@@ -1,0 +1,15 @@
+* text=auto
+
+# 统一仓库行尾，避免 Windows 上反复出现 LF/CRLF 噪音 diff
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.ini text eol=lf
+Dockerfile text eol=lf
+
+# Windows 脚本通常使用 CRLF，减少在 cmd 下的兼容性问题
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+

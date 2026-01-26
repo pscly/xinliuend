@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flow}
+      POSTGRES_USER: ${POSTGRES_USER:-flow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password_change_me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${FLOW_BACKEND_PORT:-31031}:31031"
+    environment:
+      # 通过 Postgres 容器连接数据库（生产建议使用 Postgres；本地仍可用 SQLite）
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-flow}:${POSTGRES_PASSWORD:-postgres_password_change_me}@postgres:5432/${POSTGRES_DB:-flow}
+
+      # 其它配置建议写到 .env（见 .env.example）
+      MEMOS_BASE_URL: ${MEMOS_BASE_URL:-https://memos.example.com}
+      MEMOS_ADMIN_TOKEN: ${MEMOS_ADMIN_TOKEN:-}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
+
+      ADMIN_BASIC_USER: ${ADMIN_BASIC_USER:-pscly}
+      ADMIN_BASIC_PASSWORD: ${ADMIN_BASIC_PASSWORD:-admin_password_change_me}
+
+      MEMOS_CREATE_USER_ENDPOINTS: ${MEMOS_CREATE_USER_ENDPOINTS:-/api/v1/users}
+      MEMOS_CREATE_TOKEN_ENDPOINTS: ${MEMOS_CREATE_TOKEN_ENDPOINTS:-/api/v1/users/{user_id}/accessTokens}
+      MEMOS_ALLOW_RESET_PASSWORD_FOR_EXISTING_USER: ${MEMOS_ALLOW_RESET_PASSWORD_FOR_EXISTING_USER:-false}
+
+      DEV_BYPASS_MEMOS: ${DEV_BYPASS_MEMOS:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+      SYNC_MAX_CLIENT_CLOCK_SKEW_SECONDS: ${SYNC_MAX_CLIENT_CLOCK_SKEW_SECONDS:-300}
+      SYNC_PULL_LIMIT: ${SYNC_PULL_LIMIT:-200}
+      DEFAULT_TZID: ${DEFAULT_TZID:-Asia/Shanghai}
+
+volumes:
+  postgres_data:
+
