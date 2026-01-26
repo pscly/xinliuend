@@ -28,7 +28,7 @@ jobs:
 
       - name: Deploy on server
         run: |
-          # 直接在服务器执行部署逻辑，避免首次部署时脚本文件尚未存在导致失败
+          # 先同步 git，再优先使用仓库内的 scripts/deploy.sh；若不存在则回退到内联部署逻辑
           ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" "bash -s" <<'EOF'
           set -euo pipefail
 
@@ -39,17 +39,20 @@ jobs:
           git fetch --all --prune
           git reset --hard origin/main
 
-          echo "[deploy] docker compose up ..."
-          PROFILE_ARGS=""
-          if [[ -n "${DEPLOY_COMPOSE_PROFILES:-}" ]]; then
-            IFS=',' read -r -a _profiles <<< "${DEPLOY_COMPOSE_PROFILES}"
-            for p in "${_profiles[@]}"; do
-              p_trimmed="$(echo "$p" | xargs)"
-              [[ -n "$p_trimmed" ]] && PROFILE_ARGS="${PROFILE_ARGS} --profile ${p_trimmed}"
-            done
+          if [[ -f "scripts/deploy.sh" ]]; then
+            echo "[deploy] run scripts/deploy.sh ..."
+            bash "scripts/deploy.sh"
+          else
+            echo "[deploy] scripts/deploy.sh not found, fallback to inline compose up ..."
+            PROFILE_ARGS=""
+            if [[ -n "${DEPLOY_COMPOSE_PROFILES:-}" ]]; then
+              IFS=',' read -r -a _profiles <<< "${DEPLOY_COMPOSE_PROFILES}"
+              for p in "${_profiles[@]}"; do
+                p_trimmed="$(echo "$p" | xargs)"
+                [[ -n "$p_trimmed" ]] && PROFILE_ARGS="${PROFILE_ARGS} --profile ${p_trimmed}"
+              done
+            fi
+            # shellcheck disable=SC2086
+            docker compose ${PROFILE_ARGS} up -d --build --remove-orphans
           fi
-
-          # shellcheck disable=SC2086
-          docker compose ${PROFILE_ARGS} up -d --build --remove-orphans
-          echo "[deploy] done."
           EOF
