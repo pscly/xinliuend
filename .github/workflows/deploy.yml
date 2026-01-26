@@ -14,6 +14,7 @@ jobs:
     env:
       DEPLOY_HOST: 2.pscly.cn
       DEPLOY_PORT: 10001
+      APP_DIR: /root/mnt2/mydocker2/auto_github/xinliuend
     steps:
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -27,4 +28,28 @@ jobs:
 
       - name: Deploy on server
         run: |
-          ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" "bash /root/mnt2/mydocker2/auto_github/xinliuend/scripts/deploy.sh"
+          # 直接在服务器执行部署逻辑，避免首次部署时脚本文件尚未存在导致失败
+          ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" "bash -s" <<'EOF'
+          set -euo pipefail
+
+          APP_DIR="${APP_DIR:-/root/mnt2/mydocker2/auto_github/xinliuend}"
+          cd "$APP_DIR"
+
+          echo "[deploy] sync git main ..."
+          git fetch --all --prune
+          git reset --hard origin/main
+
+          echo "[deploy] docker compose up ..."
+          PROFILE_ARGS=""
+          if [[ -n "${DEPLOY_COMPOSE_PROFILES:-}" ]]; then
+            IFS=',' read -r -a _profiles <<< "${DEPLOY_COMPOSE_PROFILES}"
+            for p in "${_profiles[@]}"; do
+              p_trimmed="$(echo "$p" | xargs)"
+              [[ -n "$p_trimmed" ]] && PROFILE_ARGS="${PROFILE_ARGS} --profile ${p_trimmed}"
+            done
+          fi
+
+          # shellcheck disable=SC2086
+          docker compose ${PROFILE_ARGS} up -d --build --remove-orphans
+          echo "[deploy] done."
+          EOF
