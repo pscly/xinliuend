@@ -27,3 +27,5 @@ build/
 # 调试产物（本地抓取的 Memos 前端资源）
 tools/_*.js
 .ace-tool/
+
+test

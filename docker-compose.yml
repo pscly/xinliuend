@@ -1,32 +1,16 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-flow}
-      POSTGRES_USER: ${POSTGRES_USER:-flow}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password_change_me}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
   api:
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     ports:
       - "${FLOW_BACKEND_PORT:-31031}:31031"
+    env_file:
+      - .env
     environment:
-      # 通过 Postgres 容器连接数据库（生产建议使用 Postgres；本地仍可用 SQLite）
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-flow}:${POSTGRES_PASSWORD:-postgres_password_change_me}@postgres:5432/${POSTGRES_DB:-flow}
+      # 数据库连接统一从 .env 读取（SQLite / PostgreSQL 均可）
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///./dev.db}
 
       # 其它配置建议写到 .env（见 .env.example）
       MEMOS_BASE_URL: ${MEMOS_BASE_URL:-https://memos.example.com}
@@ -47,6 +31,19 @@ services:
       SYNC_PULL_LIMIT: ${SYNC_PULL_LIMIT:-200}
       DEFAULT_TZID: ${DEFAULT_TZID:-Asia/Shanghai}
 
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    profiles:
+      - postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flow}
+      POSTGRES_USER: ${POSTGRES_USER:-flow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password_change_me}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
 volumes:
   postgres_data:
-

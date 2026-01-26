@@ -30,21 +30,29 @@ uv sync
 uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031 --reload
 ```
 
-## Docker Compose 一键部署（推荐：PostgreSQL）
+## Docker Compose 一键部署（SQLite / PostgreSQL）
 
 1）准备环境变量：
 
 - 将 `.env.example` 复制为 `.env`
-- 生产环境建议至少修改：
-  - `POSTGRES_PASSWORD`
+- 至少配置：
+  - `DATABASE_URL`
   - `ADMIN_BASIC_PASSWORD`
   - `MEMOS_BASE_URL`
   - `MEMOS_ADMIN_TOKEN`（生产必填；本地联调可临时用 `DEV_BYPASS_MEMOS=true`）
 
 2）启动（首次会自动构建镜像并跑 Alembic 迁移）：
 
+- SQLite（默认）：
+
 ```powershell
 docker compose up -d --build
+```
+
+- PostgreSQL：将 `.env` 里的 `DATABASE_URL` 设置为 `postgresql+psycopg2://...@postgres:5432/...`，并启用 postgres profile：
+
+```powershell
+docker compose --profile postgres up -d --build
 ```
 
 3）查看日志：
@@ -64,7 +72,7 @@ docker compose logs -f api
 docker compose down
 ```
 
-（可选）清空数据库数据卷：
+（可选）清空 PostgreSQL 数据卷：
 
 ```powershell
 docker compose down -v
