@@ -1,0 +1,28 @@
+name: Deploy
+
+on:
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.CI }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p 10001 u.pscly.cn >> ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        run: |
+          ssh -p 10001 root@u.pscly.cn "bash /root/mnt2/mydocker2/auto_github/xinliuend/scripts/deploy.sh"
+

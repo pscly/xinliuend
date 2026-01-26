@@ -8,8 +8,8 @@
 *.yaml text eol=lf
 *.ini text eol=lf
 Dockerfile text eol=lf
+*.sh text eol=lf
 
 # Windows 脚本通常使用 CRLF，减少在 cmd 下的兼容性问题
 *.bat text eol=crlf
 *.ps1 text eol=crlf
-
