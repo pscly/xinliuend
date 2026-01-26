@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.6
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -14,7 +15,12 @@ ARG PIP_TRUSTED_HOST=mirrors.aliyun.com
 ENV PIP_INDEX_URL=${PIP_INDEX_URL} \
     PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST} \
     # uv 会读取该变量（若版本支持）以加速依赖下载；不支持时会被忽略
-    UV_INDEX_URL=${PIP_INDEX_URL}
+    UV_INDEX_URL=${PIP_INDEX_URL} \
+    # 缓存目录：配合 BuildKit cache mount，可显著降低重复构建的下载耗时
+    UV_CACHE_DIR=/root/.cache/uv \
+    # 国内网络下容错与并发（按需调大/调小）
+    UV_HTTP_TIMEOUT=60 \
+    UV_CONCURRENT_DOWNLOADS=16
 
 RUN pip install --no-cache-dir -i "${PIP_INDEX_URL}" --trusted-host "${PIP_TRUSTED_HOST}" uv==0.9.24 \
     && rm -rf /root/.cache/pip
@@ -24,7 +30,8 @@ RUN touch .env
 
 # 先拷贝依赖描述文件，利用 Docker layer cache 加速构建
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
 # 应用代码 + 迁移脚本
 COPY src ./src
