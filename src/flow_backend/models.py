@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import Column
+from sqlalchemy import Column, Text
 from sqlalchemy.types import JSON as SAJSON
 from sqlmodel import Field, SQLModel
 
@@ -20,7 +20,8 @@ class User(SQLModel, table=True):
     password_hash: str = Field(min_length=1, max_length=255)
 
     memos_id: Optional[int] = Field(default=None, index=True)
-    memos_token: str = Field(min_length=1)
+    # 允许先创建账号、后续再由管理员在后台手动补齐 memos_token
+    memos_token: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
 
     is_active: bool = Field(default=True, index=True)
     created_at: datetime = Field(default_factory=utc_now, index=True)

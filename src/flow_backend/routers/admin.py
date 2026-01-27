@@ -17,7 +17,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
 from flow_backend.db import get_session
-from flow_backend.memos_client import MemosClient, MemosClientError
 from flow_backend.models import User
 from flow_backend.security import hash_password
 
@@ -206,6 +205,7 @@ async def admin_create_user(
     username = str(form.get("username") or "").strip()
     password = str(form.get("password") or "")
     password2 = str(form.get("password2") or "")
+    memos_token = str(form.get("memos_token") or "").strip()
 
     if not username:
         return _admin_redirect(err="用户名不能为空")
@@ -215,8 +215,8 @@ async def admin_create_user(
         return _admin_redirect(err="用户名只能包含字母和数字（不支持下划线）")
     if len(password) < 6:
         return _admin_redirect(err="密码太短（至少 6 位）")
-    if len(password.encode("utf-8")) > 71:
-        return _admin_redirect(err="密码过长（为了给 Memos 追加 x，最多 71 字节）")
+    if len(password.encode("utf-8")) > 72:
+        return _admin_redirect(err="密码过长（bcrypt 只支持最多 72 字节）")
     if password != password2:
         return _admin_redirect(err="两次输入的密码不一致")
 
@@ -224,35 +224,11 @@ async def admin_create_user(
     if existing:
         return _admin_redirect(err="用户名已存在")
 
-    if settings.dev_bypass_memos:
-        memos_user_id = 0
-        memos_token = f"dev-{secrets.token_urlsafe(24)}"
-    else:
-        if not settings.memos_admin_token.strip():
-            return _admin_redirect(err="未配置 MEMOS_ADMIN_TOKEN（或设置 DEV_BYPASS_MEMOS=true 用于本地调试）")
-        client = MemosClient(
-            base_url=settings.memos_base_url,
-            admin_token=settings.memos_admin_token,
-            timeout_seconds=settings.memos_request_timeout_seconds,
-        )
-        try:
-            result = await client.create_user_and_token(
-                create_user_endpoints=settings.create_user_endpoints_list(),
-                create_token_endpoints=settings.create_token_endpoints_list(),
-                username=username,
-                password=password,
-                allow_reset_existing_user_password=settings.memos_allow_reset_password_for_existing_user,
-            )
-            memos_user_id = result.memos_user_id
-            memos_token = result.memos_token
-        except MemosClientError as e:
-            return _admin_redirect(err=f"Memos 对接失败：{e}")
-
     user = User(
         username=username,
         password_hash="",
-        memos_id=memos_user_id,
-        memos_token=memos_token,
+        memos_id=None,
+        memos_token=memos_token or None,
         is_active=True,
     )
     try:
@@ -318,8 +294,8 @@ async def delete_user(
     return _admin_redirect(msg="已删除")
 
 
-@router.post("/admin/users/{user_id}/reset-token")
-async def reset_token(
+@router.post("/admin/users/{user_id}/set-token")
+async def set_token(
     user_id: int,
     request: Request,
     session: AsyncSession = Depends(get_session),
@@ -336,35 +312,11 @@ async def reset_token(
 
     user = await session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="user not found")
+        return _admin_redirect(err="用户不存在")
 
-    if settings.dev_bypass_memos:
-        user.memos_token = f"dev-{secrets.token_urlsafe(24)}"
-    else:
-        if not settings.memos_admin_token.strip():
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="MEMOS_ADMIN_TOKEN is not set (or set DEV_BYPASS_MEMOS=true for local dev)",
-            )
-        if not user.memos_id:
-            raise HTTPException(status_code=400, detail="user.memos_id is empty; cannot reset token")
-        if not user.memos_token:
-            raise HTTPException(status_code=400, detail="user.memos_token is empty; cannot reset token")
-        client = MemosClient(
-            base_url=settings.memos_base_url,
-            admin_token=settings.memos_admin_token,
-            timeout_seconds=settings.memos_request_timeout_seconds,
-        )
-        try:
-            # 使用“现有用户 token”自助签发新 token（避免保存/回收用户明文密码）
-            user.memos_token = await client.create_access_token_with_bearer(
-                user_id=int(user.memos_id),
-                bearer_token=user.memos_token,
-                token_name=f"flow-reset-{user.username}",
-            )
-        except MemosClientError as e:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    token = str(form.get("memos_token") or "").strip()
+    user.memos_token = token or None
 
     session.add(user)
     await session.commit()
-    return RedirectResponse(url="/admin", status_code=303)
+    return _admin_redirect(msg="已保存 Token（为空则清空）")

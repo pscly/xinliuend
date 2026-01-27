@@ -79,5 +79,7 @@ async def login(payload: LoginRequest, session: AsyncSession = Depends(get_sessi
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user disabled")
+    if not user.memos_token:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="memos token not set; contact admin")
 
     return {"code": 200, "data": {"token": user.memos_token, "server_url": settings.memos_base_url}}

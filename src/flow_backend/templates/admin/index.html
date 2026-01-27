@@ -136,7 +136,7 @@
             <div class="flex items-center justify-between gap-3">
               <div>
                 <div class="text-base font-semibold">创建账号</div>
-                <div class="mt-1 text-sm text-zinc-400">会在 Memos 创建同名用户并生成 Token</div>
+                <div class="mt-1 text-sm text-zinc-400">仅创建后端账号；Memos Token 可选，后续可在列表里补齐</div>
               </div>
               <div class="text-xs text-zinc-500">用户名仅支持字母/数字（不支持下划线）</div>
             </div>
@@ -155,6 +155,15 @@
               <div class="md:col-span-2">
                 <label class="block text-xs text-zinc-400 mb-1">确认密码</label>
                 <input name="password2" type="password" placeholder="再次输入密码" minlength="6" required class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm" />
+              </div>
+
+              <div class="md:col-span-6">
+                <label class="block text-xs text-zinc-400 mb-1">Memos Token（可选）</label>
+                <input
+                  name="memos_token"
+                  placeholder="可先留空，后续在用户列表里粘贴/更新（留空表示不设置）"
+                  class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm font-mono"
+                />
               </div>
 
               <div class="md:col-span-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
@@ -198,7 +207,7 @@
         <div class="px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between gap-3">
           <div>
             <div class="text-base font-semibold">用户列表</div>
-            <div class="mt-1 text-sm text-zinc-400">支持复制 Token、启用/禁用、重置 Token、删除映射</div>
+            <div class="mt-1 text-sm text-zinc-400">支持复制/设置 Token、启用/禁用、删除映射</div>
           </div>
           <div class="text-xs text-zinc-500">提示：表格可横向滚动</div>
         </div>
@@ -231,22 +240,37 @@
                 </td>
                 <td class="px-5 py-4 text-zinc-300">{{ u.memos_id }}</td>
                 <td class="px-5 py-4">
-                  <div class="flex items-center gap-2">
-                    <code class="text-xs text-zinc-300 font-mono">
-                      {{ (u.memos_token[:8] ~ '…' ~ u.memos_token[-6:]) if u.memos_token else '' }}
-                    </code>
-                    <button
-                      class="inline-flex items-center gap-1.5 rounded-lg bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-2.5 py-1.5 text-xs font-semibold ring-1 ring-zinc-700"
-                      data-token="{{ u.memos_token }}"
-                      onclick="copyToken(this)"
-                      type="button"
-                    >
-                      <svg viewBox="0 0 24 24" class="h-4 w-4 text-zinc-200" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                      </svg>
-                      复制
-                    </button>
+                  <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                      <code class="text-xs text-zinc-300 font-mono">
+                        {{ (u.memos_token[:8] ~ '…' ~ u.memos_token[-6:]) if u.memos_token else '未设置' }}
+                      </code>
+                      <button
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-2.5 py-1.5 text-xs font-semibold ring-1 ring-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        data-token="{{ u.memos_token or '' }}"
+                        onclick="copyToken(this)"
+                        type="button"
+                        {% if not u.memos_token %}disabled{% endif %}
+                      >
+                        <svg viewBox="0 0 24 24" class="h-4 w-4 text-zinc-200" fill="none" stroke="currentColor" stroke-width="2">
+                          <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        复制
+                      </button>
+                    </div>
+
+                    <form method="post" action="/admin/users/{{ u.id }}/set-token" class="flex items-center gap-2">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                      <input
+                        name="memos_token"
+                        placeholder="粘贴 Token（留空=清空）"
+                        class="w-full min-w-[280px] rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-xs font-mono"
+                      />
+                      <button class="rounded-xl bg-indigo-600/90 hover:bg-indigo-500 active:bg-indigo-600 px-3 py-2 text-xs font-semibold text-white ring-1 ring-indigo-400/25" type="submit">
+                        保存
+                      </button>
+                    </form>
                   </div>
                 </td>
                 <td class="px-5 py-4 text-zinc-400">{{ u.created_at.strftime('%Y-%m-%d %H:%M') if u.created_at else '' }}</td>
@@ -256,12 +280,6 @@
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
                       <button class="rounded-lg bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-1.5 text-xs font-semibold ring-1 ring-zinc-700" type="submit">
                         {{ '启用' if not u.is_active else '禁用' }}
-                      </button>
-                    </form>
-                    <form method="post" action="/admin/users/{{ u.id }}/reset-token">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-                      <button class="rounded-lg bg-indigo-600/90 hover:bg-indigo-500 active:bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-indigo-400/25" type="submit">
-                        重置 Token
                       </button>
                     </form>
                     <form method="post" action="/admin/users/{{ u.id }}/delete">
