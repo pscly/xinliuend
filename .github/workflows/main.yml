@@ -1,3 +1,13 @@
-#
-# 该文件保留为空会影响可读性；实际部署使用 deploy.yml。
-#
+name: Placeholder
+
+# 该仓库实际部署使用 deploy.yml。
+# 这里保留一个可手动触发的占位工作流，避免 GitHub Actions 因“缺少 on 触发器”报错。
+
+on:
+  workflow_dispatch:
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This workflow is intentionally empty. Use deploy.yml."
