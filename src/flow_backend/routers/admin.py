@@ -206,6 +206,7 @@ async def admin_create_user(
     password = str(form.get("password") or "")
     password2 = str(form.get("password2") or "")
     memos_token = str(form.get("memos_token") or "").strip()
+    memos_id_s = str(form.get("memos_id") or "").strip()
 
     if not username:
         return _admin_redirect(err="用户名不能为空")
@@ -220,6 +221,12 @@ async def admin_create_user(
     if password != password2:
         return _admin_redirect(err="两次输入的密码不一致")
 
+    memos_id: int | None = None
+    if memos_id_s:
+        if not memos_id_s.isdigit():
+            return _admin_redirect(err="Memos 用户 ID 必须是数字（或留空）")
+        memos_id = int(memos_id_s)
+
     existing = (await session.exec(select(User).where(User.username == username))).first()
     if existing:
         return _admin_redirect(err="用户名已存在")
@@ -227,7 +234,7 @@ async def admin_create_user(
     user = User(
         username=username,
         password_hash="",
-        memos_id=None,
+        memos_id=memos_id,
         memos_token=memos_token or None,
         is_active=True,
     )
@@ -315,6 +322,13 @@ async def set_token(
         return _admin_redirect(err="用户不存在")
 
     token = str(form.get("memos_token") or "").strip()
+    memos_id_s = str(form.get("memos_id") or "").strip()
+    if memos_id_s:
+        if not memos_id_s.isdigit():
+            return _admin_redirect(err="Memos 用户 ID 必须是数字（或留空）")
+        user.memos_id = int(memos_id_s)
+    else:
+        user.memos_id = None
     user.memos_token = token or None
 
     session.add(user)

@@ -166,6 +166,18 @@
                 />
               </div>
 
+              <div class="md:col-span-6">
+                <label class="block text-xs text-zinc-400 mb-1">Memos 用户 ID（可选）</label>
+                <input
+                  name="memos_id"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  placeholder="可先留空，后续在列表里补齐（留空表示不设置）"
+                  class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm"
+                />
+              </div>
+
               <div class="md:col-span-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
                 <div class="text-xs text-zinc-500">
                   提示：删除账号目前只删除后端映射，不会删除 Memos 侧用户（避免误删生产数据）。
@@ -262,6 +274,14 @@
 
                     <form method="post" action="/admin/users/{{ u.id }}/set-token" class="flex items-center gap-2">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                      <input
+                        name="memos_id"
+                        type="number"
+                        inputmode="numeric"
+                        min="0"
+                        placeholder="Memos ID（留空=清空）"
+                        class="w-40 rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-xs"
+                      />
                       <input
                         name="memos_token"
                         placeholder="粘贴 Token（留空=清空）"
