@@ -57,7 +57,7 @@ jobs:
             echo "[deploy] run scripts/deploy.sh ..."
             bash "scripts/deploy.sh"
           else
-            echo "[deploy] scripts/deploy.sh not found, fallback to inline compose up ..."
+            echo "[deploy] scripts/deploy.sh not found, fallback to inline compose down -v + up ..."
             PROFILE_ARGS=""
             if [[ -n "${DEPLOY_COMPOSE_PROFILES:-}" ]]; then
               IFS=',' read -r -a _profiles <<< "${DEPLOY_COMPOSE_PROFILES}"
@@ -66,6 +66,8 @@ jobs:
                 [[ -n "$p_trimmed" ]] && PROFILE_ARGS="${PROFILE_ARGS} --profile ${p_trimmed}"
               done
             fi
+            # shellcheck disable=SC2086
+            docker compose ${PROFILE_ARGS} down -v --remove-orphans
             # shellcheck disable=SC2086
             docker compose ${PROFILE_ARGS} up -d --build --remove-orphans
           fi

@@ -62,6 +62,10 @@ if [[ -n "${DEPLOY_COMPOSE_PROFILES}" ]]; then
 fi
 
 log "构建并启动：docker compose up -d --build --remove-orphans"
+log "强制清理：docker compose down -v --remove-orphans（会删除 volumes/持久化数据）"
+docker compose "${PROFILE_ARGS[@]}" down -v --remove-orphans
+
+log "构建并启动：docker compose up -d --build --remove-orphans"
 docker compose "${PROFILE_ARGS[@]}" up -d --build --remove-orphans
 
 log "当前容器状态："
