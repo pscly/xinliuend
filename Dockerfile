@@ -4,7 +4,9 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PYTHONPATH=/app/src
+    PYTHONPATH=/app/src \
+    VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
@@ -41,4 +43,4 @@ COPY alembic.ini ./
 EXPOSE 31031
 
 # 启动前执行迁移，避免“镜像已更新但表结构未升级”
-CMD ["sh", "-c", "uv run alembic -c alembic.ini upgrade head && uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031"]
+CMD ["sh", "-c", "alembic -c alembic.ini upgrade head && uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031"]
