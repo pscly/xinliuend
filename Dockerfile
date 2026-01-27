@@ -39,8 +39,14 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY src ./src
 COPY alembic ./alembic
 COPY alembic.ini ./
+COPY README.md ./
+
+# 将本项目本身安装到虚拟环境（避免运行时 `uv run` 再触发 editable 构建）
+# - `--no-deps`：依赖已在上一层通过 uv sync 安装
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --no-deps -e .
 
 EXPOSE 31031
 
 # 启动前执行迁移，避免“镜像已更新但表结构未升级”
-CMD ["sh", "-c", "alembic -c alembic.ini upgrade head && uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031"]
+CMD ["sh", "-c", "uv run alembic -c alembic.ini upgrade head && uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031"]
