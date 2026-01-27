@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     admin_basic_user: str = "admin"
     admin_basic_password: str = "admin_password_change_me"
 
+    # 管理后台会话：Cookie 签名密钥（生产环境务必通过 .env 覆写为高强度随机值）
+    admin_session_secret: str = "admin_session_secret_change_me"
+    # 管理后台会话有效期（秒）
+    admin_session_max_age_seconds: int = 60 * 60 * 12  # 12 小时
+    # 管理后台会话 Cookie 名称
+    admin_session_cookie_name: str = "flow_admin_session"
+
     # Comma-separated endpoint list, tried in order.
     memos_create_user_endpoints: str = "/api/v1/users"
     memos_create_token_endpoints: str = (

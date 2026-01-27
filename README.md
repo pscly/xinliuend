@@ -82,7 +82,9 @@ docker compose down -v
 
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
-- `GET /admin`（HTTP Basic Auth）
+- `GET /admin`（管理后台首页，未登录会跳转到登录页）
+- `GET /admin/login` / `POST /admin/login`（管理后台登录）
+- `POST /admin/logout`（退出登录）
 - `GET /health`
 
 成功返回示例：
