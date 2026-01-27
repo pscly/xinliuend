@@ -4,10 +4,9 @@ from pathlib import Path
 
 import pytest
 import httpx
-from sqlmodel import Session
 
 from flow_backend.config import settings
-from flow_backend.db import get_engine, init_db, reset_engine_cache
+from flow_backend.db import init_db, reset_engine_cache, session_scope
 from flow_backend.main import app
 from flow_backend.models import User
 from flow_backend.security import hash_password
@@ -22,9 +21,9 @@ def _make_async_client() -> httpx.AsyncClient:
 async def test_settings_upsert_list_delete(tmp_path: Path):
     settings.database_url = f"sqlite:///{tmp_path / 'test.db'}"
     reset_engine_cache()
-    init_db()
+    await init_db()
 
-    with Session(get_engine()) as session:
+    async with session_scope() as session:
         user = User(
             username="u1",
             password_hash=hash_password("pass1234"),
@@ -33,7 +32,7 @@ async def test_settings_upsert_list_delete(tmp_path: Path):
             is_active=True,
         )
         session.add(user)
-        session.commit()
+        await session.commit()
 
     headers = {"Authorization": "Bearer tok-1"}
     async with _make_async_client() as client:
@@ -67,9 +66,9 @@ async def test_settings_upsert_list_delete(tmp_path: Path):
 async def test_todo_rrule_occurrence_and_sync_pull(tmp_path: Path):
     settings.database_url = f"sqlite:///{tmp_path / 'test2.db'}"
     reset_engine_cache()
-    init_db()
+    await init_db()
 
-    with Session(get_engine()) as session:
+    async with session_scope() as session:
         user = User(
             username="u2",
             password_hash=hash_password("pass1234"),
@@ -78,7 +77,7 @@ async def test_todo_rrule_occurrence_and_sync_pull(tmp_path: Path):
             is_active=True,
         )
         session.add(user)
-        session.commit()
+        await session.commit()
 
     headers = {"Authorization": "Bearer tok-2"}
     async with _make_async_client() as client:

@@ -33,7 +33,7 @@ def upgrade() -> None:
             sa.Column("password_hash", sa.String(length=255), nullable=False),
             sa.Column("memos_id", sa.Integer(), nullable=True),
             sa.Column("memos_token", sa.Text(), nullable=False),
-            sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
+            sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         )
         op.create_index("ix_users_username", "users", ["username"], unique=True)
@@ -68,7 +68,7 @@ def upgrade() -> None:
             sa.Column("name", sa.String(length=200), nullable=False),
             sa.Column("color", sa.String(length=32), nullable=True),
             sa.Column("sort_order", sa.Integer(), nullable=False, server_default=sa.text("0")),
-            sa.Column("archived", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+            sa.Column("archived", sa.Boolean(), nullable=False, server_default=sa.text("false")),
             sa.Column("client_updated_at_ms", sa.BigInteger(), nullable=False, server_default=sa.text("0")),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
@@ -95,7 +95,7 @@ def upgrade() -> None:
             sa.Column("completed_at_local", sa.String(length=19), nullable=True),
             sa.Column("sort_order", sa.Integer(), nullable=False, server_default=sa.text("0")),
             sa.Column("tags_json", sa.JSON(), nullable=False),
-            sa.Column("is_recurring", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+            sa.Column("is_recurring", sa.Boolean(), nullable=False, server_default=sa.text("false")),
             sa.Column("rrule", sa.String(length=512), nullable=True),
             sa.Column("dtstart_local", sa.String(length=19), nullable=True),
             sa.Column("tzid", sa.String(length=64), nullable=False, server_default=sa.text("'Asia/Shanghai'")),

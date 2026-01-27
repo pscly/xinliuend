@@ -5,10 +5,10 @@ import time
 from typing import Any
 
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from flow_backend.config import settings
-from flow_backend.db import engine, init_db
+from flow_backend.db import init_db, session_scope
 from flow_backend.main import app
 from flow_backend.models import User
 
@@ -27,8 +27,8 @@ def _redact(obj: Any) -> Any:
     return obj
 
 
-def main() -> None:
-    init_db()
+async def main() -> None:
+    await init_db()
     print("== Settings ==")
     print("DATABASE_URL:", settings.database_url)
     print("MEMOS_BASE_URL:", settings.memos_base_url)
@@ -51,8 +51,8 @@ def main() -> None:
     except Exception:
         print(resp.text[:1200])
 
-    with Session(engine) as session:
-        user = session.exec(select(User).where(User.username == username)).first()
+    async with session_scope() as session:
+        user = (await session.exec(select(User).where(User.username == username))).first()
         print("\n== DB lookup ==")
         if not user:
             print("not found:", username)
@@ -63,4 +63,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+
+    asyncio.run(main())

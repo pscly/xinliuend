@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
 from flow_backend.db import get_session
@@ -92,14 +93,14 @@ def _serialize_occurrence(row: TodoItemOccurrence) -> dict[str, Any]:
 
 
 @router.get("/pull")
-def pull(
+async def pull(
     cursor: int = 0,
     limit: int = Query(default=settings.sync_pull_limit, ge=1, le=1000),
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     events = list(
-        session.exec(
+        await session.exec(
             select(SyncEvent)
             .where(SyncEvent.user_id == user.id)
             .where(SyncEvent.id > cursor)
@@ -132,7 +133,7 @@ def pull(
     settings_rows = []
     if setting_keys:
         settings_rows = list(
-            session.exec(
+            await session.exec(
                 select(UserSetting)
                 .where(UserSetting.user_id == user.id)
                 .where(UserSetting.key.in_(sorted(setting_keys)))
@@ -141,7 +142,7 @@ def pull(
     lists_rows = []
     if list_ids:
         lists_rows = list(
-            session.exec(
+            await session.exec(
                 select(TodoList)
                 .where(TodoList.user_id == user.id)
                 .where(TodoList.id.in_(sorted(list_ids)))
@@ -150,7 +151,7 @@ def pull(
     items_rows = []
     if item_ids:
         items_rows = list(
-            session.exec(
+            await session.exec(
                 select(TodoItem)
                 .where(TodoItem.user_id == user.id)
                 .where(TodoItem.id.in_(sorted(item_ids)))
@@ -159,7 +160,7 @@ def pull(
     occ_rows = []
     if occ_ids:
         occ_rows = list(
-            session.exec(
+            await session.exec(
                 select(TodoItemOccurrence)
                 .where(TodoItemOccurrence.user_id == user.id)
                 .where(TodoItemOccurrence.id.in_(sorted(occ_ids)))
@@ -195,10 +196,10 @@ def _reject(resource: str, entity_id: str, reason: str, server: Any | None) -> d
 
 
 @router.post("/push")
-def push(
+async def push(
     req: SyncPushRequest,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     applied: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
@@ -208,9 +209,9 @@ def push(
 
         if m.resource == "user_setting":
             key = m.entity_id
-            row = session.exec(
+            row = (await session.exec(
                 select(UserSetting).where(UserSetting.user_id == user.id).where(UserSetting.key == key)
-            ).first()
+            )).first()
             if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
                 rejected.append(_reject(m.resource, key, "conflict", _serialize_setting(row)))
                 continue
@@ -230,9 +231,9 @@ def push(
 
         if m.resource == "todo_list":
             list_id = m.entity_id
-            row = session.exec(
+            row = (await session.exec(
                 select(TodoList).where(TodoList.user_id == user.id).where(TodoList.id == list_id)
-            ).first()
+            )).first()
             if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
                 rejected.append(_reject(m.resource, list_id, "conflict", _serialize_list(row)))
                 continue
@@ -256,9 +257,9 @@ def push(
 
         if m.resource == "todo_item":
             item_id = m.entity_id
-            row = session.exec(
+            row = (await session.exec(
                 select(TodoItem).where(TodoItem.user_id == user.id).where(TodoItem.id == item_id)
-            ).first()
+            )).first()
             if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
                 rejected.append(_reject(m.resource, item_id, "conflict", _serialize_item(row)))
                 continue
@@ -271,12 +272,12 @@ def push(
                 if not list_id:
                     rejected.append(_reject(m.resource, item_id, "missing list_id", None))
                     continue
-                list_row = session.exec(
+                list_row = (await session.exec(
                     select(TodoList)
                     .where(TodoList.user_id == user.id)
                     .where(TodoList.id == list_id)
                     .where(TodoList.deleted_at.is_(None))
-                ).first()
+                )).first()
                 if not list_row:
                     rejected.append(_reject(m.resource, item_id, "todo list not found", None))
                     continue
@@ -318,11 +319,11 @@ def push(
 
         if m.resource == "todo_occurrence":
             occ_id = m.entity_id
-            row = session.exec(
+            row = (await session.exec(
                 select(TodoItemOccurrence)
                 .where(TodoItemOccurrence.user_id == user.id)
                 .where(TodoItemOccurrence.id == occ_id)
-            ).first()
+            )).first()
             if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
                 rejected.append(_reject(m.resource, occ_id, "conflict", _serialize_occurrence(row)))
                 continue
@@ -335,12 +336,12 @@ def push(
                 if not item_id:
                     rejected.append(_reject(m.resource, occ_id, "missing item_id", None))
                     continue
-                item = session.exec(
+                item = (await session.exec(
                     select(TodoItem)
                     .where(TodoItem.user_id == user.id)
                     .where(TodoItem.id == item_id)
                     .where(TodoItem.deleted_at.is_(None))
-                ).first()
+                )).first()
                 if not item:
                     rejected.append(_reject(m.resource, occ_id, "todo item not found", None))
                     continue
@@ -376,14 +377,14 @@ def push(
 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"unknown resource: {m.resource}")
 
-    session.commit()
+    await session.commit()
 
-    last_event_id = session.exec(
+    last_event_id = (await session.exec(
         select(SyncEvent.id)
         .where(SyncEvent.user_id == user.id)
         .order_by(SyncEvent.id.desc())
         .limit(1)
-    ).first()
+    )).first()
     cursor = int(last_event_id or 0)
 
     return {"code": 200, "data": {"cursor": cursor, "applied": applied, "rejected": rejected}}

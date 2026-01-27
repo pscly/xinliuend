@@ -4,7 +4,8 @@ import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
 from flow_backend.db import get_session
@@ -17,8 +18,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register")
-async def register(payload: RegisterRequest, session: Session = Depends(get_session)):
-    existing = session.exec(select(User).where(User.username == payload.username)).first()
+async def register(payload: RegisterRequest, session: AsyncSession = Depends(get_session)):
+    existing = (await session.exec(select(User).where(User.username == payload.username))).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
 
@@ -62,18 +63,18 @@ async def register(payload: RegisterRequest, session: Session = Depends(get_sess
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     try:
         session.add(user)
-        session.commit()
-        session.refresh(user)
+        await session.commit()
+        await session.refresh(user)
     except IntegrityError:
-        session.rollback()
+        await session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
 
     return {"code": 200, "data": {"token": user.memos_token, "server_url": settings.memos_base_url}}
 
 
 @router.post("/login")
-def login(payload: LoginRequest, session: Session = Depends(get_session)):
-    user = session.exec(select(User).where(User.username == payload.username)).first()
+async def login(payload: LoginRequest, session: AsyncSession = Depends(get_session)):
+    user = (await session.exec(select(User).where(User.username == payload.username))).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
     if not user.is_active:

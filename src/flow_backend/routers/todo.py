@@ -4,7 +4,8 @@ from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.db import get_session
 from flow_backend.deps import get_current_user
@@ -26,13 +27,13 @@ def _new_id() -> str:
     return str(uuid4())
 
 
-def _require_list(session: Session, user_id: int, list_id: str) -> TodoList:
-    row = session.exec(
+async def _require_list(session: AsyncSession, user_id: int, list_id: str) -> TodoList:
+    row = (await session.exec(
         select(TodoList)
         .where(TodoList.user_id == user_id)
         .where(TodoList.id == list_id)
         .where(TodoList.deleted_at.is_(None))
-    ).first()
+    )).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo list not found")
     return row
@@ -52,15 +53,15 @@ def _validate_recurring(is_recurring: bool, rrule: Optional[str], dtstart_local:
 
 
 @router.get("/lists")
-def list_todo_lists(
+async def list_todo_lists(
     include_archived: bool = False,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     q = select(TodoList).where(TodoList.user_id == user.id).where(TodoList.deleted_at.is_(None))
     if not include_archived:
         q = q.where(TodoList.archived.is_(False))
-    rows = list(session.exec(q.order_by(TodoList.sort_order.asc(), TodoList.created_at.asc())))
+    rows = list(await session.exec(q.order_by(TodoList.sort_order.asc(), TodoList.created_at.asc())))
     data = [
         {
             "id": r.id,
@@ -77,17 +78,17 @@ def list_todo_lists(
 
 
 @router.post("/lists")
-def upsert_todo_list(
+async def upsert_todo_list(
     payload: TodoListUpsertRequest,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     list_id = payload.id or _new_id()
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
 
-    row = session.exec(
+    row = (await session.exec(
         select(TodoList).where(TodoList.user_id == user.id).where(TodoList.id == list_id)
-    ).first()
+    )).first()
     if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict (stale update)")
     if not row:
@@ -103,24 +104,24 @@ def upsert_todo_list(
 
     session.add(row)
     record_sync_event(session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="upsert")
-    session.commit()
-    session.refresh(row)
+    await session.commit()
+    await session.refresh(row)
     return {"code": 200, "data": {"id": row.id}}
 
 
 @router.patch("/lists/{list_id}")
-def patch_todo_list(
+async def patch_todo_list(
     list_id: str,
     payload: TodoListPatchRequest,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
-    row = session.exec(
+    row = (await session.exec(
         select(TodoList)
         .where(TodoList.user_id == user.id)
         .where(TodoList.id == list_id)
         .where(TodoList.deleted_at.is_(None))
-    ).first()
+    )).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo list not found")
 
@@ -142,23 +143,23 @@ def patch_todo_list(
 
     session.add(row)
     record_sync_event(session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="upsert")
-    session.commit()
+    await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
 
 @router.post("/lists/reorder")
-def reorder_todo_lists(
+async def reorder_todo_lists(
     items: list[TodoListReorderItem],
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     for it in items:
-        row = session.exec(
+        row = (await session.exec(
             select(TodoList)
             .where(TodoList.user_id == user.id)
             .where(TodoList.id == it.id)
             .where(TodoList.deleted_at.is_(None))
-        ).first()
+        )).first()
         if not row:
             continue
         incoming_ms = clamp_client_updated_at_ms(it.client_updated_at_ms) or now_ms()
@@ -169,20 +170,20 @@ def reorder_todo_lists(
         row.updated_at = utc_now()
         session.add(row)
         record_sync_event(session, user_id=int(user.id), resource="todo_list", entity_id=row.id, action="upsert")
-    session.commit()
+    await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
 
 @router.delete("/lists/{list_id}")
-def delete_todo_list(
+async def delete_todo_list(
     list_id: str,
     client_updated_at_ms: int = Query(default=0),
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
-    row = session.exec(
+    row = (await session.exec(
         select(TodoList).where(TodoList.user_id == user.id).where(TodoList.id == list_id)
-    ).first()
+    )).first()
     if not row:
         return {"code": 200, "data": {"ok": True}}
 
@@ -196,12 +197,12 @@ def delete_todo_list(
 
     session.add(row)
     record_sync_event(session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="delete")
-    session.commit()
+    await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
 
 @router.get("/items")
-def list_todo_items(
+async def list_todo_items(
     list_id: Optional[str] = None,
     status_value: Optional[str] = Query(default=None, alias="status"),
     tag: Optional[str] = None,
@@ -210,7 +211,7 @@ def list_todo_items(
     limit: int = 200,
     offset: int = 0,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     q = select(TodoItem).where(TodoItem.user_id == user.id)
     if not include_deleted:
@@ -225,7 +226,7 @@ def list_todo_items(
 
     if not include_archived_lists:
         active_list_ids = list(
-            session.exec(
+            await session.exec(
                 select(TodoList.id)
                 .where(TodoList.user_id == user.id)
                 .where(TodoList.deleted_at.is_(None))
@@ -238,7 +239,9 @@ def list_todo_items(
             return {"code": 200, "data": {"items": []}}
 
     rows = list(
-        session.exec(q.order_by(TodoItem.sort_order.asc(), TodoItem.created_at.asc()).offset(offset).limit(limit))
+        await session.exec(
+            q.order_by(TodoItem.sort_order.asc(), TodoItem.created_at.asc()).offset(offset).limit(limit)
+        )
     )
     data = [
         {
@@ -267,17 +270,19 @@ def list_todo_items(
     return {"code": 200, "data": {"items": data}}
 
 
-def _upsert_item_row(
+async def _upsert_item_row(
     *,
-    session: Session,
+    session: AsyncSession,
     user_id: int,
     payload: TodoItemUpsertRequest,
     item_id: str,
 ) -> TodoItem:
-    _require_list(session, user_id=user_id, list_id=payload.list_id)
+    await _require_list(session, user_id=user_id, list_id=payload.list_id)
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
 
-    row = session.exec(select(TodoItem).where(TodoItem.user_id == user_id).where(TodoItem.id == item_id)).first()
+    row = (await session.exec(
+        select(TodoItem).where(TodoItem.user_id == user_id).where(TodoItem.id == item_id)
+    )).first()
     if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict (stale update)")
     if not row:
@@ -316,45 +321,45 @@ def _upsert_item_row(
 
 
 @router.post("/items")
-def upsert_todo_item(
+async def upsert_todo_item(
     payload: TodoItemUpsertRequest,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     item_id = payload.id or _new_id()
-    _upsert_item_row(session=session, user_id=int(user.id), payload=payload, item_id=item_id)
-    session.commit()
+    await _upsert_item_row(session=session, user_id=int(user.id), payload=payload, item_id=item_id)
+    await session.commit()
     return {"code": 200, "data": {"id": item_id}}
 
 
 @router.post("/items/bulk")
-def bulk_upsert_todo_items(
+async def bulk_upsert_todo_items(
     payloads: list[TodoItemUpsertRequest],
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     ids: list[str] = []
     for payload in payloads:
         item_id = payload.id or _new_id()
-        _upsert_item_row(session=session, user_id=int(user.id), payload=payload, item_id=item_id)
+        await _upsert_item_row(session=session, user_id=int(user.id), payload=payload, item_id=item_id)
         ids.append(item_id)
-    session.commit()
+    await session.commit()
     return {"code": 200, "data": {"ids": ids}}
 
 
 @router.patch("/items/{item_id}")
-def patch_todo_item(
+async def patch_todo_item(
     item_id: str,
     payload: TodoItemPatchRequest,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
-    row = session.exec(
+    row = (await session.exec(
         select(TodoItem)
         .where(TodoItem.user_id == user.id)
         .where(TodoItem.id == item_id)
         .where(TodoItem.deleted_at.is_(None))
-    ).first()
+    )).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo item not found")
 
@@ -363,7 +368,7 @@ def patch_todo_item(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict (stale update)")
 
     if payload.list_id is not None:
-        _require_list(session, user_id=int(user.id), list_id=payload.list_id)
+        await _require_list(session, user_id=int(user.id), list_id=payload.list_id)
         row.list_id = payload.list_id
     if payload.parent_id is not None:
         row.parent_id = payload.parent_id
@@ -401,18 +406,20 @@ def patch_todo_item(
     row.updated_at = utc_now()
     session.add(row)
     record_sync_event(session, user_id=int(user.id), resource="todo_item", entity_id=item_id, action="upsert")
-    session.commit()
+    await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
 
 @router.delete("/items/{item_id}")
-def delete_todo_item(
+async def delete_todo_item(
     item_id: str,
     client_updated_at_ms: int = Query(default=0),
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
-    row = session.exec(select(TodoItem).where(TodoItem.user_id == user.id).where(TodoItem.id == item_id)).first()
+    row = (await session.exec(
+        select(TodoItem).where(TodoItem.user_id == user.id).where(TodoItem.id == item_id)
+    )).first()
     if not row:
         return {"code": 200, "data": {"ok": True}}
 
@@ -425,42 +432,42 @@ def delete_todo_item(
     row.deleted_at = utc_now()
     session.add(row)
     record_sync_event(session, user_id=int(user.id), resource="todo_item", entity_id=item_id, action="delete")
-    session.commit()
+    await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
 
-def _upsert_occurrence_row(
+async def _upsert_occurrence_row(
     *,
-    session: Session,
+    session: AsyncSession,
     user_id: int,
     payload: TodoItemOccurrenceUpsertRequest,
     occurrence_id: str,
 ) -> TodoItemOccurrence:
-    item = session.exec(
+    item = (await session.exec(
         select(TodoItem)
         .where(TodoItem.user_id == user_id)
         .where(TodoItem.id == payload.item_id)
         .where(TodoItem.deleted_at.is_(None))
-    ).first()
+    )).first()
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo item not found")
 
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
 
-    row = session.exec(
+    row = (await session.exec(
         select(TodoItemOccurrence)
         .where(TodoItemOccurrence.user_id == user_id)
         .where(TodoItemOccurrence.id == occurrence_id)
-    ).first()
+    )).first()
     if not row and payload.id is None:
         # 若客户端没给 id，则按唯一键查找，避免重复插入
-        row = session.exec(
+        row = (await session.exec(
             select(TodoItemOccurrence)
             .where(TodoItemOccurrence.user_id == user_id)
             .where(TodoItemOccurrence.item_id == payload.item_id)
             .where(TodoItemOccurrence.tzid == "Asia/Shanghai")
             .where(TodoItemOccurrence.recurrence_id_local == payload.recurrence_id_local)
-        ).first()
+        )).first()
         if row:
             occurrence_id = row.id
 
@@ -495,12 +502,12 @@ def _upsert_occurrence_row(
 
 
 @router.get("/occurrences")
-def list_occurrences(
+async def list_occurrences(
     item_id: str,
     from_local: Optional[str] = Query(default=None, alias="from"),
     to_local: Optional[str] = Query(default=None, alias="to"),
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     q = (
         select(TodoItemOccurrence)
@@ -512,7 +519,7 @@ def list_occurrences(
         q = q.where(TodoItemOccurrence.recurrence_id_local >= from_local)
     if to_local:
         q = q.where(TodoItemOccurrence.recurrence_id_local <= to_local)
-    rows = list(session.exec(q.order_by(TodoItemOccurrence.recurrence_id_local.asc())))
+    rows = list(await session.exec(q.order_by(TodoItemOccurrence.recurrence_id_local.asc())))
     data = [
         {
             "id": r.id,
@@ -533,48 +540,48 @@ def list_occurrences(
 
 
 @router.post("/occurrences")
-def upsert_occurrence(
+async def upsert_occurrence(
     payload: TodoItemOccurrenceUpsertRequest,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     occ_id = payload.id or _new_id()
-    row = _upsert_occurrence_row(
+    row = await _upsert_occurrence_row(
         session=session, user_id=int(user.id), payload=payload, occurrence_id=occ_id
     )
-    session.commit()
+    await session.commit()
     return {"code": 200, "data": {"id": row.id}}
 
 
 @router.post("/occurrences/bulk")
-def bulk_upsert_occurrences(
+async def bulk_upsert_occurrences(
     payloads: list[TodoItemOccurrenceUpsertRequest],
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     ids: list[str] = []
     for payload in payloads:
         occ_id = payload.id or _new_id()
-        row = _upsert_occurrence_row(
+        row = await _upsert_occurrence_row(
             session=session, user_id=int(user.id), payload=payload, occurrence_id=occ_id
         )
         ids.append(row.id)
-    session.commit()
+    await session.commit()
     return {"code": 200, "data": {"ids": ids}}
 
 
 @router.delete("/occurrences/{occurrence_id}")
-def delete_occurrence(
+async def delete_occurrence(
     occurrence_id: str,
     client_updated_at_ms: int = Query(default=0),
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
-    row = session.exec(
+    row = (await session.exec(
         select(TodoItemOccurrence)
         .where(TodoItemOccurrence.user_id == user.id)
         .where(TodoItemOccurrence.id == occurrence_id)
-    ).first()
+    )).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="occurrence not found")
 
@@ -589,5 +596,5 @@ def delete_occurrence(
     record_sync_event(
         session, user_id=int(user.id), resource="todo_occurrence", entity_id=row.id, action="delete"
     )
-    session.commit()
+    await session.commit()
     return {"code": 200, "data": {"ok": True}}

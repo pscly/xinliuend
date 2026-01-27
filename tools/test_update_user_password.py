@@ -1,18 +1,19 @@
 from __future__ import annotations
 
+import asyncio
 import json
 
 import httpx
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from flow_backend.config import settings
-from flow_backend.db import engine
+from flow_backend.db import session_scope
 from flow_backend.models import User
 
 
-def main() -> None:
-    with Session(engine) as session:
-        user = session.exec(select(User).order_by(User.id.desc())).first()
+async def main() -> None:
+    async with session_scope() as session:
+        user = (await session.exec(select(User).order_by(User.id.desc()))).first()
         if not user or not user.memos_id:
             print("no user/memos_id")
             return
@@ -34,5 +35,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
-
+    asyncio.run(main())

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.db import get_session
 from flow_backend.deps import get_current_user
@@ -13,17 +14,17 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 
 
 @router.get("")
-def list_settings(
+async def list_settings(
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     settings_rows = list(
-        session.exec(
+        (await session.exec(
             select(UserSetting)
             .where(UserSetting.user_id == user.id)
             .where(UserSetting.deleted_at.is_(None))
             .order_by(UserSetting.key.asc())
-        )
+        ))
     )
     data = [
         {
@@ -38,11 +39,11 @@ def list_settings(
 
 
 @router.put("/{key}")
-def upsert_setting(
+async def upsert_setting(
     key: str,
     payload: SettingUpsertRequest,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     if not key.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key is empty")
@@ -50,9 +51,9 @@ def upsert_setting(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key too long")
 
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
-    row = session.exec(
+    row = (await session.exec(
         select(UserSetting).where(UserSetting.user_id == user.id).where(UserSetting.key == key)
-    ).first()
+    )).first()
 
     if row and incoming_ms < row.client_updated_at_ms:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict (stale update)")
@@ -67,8 +68,8 @@ def upsert_setting(
 
     session.add(row)
     record_sync_event(session, user_id=int(user.id), resource="user_setting", entity_id=key, action="upsert")
-    session.commit()
-    session.refresh(row)
+    await session.commit()
+    await session.refresh(row)
 
     return {
         "code": 200,
@@ -83,19 +84,19 @@ def upsert_setting(
 
 
 @router.delete("/{key}")
-def delete_setting(
+async def delete_setting(
     key: str,
     payload: SettingDeleteRequest,
     user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     if not key.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key is empty")
 
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
-    row = session.exec(
+    row = (await session.exec(
         select(UserSetting).where(UserSetting.user_id == user.id).where(UserSetting.key == key)
-    ).first()
+    )).first()
 
     if row and incoming_ms < row.client_updated_at_ms:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict (stale delete)")
@@ -109,7 +110,6 @@ def delete_setting(
 
     session.add(row)
     record_sync_event(session, user_id=int(user.id), resource="user_setting", entity_id=key, action="delete")
-    session.commit()
+    await session.commit()
 
     return {"code": 200, "data": {"ok": True}}
-

@@ -7,10 +7,10 @@ from typing import Any
 
 import httpx
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from flow_backend.config import settings
-from flow_backend.db import engine
+from flow_backend.db import session_scope
 from flow_backend.main import app
 from flow_backend.models import User
 
@@ -69,14 +69,19 @@ def main() -> None:
     print(r.text[:300])
 
     # DB check
-    with Session(engine) as session:
-        users = list(session.exec(select(User).order_by(User.id.desc()).limit(5)))
-        print("\n== DB users (top 5) ==")
-        print("count(top5):", len(users))
-        for u in users:
-            print(
-                f"- id={u.id} username={u.username} active={u.is_active} memos_id={u.memos_id} token_len={len(u.memos_token or '')}"
-            )
+    import asyncio
+
+    async def _db_check() -> None:
+        async with session_scope() as session:
+            users = list(await session.exec(select(User).order_by(User.id.desc()).limit(5)))
+            print("\n== DB users (top 5) ==")
+            print("count(top5):", len(users))
+            for u in users:
+                print(
+                    f"- id={u.id} username={u.username} active={u.is_active} memos_id={u.memos_id} token_len={len(u.memos_token or '')}"
+                )
+
+    asyncio.run(_db_check())
 
     # Memos probe（尽量只读；少量 POST 仅用于探测接口形状）
     if not settings.memos_admin_token.strip():

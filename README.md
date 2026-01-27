@@ -49,7 +49,7 @@ uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031 --reload
 docker compose up -d --build
 ```
 
-- PostgreSQL：将 `.env` 里的 `DATABASE_URL` 设置为 `postgresql+psycopg2://...@postgres:5432/...`，并启用 postgres profile：
+- PostgreSQL：将 `.env` 里的 `DATABASE_URL` 设置为 `postgresql+psycopg://...@postgres:5432/...`（或直接用 `postgresql://...`），并启用 postgres profile：
 
 ```powershell
 docker compose --profile postgres up -d --build

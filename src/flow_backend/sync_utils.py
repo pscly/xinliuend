@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
 from flow_backend.models import SyncEvent, utc_now
@@ -22,7 +22,9 @@ def clamp_client_updated_at_ms(value: int | None) -> int:
     return value
 
 
-def record_sync_event(session: Session, user_id: int, resource: str, entity_id: str, action: str) -> None:
+def record_sync_event(
+    session: AsyncSession, user_id: int, resource: str, entity_id: str, action: str
+) -> None:
     session.add(
         SyncEvent(
             user_id=user_id,
@@ -32,4 +34,3 @@ def record_sync_event(session: Session, user_id: int, resource: str, entity_id: 
             created_at=utc_now(),
         )
     )
-

@@ -12,7 +12,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
 from flow_backend.db import get_session
@@ -163,15 +164,15 @@ def admin_logout(_: Request):
 
 
 @router.get("/admin", response_class=HTMLResponse)
-def admin_index(
+async def admin_index(
     request: Request,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     sess = _get_admin_session(request)
     if not sess:
         return _redirect_to_login(next_url="/admin")
 
-    users = list(session.exec(select(User).order_by(User.id.desc())))
+    users = list(await session.exec(select(User).order_by(User.id.desc())))
     msg = request.query_params.get("msg")
     err = request.query_params.get("err")
     return templates.TemplateResponse(
@@ -190,7 +191,7 @@ def admin_index(
 @router.post("/admin/users/create")
 async def admin_create_user(
     request: Request,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     sess = _get_admin_session(request)
     if not sess:
@@ -219,7 +220,7 @@ async def admin_create_user(
     if password != password2:
         return _admin_redirect(err="两次输入的密码不一致")
 
-    existing = session.exec(select(User).where(User.username == username)).first()
+    existing = (await session.exec(select(User).where(User.username == username))).first()
     if existing:
         return _admin_redirect(err="用户名已存在")
 
@@ -260,9 +261,9 @@ async def admin_create_user(
         return _admin_redirect(err=str(e))
     try:
         session.add(user)
-        session.commit()
+        await session.commit()
     except IntegrityError:
-        session.rollback()
+        await session.rollback()
         return _admin_redirect(err="用户名已存在")
 
     return _admin_redirect(msg="创建成功")
@@ -272,7 +273,7 @@ async def admin_create_user(
 async def toggle_active(
     user_id: int,
     request: Request,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     sess = _get_admin_session(request)
     if not sess:
@@ -284,12 +285,12 @@ async def toggle_active(
         _clear_admin_session_cookie(resp)
         return resp
 
-    user = session.get(User, user_id)
+    user = await session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="user not found")
     user.is_active = not user.is_active
     session.add(user)
-    session.commit()
+    await session.commit()
     return RedirectResponse(url="/admin", status_code=303)
 
 
@@ -297,7 +298,7 @@ async def toggle_active(
 async def delete_user(
     user_id: int,
     request: Request,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     sess = _get_admin_session(request)
     if not sess:
@@ -309,11 +310,11 @@ async def delete_user(
         _clear_admin_session_cookie(resp)
         return resp
 
-    user = session.get(User, user_id)
+    user = await session.get(User, user_id)
     if not user:
         return _admin_redirect(err="用户不存在")
-    session.delete(user)
-    session.commit()
+    await session.delete(user)
+    await session.commit()
     return _admin_redirect(msg="已删除")
 
 
@@ -321,7 +322,7 @@ async def delete_user(
 async def reset_token(
     user_id: int,
     request: Request,
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     sess = _get_admin_session(request)
     if not sess:
@@ -333,7 +334,7 @@ async def reset_token(
         _clear_admin_session_cookie(resp)
         return resp
 
-    user = session.get(User, user_id)
+    user = await session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="user not found")
 
@@ -365,5 +366,5 @@ async def reset_token(
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
 
     session.add(user)
-    session.commit()
+    await session.commit()
     return RedirectResponse(url="/admin", status_code=303)
