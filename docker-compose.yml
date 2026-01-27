@@ -9,7 +9,7 @@ services:
     env_file:
       - .env
     environment:
-      # 数据库连接统一从 .env 读取（SQLite / PostgreSQL 均可）
+      # 数据库连接统一从 .env 读取（SQLite / 外部 PostgreSQL 均可）
       DATABASE_URL: ${DATABASE_URL:-sqlite:///./dev.db}
 
       # 其它配置建议写到 .env（见 .env.example）
@@ -30,20 +30,3 @@ services:
       SYNC_MAX_CLIENT_CLOCK_SKEW_SECONDS: ${SYNC_MAX_CLIENT_CLOCK_SKEW_SECONDS:-300}
       SYNC_PULL_LIMIT: ${SYNC_PULL_LIMIT:-200}
       DEFAULT_TZID: ${DEFAULT_TZID:-Asia/Shanghai}
-
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    profiles:
-      - postgres
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-flow}
-      POSTGRES_USER: ${POSTGRES_USER:-flow}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password_change_me}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
