@@ -11,10 +11,23 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: pscly-cn
+            host: 2.pscly.cn
+            port: 10001
+            app_dir: /root/mnt2/mydocker2/auto_github/xinliuend
+          - name: pscly-cc
+            host: pscly.cc
+            port: 22
+            app_dir: /root/dockers/1auto/xinliuend
     env:
-      DEPLOY_HOST: 2.pscly.cn
-      DEPLOY_PORT: 10001
-      APP_DIR: /root/mnt2/mydocker2/auto_github/xinliuend
+      DEPLOY_NAME: ${{ matrix.name }}
+      DEPLOY_HOST: ${{ matrix.host }}
+      DEPLOY_PORT: ${{ matrix.port }}
+      APP_DIR: ${{ matrix.app_dir }}
     steps:
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -28,11 +41,12 @@ jobs:
 
       - name: Deploy on server
         run: |
-          # 先同步 git，再优先使用仓库内的 scripts/deploy.sh；若不存在则回退到内联部署逻辑
-          ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" "bash -s" <<'EOF'
+          echo "[deploy] target=${DEPLOY_NAME} ${DEPLOY_HOST}:${DEPLOY_PORT} dir=${APP_DIR}"
+          # 将 APP_DIR 通过 SSH 环境变量传到远端，避免 heredoc 内部变量展开导致的混淆
+          ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" "APP_DIR='${APP_DIR}' bash -s" <<'EOF'
           set -euo pipefail
 
-          APP_DIR="${APP_DIR:-/root/mnt2/mydocker2/auto_github/xinliuend}"
+          : "${APP_DIR:?APP_DIR 未设置}"
           cd "$APP_DIR"
 
           echo "[deploy] sync git main ..."
