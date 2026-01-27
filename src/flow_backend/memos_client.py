@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Literal
+from typing import Any
 
 import httpx
 
@@ -210,68 +210,14 @@ class MemosClient:
                 raise MemosClientError("Create session succeeded but no session cookie returned")
             raise MemosClientError(f"Create session failed. {resp.status_code} {resp.text}")
 
-    async def create_session_with_password_mode(
-        self, username: str, password: str, password_mode: Literal["app", "raw"] = "app"
-    ) -> httpx.Cookies:
-        """创建用户会话（cookie）。
-
-        - app：表示后端“App 侧密码”（会自动追加 x 转成 Memos 密码）
-        - raw：表示“用户在 Memos 侧真实密码”（不做任何拼接/变换）
-        """
-        url = f"{self._base_url}/api/v1/auth/sessions"
-        if password_mode == "app":
-            memos_password = memos_password_from_app_password(password)
-        else:
-            memos_password = password
-        payload = {"passwordCredentials": {"username": username, "password": memos_password}}
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.post(url, json=payload)
-            if 200 <= resp.status_code < 300:
-                cookie_header = resp.headers.get("grpc-metadata-set-cookie") or resp.headers.get("set-cookie") or ""
-                cookie_pair = cookie_header.split(";", 1)[0].strip()
-                if cookie_pair:
-                    return httpx.Cookies({cookie_pair.split("=", 1)[0]: cookie_pair.split("=", 1)[1]})
-                raise MemosClientError("Create session succeeded but no session cookie returned")
-            raise MemosClientError(f"Create session failed. {resp.status_code} {resp.text}")
-
-    async def get_current_user_id(self, cookies: httpx.Cookies) -> int | None:
-        """通过 session cookie 获取当前登录用户 id。
-
-        说明：不同版本返回结构可能不一致，这里做了尽量宽松的解析；若实例不支持该接口，返回 None。
-        """
-        url = f"{self._base_url}/api/v1/user"
-        async with httpx.AsyncClient(timeout=self._timeout, cookies=cookies) as client:
-            resp = await client.get(url)
-            if resp.status_code == 404:
-                return None
-            if not (200 <= resp.status_code < 300):
-                return None
-            try:
-                data = resp.json()
-            except Exception:
-                return None
-
-        if isinstance(data, dict) and isinstance(data.get("user"), dict):
-            data = data["user"]
-
-        if isinstance(data, dict):
-            name = data.get("name")
-            if isinstance(name, str) and name.startswith("users/"):
-                try:
-                    return int(name.split("/", 1)[1])
-                except Exception:
-                    return None
-            user_id = data.get("id")
-            if isinstance(user_id, int):
-                return user_id
-        return None
-
-    async def create_access_token_with_cookies(
+    async def create_access_token_as_user(
         self,
         user_id: int,
-        cookies: httpx.Cookies,
+        username: str,
+        password: str,
         token_name: str,
     ) -> str:
+        cookies = await self.create_session(username=username, password=password)
         url = f"{self._base_url}/api/v1/users/{user_id}/accessTokens"
         payload = {"description": token_name}
         async with httpx.AsyncClient(timeout=self._timeout, cookies=cookies) as client:
@@ -287,53 +233,6 @@ class MemosClient:
                         return token
                 raise MemosClientError(f"Create token succeeded but cannot parse response: {data}")
             raise MemosClientError(f"Create token (as user) failed. {resp.status_code} {resp.text}")
-
-    async def create_access_token_from_login(
-        self,
-        username: str,
-        password: str,
-        token_name: str | None = None,
-    ) -> MemosUserAndToken:
-        """用于“已有 Memos 账号”的中转登录：用账号密码换取 token。
-
-        注意：这里的 password 是“用户在 Memos 侧真实密码”（不追加 x）。
-        """
-        cookies = await self.create_session_with_password_mode(
-            username=username,
-            password=password,
-            password_mode="raw",
-        )
-
-        user_id = await self.get_current_user_id(cookies=cookies)
-        if not user_id:
-            if self._admin_token:
-                user_id = await self.find_user_id_by_username(username=username)
-            if not user_id:
-                raise MemosClientError(
-                    "Cannot determine memos user id from session; "
-                    "try enabling /api/v1/user on Memos or set MEMOS_ADMIN_TOKEN for fallback lookup."
-                )
-
-        if not token_name:
-            ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
-            token_name = f"flow-relay-{username}-{ts}"
-
-        memos_token = await self.create_access_token_with_cookies(
-            user_id=user_id,
-            cookies=cookies,
-            token_name=token_name,
-        )
-        return MemosUserAndToken(memos_user_id=user_id, memos_token=memos_token)
-
-    async def create_access_token_as_user(
-        self,
-        user_id: int,
-        username: str,
-        password: str,
-        token_name: str,
-    ) -> str:
-        cookies = await self.create_session(username=username, password=password)
-        return await self.create_access_token_with_cookies(user_id=user_id, cookies=cookies, token_name=token_name)
 
     async def create_access_token_with_bearer(
         self,
