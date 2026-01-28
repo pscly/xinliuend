@@ -209,14 +209,20 @@ async def push(
 
         if m.resource == "user_setting":
             key = m.entity_id
-            row = (await session.exec(
-                select(UserSetting).where(UserSetting.user_id == user.id).where(UserSetting.key == key)
-            )).first()
+            row = (
+                await session.exec(
+                    select(UserSetting)
+                    .where(UserSetting.user_id == user.id)
+                    .where(UserSetting.key == key)
+                )
+            ).first()
             if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
                 rejected.append(_reject(m.resource, key, "conflict", _serialize_setting(row)))
                 continue
             if not row:
-                row = UserSetting(user_id=int(user.id), key=key, value_json={}, client_updated_at_ms=0)
+                row = UserSetting(
+                    user_id=int(user.id), key=key, value_json={}, client_updated_at_ms=0
+                )
             row.client_updated_at_ms = incoming_ms
             row.updated_at = utc_now()
             if m.op == "delete":
@@ -231,9 +237,13 @@ async def push(
 
         if m.resource == "todo_list":
             list_id = m.entity_id
-            row = (await session.exec(
-                select(TodoList).where(TodoList.user_id == user.id).where(TodoList.id == list_id)
-            )).first()
+            row = (
+                await session.exec(
+                    select(TodoList)
+                    .where(TodoList.user_id == user.id)
+                    .where(TodoList.id == list_id)
+                )
+            ).first()
             if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
                 rejected.append(_reject(m.resource, list_id, "conflict", _serialize_list(row)))
                 continue
@@ -257,9 +267,13 @@ async def push(
 
         if m.resource == "todo_item":
             item_id = m.entity_id
-            row = (await session.exec(
-                select(TodoItem).where(TodoItem.user_id == user.id).where(TodoItem.id == item_id)
-            )).first()
+            row = (
+                await session.exec(
+                    select(TodoItem)
+                    .where(TodoItem.user_id == user.id)
+                    .where(TodoItem.id == item_id)
+                )
+            ).first()
             if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
                 rejected.append(_reject(m.resource, item_id, "conflict", _serialize_item(row)))
                 continue
@@ -272,12 +286,14 @@ async def push(
                 if not list_id:
                     rejected.append(_reject(m.resource, item_id, "missing list_id", None))
                     continue
-                list_row = (await session.exec(
-                    select(TodoList)
-                    .where(TodoList.user_id == user.id)
-                    .where(TodoList.id == list_id)
-                    .where(TodoList.deleted_at.is_(None))
-                )).first()
+                list_row = (
+                    await session.exec(
+                        select(TodoList)
+                        .where(TodoList.user_id == user.id)
+                        .where(TodoList.id == list_id)
+                        .where(TodoList.deleted_at.is_(None))
+                    )
+                ).first()
                 if not list_row:
                     rejected.append(_reject(m.resource, item_id, "todo list not found", None))
                     continue
@@ -319,11 +335,13 @@ async def push(
 
         if m.resource == "todo_occurrence":
             occ_id = m.entity_id
-            row = (await session.exec(
-                select(TodoItemOccurrence)
-                .where(TodoItemOccurrence.user_id == user.id)
-                .where(TodoItemOccurrence.id == occ_id)
-            )).first()
+            row = (
+                await session.exec(
+                    select(TodoItemOccurrence)
+                    .where(TodoItemOccurrence.user_id == user.id)
+                    .where(TodoItemOccurrence.id == occ_id)
+                )
+            ).first()
             if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
                 rejected.append(_reject(m.resource, occ_id, "conflict", _serialize_occurrence(row)))
                 continue
@@ -336,12 +354,14 @@ async def push(
                 if not item_id:
                     rejected.append(_reject(m.resource, occ_id, "missing item_id", None))
                     continue
-                item = (await session.exec(
-                    select(TodoItem)
-                    .where(TodoItem.user_id == user.id)
-                    .where(TodoItem.id == item_id)
-                    .where(TodoItem.deleted_at.is_(None))
-                )).first()
+                item = (
+                    await session.exec(
+                        select(TodoItem)
+                        .where(TodoItem.user_id == user.id)
+                        .where(TodoItem.id == item_id)
+                        .where(TodoItem.deleted_at.is_(None))
+                    )
+                ).first()
                 if not item:
                     rejected.append(_reject(m.resource, occ_id, "todo item not found", None))
                     continue
@@ -352,7 +372,9 @@ async def push(
                     user_id=int(user.id),
                     item_id=str(m.data.get("item_id") or ""),
                     tzid="Asia/Shanghai",
-                    recurrence_id_local=str(m.data.get("recurrence_id_local") or "1970-01-01T00:00:00"),
+                    recurrence_id_local=str(
+                        m.data.get("recurrence_id_local") or "1970-01-01T00:00:00"
+                    ),
                     client_updated_at_ms=0,
                 )
 
@@ -363,7 +385,9 @@ async def push(
             else:
                 row.item_id = str(m.data.get("item_id") or row.item_id)
                 row.tzid = "Asia/Shanghai"
-                row.recurrence_id_local = str(m.data.get("recurrence_id_local") or row.recurrence_id_local)
+                row.recurrence_id_local = str(
+                    m.data.get("recurrence_id_local") or row.recurrence_id_local
+                )
                 row.status_override = m.data.get("status_override")
                 row.title_override = m.data.get("title_override")
                 row.note_override = m.data.get("note_override")
@@ -375,16 +399,20 @@ async def push(
             applied.append({"resource": m.resource, "entity_id": occ_id})
             continue
 
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"unknown resource: {m.resource}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"unknown resource: {m.resource}"
+        )
 
     await session.commit()
 
-    last_event_id = (await session.exec(
-        select(SyncEvent.id)
-        .where(SyncEvent.user_id == user.id)
-        .order_by(SyncEvent.id.desc())
-        .limit(1)
-    )).first()
+    last_event_id = (
+        await session.exec(
+            select(SyncEvent.id)
+            .where(SyncEvent.user_id == user.id)
+            .order_by(SyncEvent.id.desc())
+            .limit(1)
+        )
+    ).first()
     cursor = int(last_event_id or 0)
 
     return {"code": 200, "data": {"cursor": cursor, "applied": applied, "rejected": rejected}}

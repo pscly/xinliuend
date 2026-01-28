@@ -153,4 +153,3 @@ class TodoItemOccurrenceUpsertRequest(BaseModel):
     @classmethod
     def _validate_completed_at_local(cls, v: str | None) -> str | None:
         return validate_local_dt(v, "completed_at_local")
-

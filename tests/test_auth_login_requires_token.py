@@ -38,4 +38,3 @@ async def test_login_requires_memos_token(tmp_path: Path):
     async with _make_async_client() as client:
         r = await client.post("/api/v1/auth/login", json={"username": "u1", "password": "pass1234"})
         assert r.status_code == 409
-

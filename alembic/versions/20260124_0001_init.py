@@ -49,7 +49,9 @@ def upgrade() -> None:
             sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
             sa.Column("key", sa.String(length=128), nullable=False),
             sa.Column("value_json", sa.JSON(), nullable=False),
-            sa.Column("client_updated_at_ms", sa.BigInteger(), nullable=False, server_default=sa.text("0")),
+            sa.Column(
+                "client_updated_at_ms", sa.BigInteger(), nullable=False, server_default=sa.text("0")
+            ),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -57,8 +59,12 @@ def upgrade() -> None:
         )
         op.create_index("ix_user_settings_user_id", "user_settings", ["user_id"], unique=False)
         op.create_index("ix_user_settings_key", "user_settings", ["key"], unique=False)
-        op.create_index("ix_user_settings_deleted_at", "user_settings", ["deleted_at"], unique=False)
-        op.create_index("ix_user_settings_updated_at", "user_settings", ["updated_at"], unique=False)
+        op.create_index(
+            "ix_user_settings_deleted_at", "user_settings", ["deleted_at"], unique=False
+        )
+        op.create_index(
+            "ix_user_settings_updated_at", "user_settings", ["updated_at"], unique=False
+        )
 
     if not _table_exists("todo_lists"):
         op.create_table(
@@ -69,7 +75,9 @@ def upgrade() -> None:
             sa.Column("color", sa.String(length=32), nullable=True),
             sa.Column("sort_order", sa.Integer(), nullable=False, server_default=sa.text("0")),
             sa.Column("archived", sa.Boolean(), nullable=False, server_default=sa.text("false")),
-            sa.Column("client_updated_at_ms", sa.BigInteger(), nullable=False, server_default=sa.text("0")),
+            sa.Column(
+                "client_updated_at_ms", sa.BigInteger(), nullable=False, server_default=sa.text("0")
+            ),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -85,22 +93,37 @@ def upgrade() -> None:
             "todo_items",
             sa.Column("id", sa.String(length=36), primary_key=True, nullable=False),
             sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-            sa.Column("list_id", sa.String(length=36), sa.ForeignKey("todo_lists.id"), nullable=False),
-            sa.Column("parent_id", sa.String(length=36), sa.ForeignKey("todo_items.id"), nullable=True),
+            sa.Column(
+                "list_id", sa.String(length=36), sa.ForeignKey("todo_lists.id"), nullable=False
+            ),
+            sa.Column(
+                "parent_id", sa.String(length=36), sa.ForeignKey("todo_items.id"), nullable=True
+            ),
             sa.Column("title", sa.String(length=500), nullable=False),
             sa.Column("note", sa.Text(), nullable=False, server_default=sa.text("''")),
-            sa.Column("status", sa.String(length=20), nullable=False, server_default=sa.text("'open'")),
+            sa.Column(
+                "status", sa.String(length=20), nullable=False, server_default=sa.text("'open'")
+            ),
             sa.Column("priority", sa.Integer(), nullable=False, server_default=sa.text("0")),
             sa.Column("due_at_local", sa.String(length=19), nullable=True),
             sa.Column("completed_at_local", sa.String(length=19), nullable=True),
             sa.Column("sort_order", sa.Integer(), nullable=False, server_default=sa.text("0")),
             sa.Column("tags_json", sa.JSON(), nullable=False),
-            sa.Column("is_recurring", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+            sa.Column(
+                "is_recurring", sa.Boolean(), nullable=False, server_default=sa.text("false")
+            ),
             sa.Column("rrule", sa.String(length=512), nullable=True),
             sa.Column("dtstart_local", sa.String(length=19), nullable=True),
-            sa.Column("tzid", sa.String(length=64), nullable=False, server_default=sa.text("'Asia/Shanghai'")),
+            sa.Column(
+                "tzid",
+                sa.String(length=64),
+                nullable=False,
+                server_default=sa.text("'Asia/Shanghai'"),
+            ),
             sa.Column("reminders_json", sa.JSON(), nullable=False),
-            sa.Column("client_updated_at_ms", sa.BigInteger(), nullable=False, server_default=sa.text("0")),
+            sa.Column(
+                "client_updated_at_ms", sa.BigInteger(), nullable=False, server_default=sa.text("0")
+            ),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -119,15 +142,24 @@ def upgrade() -> None:
             "todo_item_occurrences",
             sa.Column("id", sa.String(length=36), primary_key=True, nullable=False),
             sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-            sa.Column("item_id", sa.String(length=36), sa.ForeignKey("todo_items.id"), nullable=False),
-            sa.Column("tzid", sa.String(length=64), nullable=False, server_default=sa.text("'Asia/Shanghai'")),
+            sa.Column(
+                "item_id", sa.String(length=36), sa.ForeignKey("todo_items.id"), nullable=False
+            ),
+            sa.Column(
+                "tzid",
+                sa.String(length=64),
+                nullable=False,
+                server_default=sa.text("'Asia/Shanghai'"),
+            ),
             sa.Column("recurrence_id_local", sa.String(length=19), nullable=False),
             sa.Column("status_override", sa.String(length=20), nullable=True),
             sa.Column("title_override", sa.String(length=500), nullable=True),
             sa.Column("note_override", sa.Text(), nullable=True),
             sa.Column("due_at_override_local", sa.String(length=19), nullable=True),
             sa.Column("completed_at_local", sa.String(length=19), nullable=True),
-            sa.Column("client_updated_at_ms", sa.BigInteger(), nullable=False, server_default=sa.text("0")),
+            sa.Column(
+                "client_updated_at_ms", sa.BigInteger(), nullable=False, server_default=sa.text("0")
+            ),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -142,10 +174,17 @@ def upgrade() -> None:
         op.create_index("ix_todo_occ_user_id", "todo_item_occurrences", ["user_id"], unique=False)
         op.create_index("ix_todo_occ_item_id", "todo_item_occurrences", ["item_id"], unique=False)
         op.create_index(
-            "ix_todo_occ_recurrence_id_local", "todo_item_occurrences", ["recurrence_id_local"], unique=False
+            "ix_todo_occ_recurrence_id_local",
+            "todo_item_occurrences",
+            ["recurrence_id_local"],
+            unique=False,
         )
-        op.create_index("ix_todo_occ_deleted_at", "todo_item_occurrences", ["deleted_at"], unique=False)
-        op.create_index("ix_todo_occ_updated_at", "todo_item_occurrences", ["updated_at"], unique=False)
+        op.create_index(
+            "ix_todo_occ_deleted_at", "todo_item_occurrences", ["deleted_at"], unique=False
+        )
+        op.create_index(
+            "ix_todo_occ_updated_at", "todo_item_occurrences", ["updated_at"], unique=False
+        )
 
     if not _table_exists("sync_events"):
         op.create_table(

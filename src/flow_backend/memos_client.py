@@ -70,7 +70,9 @@ class MemosClient:
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             return await client.post(url, headers=headers, json=payload)
 
-    async def _patch_json(self, url: str, payload: dict[str, Any], params: dict[str, Any] | None = None) -> httpx.Response:
+    async def _patch_json(
+        self, url: str, payload: dict[str, Any], params: dict[str, Any] | None = None
+    ) -> httpx.Response:
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             return await client.patch(url, headers=self._headers(), params=params, json=payload)
 
@@ -88,7 +90,11 @@ class MemosClient:
     async def find_user_id_by_username(self, username: str) -> int | None:
         users = await self.list_users()
         for u in users:
-            if u.get("username") == username and isinstance(u.get("name"), str) and u["name"].startswith("users/"):
+            if (
+                u.get("username") == username
+                and isinstance(u.get("name"), str)
+                and u["name"].startswith("users/")
+            ):
                 try:
                     return int(u["name"].split("/", 1)[1])
                 except Exception:
@@ -98,7 +104,10 @@ class MemosClient:
     async def update_user_password(self, user_id: int, new_password: str) -> None:
         url = f"{self._base_url}/api/v1/users/{user_id}"
         params = {"update_mask": "password"}
-        payload = {"name": f"users/{user_id}", "password": memos_password_from_app_password(new_password)}
+        payload = {
+            "name": f"users/{user_id}",
+            "password": memos_password_from_app_password(new_password),
+        }
         resp = await self._patch_json(url, payload=payload, params=params)
         if 200 <= resp.status_code < 300:
             return
@@ -129,8 +138,10 @@ class MemosClient:
                         user = data.get("user")
                         if isinstance(user, dict) and isinstance(user.get("id"), int):
                             return user["id"]
-                        if isinstance(user, dict) and isinstance(user.get("name"), str) and user["name"].startswith(
-                            "users/"
+                        if (
+                            isinstance(user, dict)
+                            and isinstance(user.get("name"), str)
+                            and user["name"].startswith("users/")
                         ):
                             try:
                                 return int(user["name"].split("/", 1)[1])
@@ -142,12 +153,16 @@ class MemosClient:
                                 return int(name.split("/", 1)[1])
                             except Exception:
                                 pass
-                    raise MemosClientError(f"Create user succeeded but cannot parse response: {data}")
+                    raise MemosClientError(
+                        f"Create user succeeded but cannot parse response: {data}"
+                    )
                 if resp.status_code in (400, 409) and "already" in resp.text.lower():
                     saw_already_exists = True
                 last_error = f"{resp.status_code} {resp.text}"
         if saw_already_exists:
-            raise MemosUserAlreadyExistsError(f"Create user failed (already exists). last_error={last_error}")
+            raise MemosUserAlreadyExistsError(
+                f"Create user failed (already exists). last_error={last_error}"
+            )
         raise MemosClientError(f"Create user failed. last_error={last_error}")
 
     async def create_access_token(self, endpoints: list[str], user_id: int, token_name: str) -> str:
@@ -183,7 +198,9 @@ class MemosClient:
                             token2 = at.get("token")
                             if isinstance(token2, str) and token2:
                                 return token2
-                    raise MemosClientError(f"Create token succeeded but cannot parse response: {data}")
+                    raise MemosClientError(
+                        f"Create token succeeded but cannot parse response: {data}"
+                    )
                 if resp.status_code == 403 and "permission denied" in resp.text.lower():
                     saw_permission_denied = True
                 last_error = f"{resp.status_code} {resp.text}"
@@ -196,17 +213,26 @@ class MemosClient:
     async def create_session(self, username: str, password: str) -> httpx.Cookies:
         url = f"{self._base_url}/api/v1/auth/sessions"
         payload = {
-            "passwordCredentials": {"username": username, "password": memos_password_from_app_password(password)}
+            "passwordCredentials": {
+                "username": username,
+                "password": memos_password_from_app_password(password),
+            }
         }
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             resp = await client.post(url, json=payload)
             if 200 <= resp.status_code < 300:
                 # 说明：某些 Memos 版本通过 grpc-metadata-set-cookie 下发 cookie（而非标准 Set-Cookie）。
-                cookie_header = resp.headers.get("grpc-metadata-set-cookie") or resp.headers.get("set-cookie") or ""
+                cookie_header = (
+                    resp.headers.get("grpc-metadata-set-cookie")
+                    or resp.headers.get("set-cookie")
+                    or ""
+                )
                 cookie_pair = cookie_header.split(";", 1)[0].strip()
                 if cookie_pair:
                     # 形如：user_session=xxxx
-                    return httpx.Cookies({cookie_pair.split("=", 1)[0]: cookie_pair.split("=", 1)[1]})
+                    return httpx.Cookies(
+                        {cookie_pair.split("=", 1)[0]: cookie_pair.split("=", 1)[1]}
+                    )
                 raise MemosClientError("Create session succeeded but no session cookie returned")
             raise MemosClientError(f"Create session failed. {resp.status_code} {resp.text}")
 
@@ -271,13 +297,17 @@ class MemosClient:
         # 重要：某些 Memos 版本中，管理员无权为“其它用户”直接创建 accessToken（会 403）。
         # 因此这里采用“同密码创建 Memos 用户 + 以该用户创建 session 后自助生成 token”的策略。
         try:
-            memos_user_id = await self.create_user(create_user_endpoints, username=username, password=password)
+            memos_user_id = await self.create_user(
+                create_user_endpoints, username=username, password=password
+            )
         except MemosUserAlreadyExistsError:
             if not allow_reset_existing_user_password:
                 raise
             existing_user_id = await self.find_user_id_by_username(username=username)
             if not existing_user_id:
-                raise MemosClientError("User already exists in Memos, but cannot find user id via list users")
+                raise MemosClientError(
+                    "User already exists in Memos, but cannot find user id via list users"
+                )
             # 将 Memos 侧密码更新为用户提交的密码，便于创建 session 并签发 token（用于修复历史半成品账号）
             await self.update_user_password(user_id=existing_user_id, new_password=password)
             memos_user_id = existing_user_id

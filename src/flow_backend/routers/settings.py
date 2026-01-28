@@ -19,12 +19,14 @@ async def list_settings(
     session: AsyncSession = Depends(get_session),
 ):
     settings_rows = list(
-        (await session.exec(
-            select(UserSetting)
-            .where(UserSetting.user_id == user.id)
-            .where(UserSetting.deleted_at.is_(None))
-            .order_by(UserSetting.key.asc())
-        ))
+        (
+            await session.exec(
+                select(UserSetting)
+                .where(UserSetting.user_id == user.id)
+                .where(UserSetting.deleted_at.is_(None))
+                .order_by(UserSetting.key.asc())
+            )
+        )
     )
     data = [
         {
@@ -51,9 +53,11 @@ async def upsert_setting(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key too long")
 
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
-    row = (await session.exec(
-        select(UserSetting).where(UserSetting.user_id == user.id).where(UserSetting.key == key)
-    )).first()
+    row = (
+        await session.exec(
+            select(UserSetting).where(UserSetting.user_id == user.id).where(UserSetting.key == key)
+        )
+    ).first()
 
     if row and incoming_ms < row.client_updated_at_ms:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict (stale update)")
@@ -67,7 +71,9 @@ async def upsert_setting(
     row.deleted_at = None
 
     session.add(row)
-    record_sync_event(session, user_id=int(user.id), resource="user_setting", entity_id=key, action="upsert")
+    record_sync_event(
+        session, user_id=int(user.id), resource="user_setting", entity_id=key, action="upsert"
+    )
     await session.commit()
     await session.refresh(row)
 
@@ -94,9 +100,11 @@ async def delete_setting(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="key is empty")
 
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
-    row = (await session.exec(
-        select(UserSetting).where(UserSetting.user_id == user.id).where(UserSetting.key == key)
-    )).first()
+    row = (
+        await session.exec(
+            select(UserSetting).where(UserSetting.user_id == user.id).where(UserSetting.key == key)
+        )
+    ).first()
 
     if row and incoming_ms < row.client_updated_at_ms:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict (stale delete)")
@@ -109,7 +117,9 @@ async def delete_setting(
     row.deleted_at = utc_now()
 
     session.add(row)
-    record_sync_event(session, user_id=int(user.id), resource="user_setting", entity_id=key, action="delete")
+    record_sync_event(
+        session, user_id=int(user.id), resource="user_setting", entity_id=key, action="delete"
+    )
     await session.commit()
 
     return {"code": 200, "data": {"ok": True}}

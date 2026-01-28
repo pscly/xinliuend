@@ -52,4 +52,3 @@ def downgrade() -> None:
     op.execute(sa.text("UPDATE users SET memos_token = '' WHERE memos_token IS NULL"))
     with op.batch_alter_table("users") as batch_op:
         batch_op.alter_column("memos_token", existing_type=sa.Text(), nullable=False)
-

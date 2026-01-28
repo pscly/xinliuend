@@ -20,7 +20,11 @@ def _redact(value: Any) -> Any:
         return out
     if isinstance(value, list):
         return [_redact(x) for x in value]
-    if isinstance(value, str) and len(value) > 40 and re.search(r"eyJ|bearer|token", value, re.IGNORECASE):
+    if (
+        isinstance(value, str)
+        and len(value) > 40
+        and re.search(r"eyJ|bearer|token", value, re.IGNORECASE)
+    ):
         return value[:10] + "...(redacted)"
     return value
 
@@ -64,7 +68,11 @@ def main() -> None:
 
         latest = None
         for u in users_json.get("users", []):
-            if isinstance(u, dict) and isinstance(u.get("name"), str) and u["name"].startswith("users/"):
+            if (
+                isinstance(u, dict)
+                and isinstance(u.get("name"), str)
+                and u["name"].startswith("users/")
+            ):
                 try:
                     uid = int(u["name"].split("/", 1)[1])
                 except Exception:
@@ -93,7 +101,9 @@ def main() -> None:
         print("\ncreateSession response headers (keys):")
         print(sorted(list(sess.headers.keys()))[:80])
         raw_sc = sess.headers.get("set-cookie")
-        raw_auth = sess.headers.get("authorization") or sess.headers.get("grpc-metadata-authorization")
+        raw_auth = sess.headers.get("authorization") or sess.headers.get(
+            "grpc-metadata-authorization"
+        )
         print("has set-cookie header:", raw_sc is not None)
         print("has authorization header:", raw_auth is not None)
         if raw_sc:

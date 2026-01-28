@@ -59,7 +59,9 @@ class TodoItem(TenantRow, table=True):
 
     id: str = Field(primary_key=True, min_length=1, max_length=36)
     list_id: str = Field(index=True, foreign_key="todo_lists.id", min_length=1, max_length=36)
-    parent_id: Optional[str] = Field(default=None, index=True, foreign_key="todo_items.id", max_length=36)
+    parent_id: Optional[str] = Field(
+        default=None, index=True, foreign_key="todo_items.id", max_length=36
+    )
 
     title: str = Field(min_length=1, max_length=500)
     note: str = Field(default="", max_length=10000)
@@ -87,7 +89,9 @@ class TodoItemOccurrence(TenantRow, table=True):
     id: str = Field(primary_key=True, min_length=1, max_length=36)
     item_id: str = Field(index=True, foreign_key="todo_items.id", min_length=1, max_length=36)
     tzid: str = Field(default="Asia/Shanghai", max_length=64)
-    recurrence_id_local: str = Field(min_length=19, max_length=19, index=True)  # YYYY-MM-DDTHH:mm:ss
+    recurrence_id_local: str = Field(
+        min_length=19, max_length=19, index=True
+    )  # YYYY-MM-DDTHH:mm:ss
 
     status_override: Optional[str] = Field(default=None, max_length=20)
     title_override: Optional[str] = Field(default=None, max_length=500)

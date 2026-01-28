@@ -49,8 +49,12 @@ def _http_summary(resp: httpx.Response) -> dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="探测 Memos API（默认只读；--write 才会执行 POST 探测）")
-    parser.add_argument("--write", action="store_true", help="允许执行 POST 探测（可能会创建 token）")
+    parser = argparse.ArgumentParser(
+        description="探测 Memos API（默认只读；--write 才会执行 POST 探测）"
+    )
+    parser.add_argument(
+        "--write", action="store_true", help="允许执行 POST 探测（可能会创建 token）"
+    )
     args = parser.parse_args()
 
     print("== Settings ==")
@@ -103,7 +107,11 @@ def main() -> None:
     ]
 
     auth_probe: list[tuple[str, str, Any]] = [
-        ("POST", f"{base}/api/v1/auth/sessions", {"passwordCredentials": {"username": "dummy", "password": "dummy"}}),
+        (
+            "POST",
+            f"{base}/api/v1/auth/sessions",
+            {"passwordCredentials": {"username": "dummy", "password": "dummy"}},
+        ),
         ("GET", f"{base}/api/v1/auth/sessions/current", None),
         ("DELETE", f"{base}/api/v1/auth/sessions/current", None),
     ]
@@ -116,7 +124,11 @@ def main() -> None:
                 resp = http.request(method, url, headers=headers, json=payload)
                 summary = _http_summary(resp)
                 _print_json(f"Memos {method} {url}", summary)
-                if method == "GET" and url.endswith("/api/v1/users") and isinstance(summary.get("json"), dict):
+                if (
+                    method == "GET"
+                    and url.endswith("/api/v1/users")
+                    and isinstance(summary.get("json"), dict)
+                ):
                     users_payload = summary["json"]
             except Exception as e:
                 _print_json(f"Memos {method} {url}", {"error": str(e)})
@@ -125,10 +137,26 @@ def main() -> None:
             write_candidates = [
                 ("POST", f"{base}/api/v1/users/1/accessTokens", {"name": "codex-probe"}),
                 ("POST", f"{base}/api/v1/users/1/accessTokens", {"description": "codex-probe"}),
-                ("POST", f"{base}/api/v1/users/1/accessTokens", {"accessToken": {"name": "codex-probe"}}),
-                ("POST", f"{base}/api/v1/users/1/accessTokens", {"accessToken": {"description": "codex-probe"}}),
-                ("POST", f"{base}/api/v1/users/1/accessTokens", {"name": "codex-probe", "expiresAt": 0}),
-                ("POST", f"{base}/api/v1/users/1/accessTokens", {"accessToken": {"description": "codex-probe", "expiresAt": 0}}),
+                (
+                    "POST",
+                    f"{base}/api/v1/users/1/accessTokens",
+                    {"accessToken": {"name": "codex-probe"}},
+                ),
+                (
+                    "POST",
+                    f"{base}/api/v1/users/1/accessTokens",
+                    {"accessToken": {"description": "codex-probe"}},
+                ),
+                (
+                    "POST",
+                    f"{base}/api/v1/users/1/accessTokens",
+                    {"name": "codex-probe", "expiresAt": 0},
+                ),
+                (
+                    "POST",
+                    f"{base}/api/v1/users/1/accessTokens",
+                    {"accessToken": {"description": "codex-probe", "expiresAt": 0}},
+                ),
             ]
             for method, url, payload in write_candidates:
                 try:
@@ -161,7 +189,9 @@ def main() -> None:
             url = f"{base}/api/v1/users/{latest_user_id}/accessTokens"
             if args.write:
                 try:
-                    resp = http.post(url, headers=headers, json={"description": "codex-probe-latest"})
+                    resp = http.post(
+                        url, headers=headers, json={"description": "codex-probe-latest"}
+                    )
                     _print_json(f"Memos(write) POST {url} (latest user)", _http_summary(resp))
                 except Exception as e:
                     _print_json(f"Memos(write) POST {url} (latest user)", {"error": str(e)})

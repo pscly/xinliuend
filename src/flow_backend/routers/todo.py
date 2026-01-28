@@ -28,12 +28,14 @@ def _new_id() -> str:
 
 
 async def _require_list(session: AsyncSession, user_id: int, list_id: str) -> TodoList:
-    row = (await session.exec(
-        select(TodoList)
-        .where(TodoList.user_id == user_id)
-        .where(TodoList.id == list_id)
-        .where(TodoList.deleted_at.is_(None))
-    )).first()
+    row = (
+        await session.exec(
+            select(TodoList)
+            .where(TodoList.user_id == user_id)
+            .where(TodoList.id == list_id)
+            .where(TodoList.deleted_at.is_(None))
+        )
+    ).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo list not found")
     return row
@@ -43,13 +45,17 @@ def _apply_lww(incoming_ms: int, existing_ms: int) -> bool:
     return incoming_ms >= existing_ms
 
 
-def _validate_recurring(is_recurring: bool, rrule: Optional[str], dtstart_local: Optional[str]) -> None:
+def _validate_recurring(
+    is_recurring: bool, rrule: Optional[str], dtstart_local: Optional[str]
+) -> None:
     if not is_recurring:
         return
     if not (rrule and rrule.strip()):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="rrule is required")
     if not (dtstart_local and dtstart_local.strip()):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="dtstart_local is required")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="dtstart_local is required"
+        )
 
 
 @router.get("/lists")
@@ -61,7 +67,9 @@ async def list_todo_lists(
     q = select(TodoList).where(TodoList.user_id == user.id).where(TodoList.deleted_at.is_(None))
     if not include_archived:
         q = q.where(TodoList.archived.is_(False))
-    rows = list(await session.exec(q.order_by(TodoList.sort_order.asc(), TodoList.created_at.asc())))
+    rows = list(
+        await session.exec(q.order_by(TodoList.sort_order.asc(), TodoList.created_at.asc()))
+    )
     data = [
         {
             "id": r.id,
@@ -86,9 +94,11 @@ async def upsert_todo_list(
     list_id = payload.id or _new_id()
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
 
-    row = (await session.exec(
-        select(TodoList).where(TodoList.user_id == user.id).where(TodoList.id == list_id)
-    )).first()
+    row = (
+        await session.exec(
+            select(TodoList).where(TodoList.user_id == user.id).where(TodoList.id == list_id)
+        )
+    ).first()
     if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict (stale update)")
     if not row:
@@ -103,7 +113,9 @@ async def upsert_todo_list(
     row.deleted_at = None
 
     session.add(row)
-    record_sync_event(session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="upsert")
+    record_sync_event(
+        session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="upsert"
+    )
     await session.commit()
     await session.refresh(row)
     return {"code": 200, "data": {"id": row.id}}
@@ -116,12 +128,14 @@ async def patch_todo_list(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    row = (await session.exec(
-        select(TodoList)
-        .where(TodoList.user_id == user.id)
-        .where(TodoList.id == list_id)
-        .where(TodoList.deleted_at.is_(None))
-    )).first()
+    row = (
+        await session.exec(
+            select(TodoList)
+            .where(TodoList.user_id == user.id)
+            .where(TodoList.id == list_id)
+            .where(TodoList.deleted_at.is_(None))
+        )
+    ).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo list not found")
 
@@ -142,7 +156,9 @@ async def patch_todo_list(
     row.updated_at = utc_now()
 
     session.add(row)
-    record_sync_event(session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="upsert")
+    record_sync_event(
+        session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="upsert"
+    )
     await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
@@ -154,12 +170,14 @@ async def reorder_todo_lists(
     session: AsyncSession = Depends(get_session),
 ):
     for it in items:
-        row = (await session.exec(
-            select(TodoList)
-            .where(TodoList.user_id == user.id)
-            .where(TodoList.id == it.id)
-            .where(TodoList.deleted_at.is_(None))
-        )).first()
+        row = (
+            await session.exec(
+                select(TodoList)
+                .where(TodoList.user_id == user.id)
+                .where(TodoList.id == it.id)
+                .where(TodoList.deleted_at.is_(None))
+            )
+        ).first()
         if not row:
             continue
         incoming_ms = clamp_client_updated_at_ms(it.client_updated_at_ms) or now_ms()
@@ -169,7 +187,9 @@ async def reorder_todo_lists(
         row.client_updated_at_ms = incoming_ms
         row.updated_at = utc_now()
         session.add(row)
-        record_sync_event(session, user_id=int(user.id), resource="todo_list", entity_id=row.id, action="upsert")
+        record_sync_event(
+            session, user_id=int(user.id), resource="todo_list", entity_id=row.id, action="upsert"
+        )
     await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
@@ -181,9 +201,11 @@ async def delete_todo_list(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    row = (await session.exec(
-        select(TodoList).where(TodoList.user_id == user.id).where(TodoList.id == list_id)
-    )).first()
+    row = (
+        await session.exec(
+            select(TodoList).where(TodoList.user_id == user.id).where(TodoList.id == list_id)
+        )
+    ).first()
     if not row:
         return {"code": 200, "data": {"ok": True}}
 
@@ -196,7 +218,9 @@ async def delete_todo_list(
     row.deleted_at = utc_now()
 
     session.add(row)
-    record_sync_event(session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="delete")
+    record_sync_event(
+        session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="delete"
+    )
     await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
@@ -240,7 +264,9 @@ async def list_todo_items(
 
     rows = list(
         await session.exec(
-            q.order_by(TodoItem.sort_order.asc(), TodoItem.created_at.asc()).offset(offset).limit(limit)
+            q.order_by(TodoItem.sort_order.asc(), TodoItem.created_at.asc())
+            .offset(offset)
+            .limit(limit)
         )
     )
     data = [
@@ -280,9 +306,11 @@ async def _upsert_item_row(
     await _require_list(session, user_id=user_id, list_id=payload.list_id)
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
 
-    row = (await session.exec(
-        select(TodoItem).where(TodoItem.user_id == user_id).where(TodoItem.id == item_id)
-    )).first()
+    row = (
+        await session.exec(
+            select(TodoItem).where(TodoItem.user_id == user_id).where(TodoItem.id == item_id)
+        )
+    ).first()
     if row and not _apply_lww(incoming_ms, row.client_updated_at_ms):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict (stale update)")
     if not row:
@@ -316,7 +344,9 @@ async def _upsert_item_row(
     row.deleted_at = None
 
     session.add(row)
-    record_sync_event(session, user_id=user_id, resource="todo_item", entity_id=item_id, action="upsert")
+    record_sync_event(
+        session, user_id=user_id, resource="todo_item", entity_id=item_id, action="upsert"
+    )
     return row
 
 
@@ -341,7 +371,9 @@ async def bulk_upsert_todo_items(
     ids: list[str] = []
     for payload in payloads:
         item_id = payload.id or _new_id()
-        await _upsert_item_row(session=session, user_id=int(user.id), payload=payload, item_id=item_id)
+        await _upsert_item_row(
+            session=session, user_id=int(user.id), payload=payload, item_id=item_id
+        )
         ids.append(item_id)
     await session.commit()
     return {"code": 200, "data": {"ids": ids}}
@@ -354,12 +386,14 @@ async def patch_todo_item(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    row = (await session.exec(
-        select(TodoItem)
-        .where(TodoItem.user_id == user.id)
-        .where(TodoItem.id == item_id)
-        .where(TodoItem.deleted_at.is_(None))
-    )).first()
+    row = (
+        await session.exec(
+            select(TodoItem)
+            .where(TodoItem.user_id == user.id)
+            .where(TodoItem.id == item_id)
+            .where(TodoItem.deleted_at.is_(None))
+        )
+    ).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo item not found")
 
@@ -405,7 +439,9 @@ async def patch_todo_item(
     row.client_updated_at_ms = incoming_ms
     row.updated_at = utc_now()
     session.add(row)
-    record_sync_event(session, user_id=int(user.id), resource="todo_item", entity_id=item_id, action="upsert")
+    record_sync_event(
+        session, user_id=int(user.id), resource="todo_item", entity_id=item_id, action="upsert"
+    )
     await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
@@ -417,9 +453,11 @@ async def delete_todo_item(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    row = (await session.exec(
-        select(TodoItem).where(TodoItem.user_id == user.id).where(TodoItem.id == item_id)
-    )).first()
+    row = (
+        await session.exec(
+            select(TodoItem).where(TodoItem.user_id == user.id).where(TodoItem.id == item_id)
+        )
+    ).first()
     if not row:
         return {"code": 200, "data": {"ok": True}}
 
@@ -431,7 +469,9 @@ async def delete_todo_item(
     row.updated_at = utc_now()
     row.deleted_at = utc_now()
     session.add(row)
-    record_sync_event(session, user_id=int(user.id), resource="todo_item", entity_id=item_id, action="delete")
+    record_sync_event(
+        session, user_id=int(user.id), resource="todo_item", entity_id=item_id, action="delete"
+    )
     await session.commit()
     return {"code": 200, "data": {"ok": True}}
 
@@ -443,31 +483,37 @@ async def _upsert_occurrence_row(
     payload: TodoItemOccurrenceUpsertRequest,
     occurrence_id: str,
 ) -> TodoItemOccurrence:
-    item = (await session.exec(
-        select(TodoItem)
-        .where(TodoItem.user_id == user_id)
-        .where(TodoItem.id == payload.item_id)
-        .where(TodoItem.deleted_at.is_(None))
-    )).first()
+    item = (
+        await session.exec(
+            select(TodoItem)
+            .where(TodoItem.user_id == user_id)
+            .where(TodoItem.id == payload.item_id)
+            .where(TodoItem.deleted_at.is_(None))
+        )
+    ).first()
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo item not found")
 
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
 
-    row = (await session.exec(
-        select(TodoItemOccurrence)
-        .where(TodoItemOccurrence.user_id == user_id)
-        .where(TodoItemOccurrence.id == occurrence_id)
-    )).first()
-    if not row and payload.id is None:
-        # 若客户端没给 id，则按唯一键查找，避免重复插入
-        row = (await session.exec(
+    row = (
+        await session.exec(
             select(TodoItemOccurrence)
             .where(TodoItemOccurrence.user_id == user_id)
-            .where(TodoItemOccurrence.item_id == payload.item_id)
-            .where(TodoItemOccurrence.tzid == "Asia/Shanghai")
-            .where(TodoItemOccurrence.recurrence_id_local == payload.recurrence_id_local)
-        )).first()
+            .where(TodoItemOccurrence.id == occurrence_id)
+        )
+    ).first()
+    if not row and payload.id is None:
+        # 若客户端没给 id，则按唯一键查找，避免重复插入
+        row = (
+            await session.exec(
+                select(TodoItemOccurrence)
+                .where(TodoItemOccurrence.user_id == user_id)
+                .where(TodoItemOccurrence.item_id == payload.item_id)
+                .where(TodoItemOccurrence.tzid == "Asia/Shanghai")
+                .where(TodoItemOccurrence.recurrence_id_local == payload.recurrence_id_local)
+            )
+        ).first()
         if row:
             occurrence_id = row.id
 
@@ -577,11 +623,13 @@ async def delete_occurrence(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    row = (await session.exec(
-        select(TodoItemOccurrence)
-        .where(TodoItemOccurrence.user_id == user.id)
-        .where(TodoItemOccurrence.id == occurrence_id)
-    )).first()
+    row = (
+        await session.exec(
+            select(TodoItemOccurrence)
+            .where(TodoItemOccurrence.user_id == user.id)
+            .where(TodoItemOccurrence.id == occurrence_id)
+        )
+    ).first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="occurrence not found")
 

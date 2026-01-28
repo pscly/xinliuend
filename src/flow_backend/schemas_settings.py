@@ -12,4 +12,3 @@ class SettingUpsertRequest(BaseModel):
 
 class SettingDeleteRequest(BaseModel):
     client_updated_at_ms: int = 0
-

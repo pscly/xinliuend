@@ -26,4 +26,3 @@ class SyncPullResponse(BaseModel):
     next_cursor: int
     has_more: bool
     changes: dict[str, Any]
-

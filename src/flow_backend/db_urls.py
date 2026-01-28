@@ -53,4 +53,3 @@ def normalize_database_url_for_alembic(database_url: str) -> str:
         return url.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
 
     return url
-

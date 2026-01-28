@@ -20,4 +20,3 @@ def test_register_request_rejects_over_71_bytes_password() -> None:
     too_long = "a" * 72
     with pytest.raises(ValueError):
         RegisterRequest(username="abc123", password=too_long)
-
