@@ -24,6 +24,15 @@
 uv sync
 ```
 
+（可选）安装开发依赖并运行本地检查：
+
+```powershell
+uv sync --extra dev
+uv run ruff check .
+uv run ruff format .
+uv run pytest
+```
+
 3）启动服务：
 
 ```powershell
@@ -54,6 +63,8 @@ docker compose up -d --build
 ```powershell
 docker compose --profile postgres up -d --build
 ```
+
+说明：该 profile 会启动仓库内置的 `postgres` 服务（用户名/密码/库名通过 `.env` 里的 `POSTGRES_*` 配置）。
 
 3）查看日志：
 

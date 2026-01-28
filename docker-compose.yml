@@ -30,3 +30,24 @@ services:
       SYNC_MAX_CLIENT_CLOCK_SKEW_SECONDS: ${SYNC_MAX_CLIENT_CLOCK_SKEW_SECONDS:-300}
       SYNC_PULL_LIMIT: ${SYNC_PULL_LIMIT:-200}
       DEFAULT_TZID: ${DEFAULT_TZID:-Asia/Shanghai}
+
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flow}
+      POSTGRES_USER: ${POSTGRES_USER:-flow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password_change_me}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flow} -d ${POSTGRES_DB:-flow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:

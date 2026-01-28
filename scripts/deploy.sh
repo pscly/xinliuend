@@ -17,6 +17,9 @@ GIT_BRANCH="${GIT_BRANCH:-main}"
 # 支持通过环境变量启用 compose profile（例如：export DEPLOY_COMPOSE_PROFILES=postgres）
 DEPLOY_COMPOSE_PROFILES="${DEPLOY_COMPOSE_PROFILES:-}"
 
+# 是否在部署前清空 volumes（危险！会删除持久化数据）
+DEPLOY_WIPE_VOLUMES="${DEPLOY_WIPE_VOLUMES:-false}"
+
 # 简单的互斥锁：避免同一台机器并发部署互相踩踏
 LOCK_DIR="${DEPLOY_LOCK_DIR:-/tmp/xinliuend-deploy.lock}"
 if mkdir "${LOCK_DIR}" 2>/dev/null; then
@@ -62,8 +65,16 @@ if [[ -n "${DEPLOY_COMPOSE_PROFILES}" ]]; then
 fi
 
 log "构建并启动：docker compose up -d --build --remove-orphans"
-log "强制清理：docker compose down -v --remove-orphans（会删除 volumes/持久化数据）"
-docker compose "${PROFILE_ARGS[@]}" down -v --remove-orphans
+
+DOWN_ARGS=(down --remove-orphans)
+if [[ "${DEPLOY_WIPE_VOLUMES}" == "true" ]]; then
+  DOWN_ARGS=(down -v --remove-orphans)
+  log "停止并清空数据：docker compose down -v --remove-orphans（将删除 volumes/持久化数据）"
+else
+  log "停止：docker compose down --remove-orphans（保留 volumes；如需清空请设 DEPLOY_WIPE_VOLUMES=true）"
+fi
+
+docker compose "${PROFILE_ARGS[@]}" "${DOWN_ARGS[@]}"
 
 log "构建并启动：docker compose up -d --build --remove-orphans"
 docker compose "${PROFILE_ARGS[@]}" up -d --build --remove-orphans

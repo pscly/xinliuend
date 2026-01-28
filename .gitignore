@@ -20,6 +20,13 @@ env/
 .pytest_cache/
 .mypy_cache/
 
+.vscode/
+.idea/
+.coverage
+htmlcov/
+coverage.xml
+*.log
+
 dist/
 build/
 *.egg-info/

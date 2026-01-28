@@ -66,8 +66,13 @@ jobs:
                 [[ -n "$p_trimmed" ]] && PROFILE_ARGS="${PROFILE_ARGS} --profile ${p_trimmed}"
               done
             fi
+            WIPE_VOLUMES="${DEPLOY_WIPE_VOLUMES:-false}"
+            DOWN_ARGS="down --remove-orphans"
+            if [[ "${WIPE_VOLUMES}" == "true" ]]; then
+              DOWN_ARGS="down -v --remove-orphans"
+            fi
             # shellcheck disable=SC2086
-            docker compose ${PROFILE_ARGS} down -v --remove-orphans
+            docker compose ${PROFILE_ARGS} ${DOWN_ARGS}
             # shellcheck disable=SC2086
             docker compose ${PROFILE_ARGS} up -d --build --remove-orphans
           fi
