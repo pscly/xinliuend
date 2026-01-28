@@ -40,9 +40,7 @@ class Settings(BaseSettings):
 
     # Comma-separated endpoint list, tried in order.
     memos_create_user_endpoints: str = "/api/v1/users"
-    memos_create_token_endpoints: str = (
-        "/api/v1/users/{user_id}/accessTokens"
-    )
+    memos_create_token_endpoints: str = "/api/v1/users/{user_id}/accessTokens"
 
     dev_bypass_memos: bool = False
     log_level: str = "INFO"
@@ -65,7 +63,9 @@ class Settings(BaseSettings):
         eps = _split_csv(self.memos_create_user_endpoints)
         if "/api/v1/users" in eps and "/api/v1/user" in eps:
             # 某些部署/版本 /api/v1/user 不存在，优先尝试 /api/v1/users
-            eps = ["/api/v1/users", "/api/v1/user"] + [e for e in eps if e not in {"/api/v1/users", "/api/v1/user"}]
+            eps = ["/api/v1/users", "/api/v1/user"] + [
+                e for e in eps if e not in {"/api/v1/users", "/api/v1/user"}
+            ]
         return eps
 
     def create_token_endpoints_list(self) -> list[str]:
@@ -74,6 +74,18 @@ class Settings(BaseSettings):
         if preferred in eps:
             eps = [preferred] + [e for e in eps if e != preferred]
         return eps
+
+    def security_warnings(self) -> list[str]:
+        warnings: list[str] = []
+        if self.admin_basic_password == "admin_password_change_me":
+            warnings.append("ADMIN_BASIC_PASSWORD is using placeholder value")
+        if self.admin_session_secret == "admin_session_secret_change_me":
+            warnings.append("ADMIN_SESSION_SECRET is using placeholder value")
+        if self.cors_allow_origins.strip() == "*":
+            warnings.append("CORS_ALLOW_ORIGINS='*' is permissive")
+        if self.dev_bypass_memos:
+            warnings.append("DEV_BYPASS_MEMOS=true should not be enabled in production")
+        return warnings
 
 
 settings = Settings()

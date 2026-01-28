@@ -12,12 +12,17 @@ app = FastAPI(title=settings.app_name)
 
 logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
 
+logger = logging.getLogger(__name__)
+for msg in settings.security_warnings():
+    logger.warning("SECURITY WARNING: %s", msg)
+
 origins = settings.cors_origins_list()
 if origins == ["*"]:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_credentials=True,
+        # Bearer-token auth; no cross-site cookies needed.
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -25,7 +30,7 @@ elif origins:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )

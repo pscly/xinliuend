@@ -36,6 +36,23 @@ def _admin_redirect(msg: str | None = None, err: str | None = None) -> RedirectR
     return RedirectResponse(url=url, status_code=303)
 
 
+def _normalize_next_url(next_url: str | None) -> str:
+    """Normalize user-provided next url to a safe in-site path.
+
+    - Only allow absolute paths like "/admin".
+    - Reject scheme-relative redirects like "//evil.com".
+    """
+
+    v = (next_url or "").strip()
+    if not v:
+        return "/admin"
+    if not v.startswith("/"):
+        return "/admin"
+    if v.startswith("//"):
+        return "/admin"
+    return v
+
+
 def _hmac_sha256(secret: str, message: str) -> str:
     digest = hmac.new(secret.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).digest()
     # URL-safe 且更短一些
@@ -51,7 +68,9 @@ def _make_admin_session_cookie_value(csrf_token: str, now_ts: int | None = None)
     return f"{payload}.{sig}"
 
 
-def _verify_admin_session_cookie(cookie_value: str | None, now_ts: int | None = None) -> dict | None:
+def _verify_admin_session_cookie(
+    cookie_value: str | None, now_ts: int | None = None
+) -> dict | None:
     if not cookie_value:
         return None
     parts = cookie_value.split(".")
@@ -101,7 +120,9 @@ def _get_admin_session(request: Request) -> dict | None:
     return _verify_admin_session_cookie(request.cookies.get(settings.admin_session_cookie_name))
 
 
-def _redirect_to_login(next_url: str = "/admin", err: str | None = None, msg: str | None = None) -> RedirectResponse:
+def _redirect_to_login(
+    next_url: str = "/admin", err: str | None = None, msg: str | None = None
+) -> RedirectResponse:
     url = "/admin/login"
     if next_url:
         url += f"?next={quote(next_url)}"
@@ -126,7 +147,7 @@ def admin_login_page(request: Request):
 
     err = request.query_params.get("err")
     msg = request.query_params.get("msg")
-    next_url = request.query_params.get("next") or "/admin"
+    next_url = _normalize_next_url(request.query_params.get("next"))
     return templates.TemplateResponse(
         request=request,
         name="admin/login.html",
@@ -139,15 +160,12 @@ async def admin_login_submit(request: Request):
     form = await request.form()
     username = str(form.get("username") or "").strip()
     password = str(form.get("password") or "")
-    next_url = str(form.get("next") or "/admin").strip() or "/admin"
-    # 防止 open redirect：只允许站内路径
-    if not next_url.startswith("/"):
-        next_url = "/admin"
+    next_url = _normalize_next_url(str(form.get("next") or ""))
 
     ok_user = secrets.compare_digest(username, settings.admin_basic_user)
     ok_pass = secrets.compare_digest(password, settings.admin_basic_password)
     if not (ok_user and ok_pass):
-        return RedirectResponse(url="/admin/login?err=账号或密码错误", status_code=303)
+        return _redirect_to_login(next_url=next_url, err="账号或密码错误")
 
     csrf_token = secrets.token_urlsafe(24)
     resp = RedirectResponse(url=next_url, status_code=303)
@@ -171,7 +189,9 @@ async def admin_index(
     if not sess:
         return _redirect_to_login(next_url="/admin")
 
-    users = list(await session.exec(select(User).order_by(User.id.desc())))
+    # Avoid relying on SQLAlchemy-instrumented attribute typing for `.desc()`.
+    users = list(await session.exec(select(User).order_by(User.id)))
+    users.reverse()
     msg = request.query_params.get("msg")
     err = request.query_params.get("err")
     return templates.TemplateResponse(
@@ -231,6 +251,13 @@ async def admin_create_user(
     if existing:
         return _admin_redirect(err="用户名已存在")
 
+    if memos_token:
+        existing_token = (
+            await session.exec(select(User).where(User.memos_token == memos_token))
+        ).first()
+        if existing_token:
+            return _admin_redirect(err="Token 已被其它用户占用")
+
     user = User(
         username=username,
         password_hash="",
@@ -247,7 +274,7 @@ async def admin_create_user(
         await session.commit()
     except IntegrityError:
         await session.rollback()
-        return _admin_redirect(err="用户名已存在")
+        return _admin_redirect(err="用户名或 Token 已存在")
 
     return _admin_redirect(msg="创建成功")
 
@@ -329,8 +356,21 @@ async def set_token(
         user.memos_id = int(memos_id_s)
     else:
         user.memos_id = None
+
+    if token:
+        existing_token = (
+            await session.exec(
+                select(User).where((User.memos_token == token) & (User.id != user_id))
+            )
+        ).first()
+        if existing_token:
+            return _admin_redirect(err="Token 已被其它用户占用")
     user.memos_token = token or None
 
-    session.add(user)
-    await session.commit()
+    try:
+        session.add(user)
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        return _admin_redirect(err="保存失败：用户名或 Token 冲突")
     return _admin_redirect(msg="已保存 Token（为空则清空）")
