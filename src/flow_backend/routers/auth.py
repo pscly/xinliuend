@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
 from flow_backend.db import get_session
+from flow_backend.device_tracking import record_device_activity
 from flow_backend.memos_client import MemosClient, MemosClientError
 from flow_backend.models import User
 from flow_backend.schemas import LoginRequest, RegisterRequest
@@ -18,7 +19,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register")
-async def register(payload: RegisterRequest, session: AsyncSession = Depends(get_session)):
+async def register(
+    payload: RegisterRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
     existing = (await session.exec(select(User).where(User.username == payload.username))).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
@@ -69,11 +74,18 @@ async def register(payload: RegisterRequest, session: AsyncSession = Depends(get
         await session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
 
+    # Best-effort: record device/IP at registration time as well.
+    await record_device_activity(session=session, user_id=int(user.id), request=request)
+
     return {"code": 200, "data": {"token": user.memos_token, "server_url": settings.memos_base_url}}
 
 
 @router.post("/login")
-async def login(payload: LoginRequest, session: AsyncSession = Depends(get_session)):
+async def login(
+    payload: LoginRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
     user = (await session.exec(select(User).where(User.username == payload.username))).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
@@ -83,5 +95,8 @@ async def login(payload: LoginRequest, session: AsyncSession = Depends(get_sessi
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="memos token not set; contact admin"
         )
+
+    # Record device/IP on login too (best-effort).
+    await record_device_activity(session=session, user_id=int(user.id), request=request)
 
     return {"code": 200, "data": {"token": user.memos_token, "server_url": settings.memos_base_url}}
