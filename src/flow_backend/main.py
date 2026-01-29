@@ -1,14 +1,25 @@
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from flow_backend.config import settings
+from flow_backend.db import dispose_engine_cache
 from flow_backend.routers import admin, auth, settings as settings_router, sync as sync_router, todo
 
-app = FastAPI(title=settings.app_name)
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):  # noqa: ARG001
+    yield
+    # Ensure sqlite/aiosqlite worker threads don't keep the process alive.
+    dispose_engine_cache()
+
+
+app = FastAPI(title=settings.app_name, lifespan=_lifespan)
+
 
 logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
 

@@ -24,7 +24,27 @@ def get_engine() -> AsyncEngine:
     return _create_async_engine(settings.database_url)
 
 
+def dispose_engine_cache() -> None:
+    """Dispose the cached engine to avoid leaking sqlite worker threads.
+
+    With aiosqlite, open connections may keep a non-daemon worker thread alive.
+    In CI this can make `pytest` finish but the process never exits.
+    """
+
+    if get_engine.cache_info().currsize == 0:
+        return
+
+    try:
+        engine = get_engine()
+    except Exception:
+        return
+
+    # AsyncEngine wraps a sync Engine; disposing the sync pool is enough here.
+    engine.sync_engine.dispose()
+
+
 def reset_engine_cache() -> None:
+    dispose_engine_cache()
     get_engine.cache_clear()
 
 
