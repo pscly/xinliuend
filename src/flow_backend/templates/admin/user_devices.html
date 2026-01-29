@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Flow 管理后台 - 设备/IP</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: [
+                "ui-sans-serif",
+                "system-ui",
+                "-apple-system",
+                "Segoe UI",
+                "Roboto",
+                "Helvetica",
+                "Arial",
+                "Noto Sans SC",
+                "PingFang SC",
+                "Microsoft YaHei",
+                "sans-serif",
+              ],
+              mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "monospace"],
+            },
+            boxShadow: {
+              soft: "0 10px 30px rgba(0,0,0,.35)",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+    <div class="pointer-events-none fixed inset-0 -z-10">
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(99,102,241,0.18),transparent_55%)]"></div>
+      <div class="absolute inset-0 opacity-20 [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <div class="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div class="text-xl sm:text-2xl font-semibold tracking-tight">设备 / IP</div>
+          <div class="mt-1 text-sm text-zinc-400">
+            用户：<span class="text-zinc-200 font-semibold">{{ user.username }}</span>
+            <span class="text-zinc-500">(ID {{ user.id }})</span>
+          </div>
+          <div class="mt-1 text-xs text-zinc-500">
+            在线口径：最近 {{ (active_window_seconds // 3600) }} 小时内有调用带 Token 的后端接口（需要 App 传 device_id/device_name）。
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a href="/admin" class="rounded-xl bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-2 text-xs font-semibold ring-1 ring-zinc-700">返回列表</a>
+          <form method="post" action="/admin/logout">
+            <button class="rounded-xl bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-2 text-xs font-semibold ring-1 ring-zinc-700" type="submit">退出登录</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="rounded-2xl bg-zinc-900/45 ring-1 ring-zinc-800 shadow-soft overflow-hidden">
+        <div class="px-5 py-4 border-b border-zinc-800/80">
+          <div class="text-base font-semibold">设备列表</div>
+          <div class="mt-1 text-sm text-zinc-400">展示该账号最近活跃的设备与其登录 IP 记录</div>
+        </div>
+
+        {% if not device_views %}
+          <div class="p-6 text-sm text-zinc-400">
+            暂无设备数据：需要 App 在调用后端接口时携带 Header：<code class="font-mono text-zinc-200">X-Flow-Device-Id</code> / <code class="font-mono text-zinc-200">X-Flow-Device-Name</code>。
+          </div>
+        {% else %}
+          <div class="overflow-x-auto">
+            <table class="min-w-[980px] w-full text-sm">
+              <thead class="bg-zinc-950/40 border-b border-zinc-800 text-zinc-300">
+                <tr>
+                  <th class="text-left px-5 py-3 w-40">状态</th>
+                  <th class="text-left px-5 py-3 w-64">设备</th>
+                  <th class="text-left px-5 py-3">Device ID</th>
+                  <th class="text-left px-5 py-3 w-44">最近活跃</th>
+                  <th class="text-left px-5 py-3 w-48">最近 IP</th>
+                  <th class="text-left px-5 py-3 w-[360px]">IP 记录</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-zinc-800">
+                {% for item in device_views %}
+                {% set d = item.device %}
+                <tr class="hover:bg-zinc-950/35">
+                  <td class="px-5 py-4">
+                    {% if item.online %}
+                      <span class="inline-flex items-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-400/25 px-2 py-0.5 text-xs text-emerald-200">在线</span>
+                    {% else %}
+                      <span class="inline-flex items-center rounded-full bg-zinc-500/15 ring-1 ring-zinc-400/25 px-2 py-0.5 text-xs text-zinc-200">离线</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-5 py-4 text-zinc-200">
+                    <div class="font-semibold">{{ d.device_name or '未命名设备' }}</div>
+                    {% if d.last_user_agent %}
+                      <div class="mt-1 text-xs text-zinc-500 truncate max-w-[240px]" title="{{ d.last_user_agent }}">{{ d.last_user_agent }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="px-5 py-4 text-zinc-300 font-mono text-xs">{{ d.device_id }}</td>
+                  <td class="px-5 py-4 text-zinc-400">{{ d.last_seen.strftime('%Y-%m-%d %H:%M') if d.last_seen else '' }}</td>
+                  <td class="px-5 py-4 text-zinc-300 font-mono text-xs">{{ d.last_ip or '' }}</td>
+                  <td class="px-5 py-4">
+                    <div class="flex flex-wrap gap-2">
+                      {% for iprow in item.ips[:6] %}
+                        <span class="inline-flex items-center rounded-lg bg-zinc-950/50 ring-1 ring-zinc-800 px-2 py-1 text-xs font-mono text-zinc-200" title="last_seen={{ iprow.last_seen }}">
+                          {{ iprow.ip }}
+                        </span>
+                      {% endfor %}
+                      {% if item.ips|length > 6 %}
+                        <span class="text-xs text-zinc-500">+{{ item.ips|length - 6 }}</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>
