@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import Column, Text
+from sqlalchemy import Column, Text, UniqueConstraint
 from sqlalchemy.types import JSON as SAJSON
 from sqlmodel import Field, SQLModel
 
@@ -25,6 +25,53 @@ class User(SQLModel, table=True):
 
     is_active: bool = Field(default=True, index=True)
     created_at: datetime = Field(default_factory=utc_now, index=True)
+
+
+class UserDevice(SQLModel, table=True):
+    __tablename__ = "user_devices"
+    __table_args__ = (
+        UniqueConstraint("user_id", "device_id", name="uq_user_devices_user_id_device_id"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True, foreign_key="users.id")
+
+    device_id: str = Field(index=True, min_length=1, max_length=128)
+    device_name: Optional[str] = Field(default=None, max_length=200)
+
+    first_seen: datetime = Field(default_factory=utc_now, index=True)
+    last_seen: datetime = Field(default_factory=utc_now, index=True)
+
+    last_ip: Optional[str] = Field(default=None, max_length=64, index=True)
+    last_user_agent: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+
+    revoked_at: Optional[datetime] = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=utc_now, index=True)
+    updated_at: datetime = Field(default_factory=utc_now, index=True)
+
+
+class UserDeviceIP(SQLModel, table=True):
+    __tablename__ = "user_device_ips"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "device_id",
+            "ip",
+            name="uq_user_device_ips_user_id_device_id_ip",
+        ),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True, foreign_key="users.id")
+
+    device_id: str = Field(index=True, min_length=1, max_length=128)
+    ip: str = Field(index=True, min_length=1, max_length=64)
+
+    first_seen: datetime = Field(default_factory=utc_now, index=True)
+    last_seen: datetime = Field(default_factory=utc_now, index=True)
+
+    created_at: datetime = Field(default_factory=utc_now, index=True)
+    updated_at: datetime = Field(default_factory=utc_now, index=True)
 
 
 class TenantRow(SQLModel):

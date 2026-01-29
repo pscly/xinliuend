@@ -3,22 +3,60 @@ name: Deploy
 on:
   push:
     branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      deploy_profiles:
+        description: "Optional docker compose profiles (comma-separated), e.g. postgres"
+        required: false
+        default: ""
+      wipe_volumes:
+        description: "Danger: docker compose down -v (deletes persistent data)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-main
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  verify:
+    name: Verify (lint + tests)
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.9.24"
+          enable-cache: true
+
+      - name: Install deps
+        run: uv sync --extra dev --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Test
+        run: uv run pytest
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: pscly-cn
-            host: 2.pscly.cn
-            port: 10001
-            app_dir: /root/mnt2/mydocker2/auto_github/xinliuend
           - name: pscly-cc
             host: pscly.cc
             port: 22
@@ -28,6 +66,8 @@ jobs:
       DEPLOY_HOST: ${{ matrix.host }}
       DEPLOY_PORT: ${{ matrix.port }}
       APP_DIR: ${{ matrix.app_dir }}
+      DEPLOY_PROFILES: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_profiles || '' }}
+      DEPLOY_WIPE_VOLUMES: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.wipe_volumes || 'false' }}
     steps:
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -43,7 +83,8 @@ jobs:
         run: |
           echo "[deploy] target=${DEPLOY_NAME} ${DEPLOY_HOST}:${DEPLOY_PORT} dir=${APP_DIR}"
           # 将 APP_DIR 通过 SSH 环境变量传到远端，避免 heredoc 内部变量展开导致的混淆
-          ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" "APP_DIR='${APP_DIR}' bash -s" <<'EOF'
+          ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" \
+            "APP_DIR='${APP_DIR}' DEPLOY_SKIP_GIT='true' DEPLOY_COMPOSE_PROFILES='${DEPLOY_PROFILES}' DEPLOY_WIPE_VOLUMES='${DEPLOY_WIPE_VOLUMES}' bash -s" <<'EOF'
           set -euo pipefail
 
           : "${APP_DIR:?APP_DIR 未设置}"

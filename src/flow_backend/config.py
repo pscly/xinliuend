@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     sync_pull_limit: int = 200
     default_tzid: str = "Asia/Shanghai"
 
+    # Device/IP tracking (for admin dashboard)
+    # If true, use X-Forwarded-For to determine client IP. Only enable behind a trusted proxy.
+    trust_x_forwarded_for: bool = False
+    # Consider a device "online" if it has called any authenticated API within this window.
+    device_active_window_seconds: int = 60 * 60 * 24  # 24 hours
+
     def cors_origins_list(self) -> list[str]:
         v = self.cors_allow_origins.strip()
         if not v:

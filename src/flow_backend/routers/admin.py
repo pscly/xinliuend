@@ -17,7 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
 from flow_backend.db import get_session
-from flow_backend.models import User
+from flow_backend.models import User, UserDevice, UserDeviceIP
 from flow_backend.security import hash_password
 
 router = APIRouter(tags=["admin"])
@@ -189,9 +189,7 @@ async def admin_index(
     if not sess:
         return _redirect_to_login(next_url="/admin")
 
-    # Avoid relying on SQLAlchemy-instrumented attribute typing for `.desc()`.
-    users = list(await session.exec(select(User).order_by(User.id)))
-    users.reverse()
+    users = list(await session.exec(select(User).order_by(User.__table__.c.id.desc())))
     msg = request.query_params.get("msg")
     err = request.query_params.get("err")
     return templates.TemplateResponse(
@@ -374,3 +372,59 @@ async def set_token(
         await session.rollback()
         return _admin_redirect(err="保存失败：用户名或 Token 冲突")
     return _admin_redirect(msg="已保存 Token（为空则清空）")
+
+
+@router.get("/admin/users/{user_id}/devices", response_class=HTMLResponse)
+async def admin_user_devices(
+    user_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = _get_admin_session(request)
+    if not sess:
+        return _redirect_to_login(next_url=f"/admin/users/{user_id}/devices")
+
+    user = await session.get(User, user_id)
+    if not user:
+        return _admin_redirect(err="用户不存在")
+
+    devices = list(
+        await session.exec(
+            select(UserDevice)
+            .where(UserDevice.user_id == user_id)
+            .where(UserDevice.__table__.c.revoked_at.is_(None))
+            .order_by(UserDevice.__table__.c.last_seen.desc())
+        )
+    )
+    ip_rows = list(
+        await session.exec(
+            select(UserDeviceIP)
+            .where(UserDeviceIP.user_id == user_id)
+            .order_by(UserDeviceIP.__table__.c.last_seen.desc())
+        )
+    )
+    ips_by_device_id: dict[str, list[UserDeviceIP]] = {}
+    for row in ip_rows:
+        ips_by_device_id.setdefault(row.device_id, []).append(row)
+
+    now = time.time()
+    active_since_ts = now - float(settings.device_active_window_seconds)
+
+    device_views = [
+        {
+            "device": d,
+            "online": (d.last_seen.timestamp() if d.last_seen else 0) >= active_since_ts,
+            "ips": ips_by_device_id.get(d.device_id, []),
+        }
+        for d in devices
+    ]
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/user_devices.html",
+        context={
+            "user": user,
+            "device_views": device_views,
+            "active_window_seconds": int(settings.device_active_window_seconds),
+        },
+    )

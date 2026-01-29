@@ -10,9 +10,12 @@ ts() { date '+%F %T'; }
 log() { echo "[$(ts)] [deploy] $*"; }
 die() { echo "[$(ts)] [deploy] ERROR: $*" >&2; exit 1; }
 
-APP_DIR="${APP_DIR:-/root/mnt2/mydocker2/auto_github/xinliuend}"
+APP_DIR="${APP_DIR:-/root/dockers/1auto/xinliuend}"
 GIT_REMOTE="${GIT_REMOTE:-origin}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
+
+# If the caller already updated the repo, we can skip the redundant fetch/reset.
+DEPLOY_SKIP_GIT="${DEPLOY_SKIP_GIT:-false}"
 
 # 支持通过环境变量启用 compose profile（例如：export DEPLOY_COMPOSE_PROFILES=postgres）
 DEPLOY_COMPOSE_PROFILES="${DEPLOY_COMPOSE_PROFILES:-}"
@@ -43,15 +46,19 @@ else
   log "未检测到 .env（若你依赖 .env 注入配置，请在服务器创建它）"
 fi
 
-log "同步代码：${GIT_REMOTE}/${GIT_BRANCH}"
-before_sha="$(git rev-parse HEAD || true)"
-git fetch "${GIT_REMOTE}" "${GIT_BRANCH}" --prune
-git reset --hard "${GIT_REMOTE}/${GIT_BRANCH}"
-after_sha="$(git rev-parse HEAD || true)"
-if [[ -n "${before_sha}" && -n "${after_sha}" && "${before_sha}" != "${after_sha}" ]]; then
-  log "代码已更新：${before_sha:0:7} -> ${after_sha:0:7}"
+if [[ "${DEPLOY_SKIP_GIT}" == "true" ]]; then
+  log "跳过 git 同步（DEPLOY_SKIP_GIT=true）"
 else
-  log "代码无变化（仍为 ${after_sha:0:7}）"
+  log "同步代码：${GIT_REMOTE}/${GIT_BRANCH}"
+  before_sha="$(git rev-parse HEAD || true)"
+  git fetch "${GIT_REMOTE}" "${GIT_BRANCH}" --prune
+  git reset --hard "${GIT_REMOTE}/${GIT_BRANCH}"
+  after_sha="$(git rev-parse HEAD || true)"
+  if [[ -n "${before_sha}" && -n "${after_sha}" && "${before_sha}" != "${after_sha}" ]]; then
+    log "代码已更新：${before_sha:0:7} -> ${after_sha:0:7}"
+  else
+    log "代码无变化（仍为 ${after_sha:0:7}）"
+  fi
 fi
 
 PROFILE_ARGS=()
