@@ -35,6 +35,12 @@ jobs:
       - name: Test
         run: uv run pytest -q --cov=flow_backend --cov-report=term-missing --cov-report=xml:coverage.xml
 
+      - name: Coverage gate (core modules)
+        run: >-
+          uv run coverage report --data-file=.coverage
+          --include='src/flow_backend/domain/*,src/flow_backend/services/*,src/flow_backend/repositories/*,src/flow_backend/integrations/*'
+          --fail-under=50
+
       - name: Upload coverage.xml
         uses: actions/upload-artifact@v4
         with:
