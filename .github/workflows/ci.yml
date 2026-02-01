@@ -33,4 +33,11 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Test
-        run: uv run pytest
+        run: uv run pytest -q --cov=flow_backend --cov-report=term-missing --cov-report=xml:coverage.xml
+
+      - name: Upload coverage.xml
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: error

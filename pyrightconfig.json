@@ -1,0 +1,24 @@
+{
+  "include": ["src", "tests", "alembic"],
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": ["src"]
+    }
+  ],
+  "typeCheckingMode": "basic",
+  "reportUninitializedInstanceVariable": "none",
+  "reportCallInDefaultInitializer": "none",
+  "reportGeneralTypeIssues": "none",
+  "reportMissingTypeStubs": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportAny": "none",
+  "reportExplicitAny": "none",
+  "reportDeprecated": "none",
+  "reportUnannotatedClassAttribute": "none",
+  "reportUnnecessaryTypeIgnoreComment": "none",
+  "reportIgnoreCommentWithoutRule": "none",
+  "reportOptionalOperand": "none"
+}

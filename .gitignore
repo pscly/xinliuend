@@ -35,4 +35,9 @@ build/
 tools/_*.js
 .ace-tool/
 
+# Local agent/tooling state (keep out of repo)
+.serena/
+.sisyphus/boulder.json
+.sisyphus/notepads/
+
 test
