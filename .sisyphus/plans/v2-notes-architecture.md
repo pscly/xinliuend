@@ -1008,28 +1008,17 @@ uv run pytest -q -k memos_sync
 
 **What to do**:
 - Implement server-side tag filtering for todo items.
-- Tags model decision (explicit):
-  - v2 notes uses normalized tags (Task 10).
-  - v2 todo should use the same normalized tag approach (add `todo_item_tags` join table) to avoid SQLite/Postgres JSON-dialect differences.
-  - v1 todo remains unchanged (this task is v2-only).
+- Scope boundary (explicit): v1 and v2 both support `tag` query filtering for read paths.
+- Storage decision (explicit): reuse existing `todo_items.tags_json` as the source-of-truth; do not introduce a join table in v2.0.
 
-**DB/Migration steps (pinned)**:
-- Add SQLModel table(s) for `todo_item_tags` in a dedicated module (example: `src/flow_backend/models_todo_tags.py`) and import into `src/flow_backend/models.py` so Alembic sees metadata.
-- Create an Alembic revision and upgrade head.
-
-Tags source-of-truth + backfill (pinned):
-- Source of truth for stored tags remains `todo_items.tags_json` for backward compatibility.
-- `todo_item_tags` is a derived/index table used for efficient filtering across SQLite/Postgres.
-- Migration backfill requirement: populate `todo_item_tags` from existing `todo_items.tags_json` for all non-deleted items during the Alembic revision (so v2 tag filter works on existing data).
-- Ongoing consistency requirement (v2 branch):
-  - v2 todo writes update BOTH `tags_json` and `todo_item_tags`.
-  - v1 todo writes (if still used) also update `todo_item_tags` to keep derived index in sync, without changing v1 API responses.
+SQLite/Postgres behavior (pinned):
+- SQLite: `EXISTS (SELECT 1 FROM json_each(todo_items.tags_json) WHERE value = :tag)`
+- Postgres: JSONB containment (best-effort) `tags_json::jsonb @> ['tag']`
 
 **Files to create/edit (pinned)**:
-- `src/flow_backend/v2/routers/todo.py` (implement tag filter)
-- `src/flow_backend/v2/schemas/todo.py`
-- `src/flow_backend/services/todo_service.py`
-- `src/flow_backend/repositories/todo_repo.py`
+- `src/flow_backend/routers/todo.py` (v1 list supports `tag`)
+- `src/flow_backend/v2/routers/todo.py` (v2 list supports `tag`)
+- Tests: `tests/test_settings_todo_sync.py`, `tests/test_v2_todo_items.py`
 
 **References**:
 - Anti-pattern reference (v1 code to avoid copying into v2): `src/flow_backend/routers/todo.py:248`
@@ -1044,8 +1033,7 @@ Tags source-of-truth + backfill (pinned):
 
 **Acceptance Criteria**:
 ```bash
-uv run alembic -c alembic.ini upgrade head
-uv run pytest -q -k todo_tag_filter
+uv run pytest -q -k todo_items_tag_filter
 ```
 
 ### 14) Observability & Ops Hardening
