@@ -61,6 +61,7 @@ def _todo_server_snapshot(item: TodoItem) -> ServerRowSnapshot:
         deleted=item.deleted_at is not None,
         server={
             "id": item.id,
+            "list_id": item.list_id,
             "title": item.title,
             "tags": item.tags_json,
             "tzid": item.tzid,
@@ -421,6 +422,7 @@ async def pull(
         todo_items.append(
             {
                 "id": t.id,
+                "list_id": t.list_id,
                 "title": t.title,
                 "tags": t.tags_json,
                 "tzid": t.tzid,
