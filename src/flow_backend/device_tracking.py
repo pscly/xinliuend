@@ -107,8 +107,5 @@ async def record_device_activity(session: AsyncSession, user_id: int, request: R
             ip_row.updated_at = now
         session.add(ip_row)
 
-    try:
-        await session.commit()
-    except Exception:
-        await session.rollback()
-        logger.warning("record_device_activity failed", exc_info=True)
+    # NOTE: Intentionally no commit/rollback here.
+    # Callers must decide transaction boundaries.

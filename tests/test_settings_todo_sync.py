@@ -147,3 +147,100 @@ async def test_todo_rrule_occurrence_and_sync_pull(tmp_path: Path):
             x["item_id"] == item_id and x["recurrence_id_local"] == "2026-01-24T09:00:00"
             for x in changes["todo_occurrences"]
         )
+
+
+@pytest.mark.anyio
+async def test_todo_items_tag_filter(tmp_path: Path):
+    settings.database_url = f"sqlite:///{tmp_path / 'test3.db'}"
+    reset_engine_cache()
+    await init_db()
+
+    async with session_scope() as session:
+        user = User(
+            username="u3",
+            password_hash=hash_password("pass1234"),
+            memos_id=3,
+            memos_token="tok-3",
+            is_active=True,
+        )
+        session.add(user)
+        await session.commit()
+
+    headers = {"Authorization": "Bearer tok-3"}
+    async with _make_async_client() as client:
+        r = await client.post(
+            "/api/v1/todo/lists",
+            json={
+                "name": "inbox",
+                "color": None,
+                "sort_order": 1,
+                "archived": False,
+                "client_updated_at_ms": 1000,
+            },
+            headers=headers,
+        )
+        assert r.status_code == 200
+        list_id = r.json()["data"]["id"]
+
+        r = await client.post(
+            "/api/v1/todo/items",
+            json={
+                "list_id": list_id,
+                "title": "喝水",
+                "note": "",
+                "status": "open",
+                "priority": 1,
+                "due_at_local": None,
+                "completed_at_local": None,
+                "sort_order": 1,
+                "tags": ["health", "daily"],
+                "is_recurring": False,
+                "rrule": None,
+                "dtstart_local": None,
+                "tzid": "Asia/Shanghai",
+                "reminders": [],
+                "client_updated_at_ms": 1100,
+            },
+            headers=headers,
+        )
+        assert r.status_code == 200
+        health_id = r.json()["data"]["id"]
+
+        r = await client.post(
+            "/api/v1/todo/items",
+            json={
+                "list_id": list_id,
+                "title": "写周报",
+                "note": "",
+                "status": "open",
+                "priority": 0,
+                "due_at_local": None,
+                "completed_at_local": None,
+                "sort_order": 2,
+                "tags": ["work"],
+                "is_recurring": False,
+                "rrule": None,
+                "dtstart_local": None,
+                "tzid": "Asia/Shanghai",
+                "reminders": [],
+                "client_updated_at_ms": 1200,
+            },
+            headers=headers,
+        )
+        assert r.status_code == 200
+        work_id = r.json()["data"]["id"]
+
+        r = await client.get("/api/v1/todo/items?tag=health", headers=headers)
+        assert r.status_code == 200
+        items = r.json()["data"]["items"]
+        ids = {x["id"] for x in items}
+        assert health_id in ids
+        assert work_id not in ids
+
+        # tag filter should ignore surrounding whitespace.
+        r = await client.get("/api/v1/todo/items?tag=  work ", headers=headers)
+        assert r.status_code == 200
+        items = r.json()["data"]["items"]
+        ids = {x["id"] for x in items}
+        assert work_id in ids
+        assert health_id not in ids

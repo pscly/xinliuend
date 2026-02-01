@@ -8,7 +8,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
-from flow_backend.db import get_session
+from flow_backend.db import get_session, session_scope
 from flow_backend.device_tracking import record_device_activity
 from flow_backend.memos_client import MemosClient, MemosClientError
 from flow_backend.models import User
@@ -16,6 +16,16 @@ from flow_backend.schemas import LoginRequest, RegisterRequest
 from flow_backend.security import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+async def _persist_device_tracking_best_effort(user_id: int, request: Request) -> None:
+    try:
+        async with session_scope() as tracking_session:
+            await record_device_activity(session=tracking_session, user_id=user_id, request=request)
+            await tracking_session.commit()
+    except Exception:
+        # Device tracking must never break auth flows.
+        pass
 
 
 @router.post("/register")
@@ -75,7 +85,9 @@ async def register(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
 
     # Best-effort: record device/IP at registration time as well.
-    await record_device_activity(session=session, user_id=int(user.id), request=request)
+    reg_user_id = user.id
+    if reg_user_id is not None:
+        await _persist_device_tracking_best_effort(user_id=int(reg_user_id), request=request)
 
     return {"code": 200, "data": {"token": user.memos_token, "server_url": settings.memos_base_url}}
 
@@ -97,6 +109,8 @@ async def login(
         )
 
     # Record device/IP on login too (best-effort).
-    await record_device_activity(session=session, user_id=int(user.id), request=request)
+    login_user_id = user.id
+    if login_user_id is not None:
+        await _persist_device_tracking_best_effort(user_id=int(login_user_id), request=request)
 
     return {"code": 200, "data": {"token": user.memos_token, "server_url": settings.memos_base_url}}

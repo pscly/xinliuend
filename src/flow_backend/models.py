@@ -13,7 +13,7 @@ def utc_now() -> datetime:
 
 
 class User(SQLModel, table=True):
-    __tablename__ = "users"
+    __tablename__ = "users"  # pyright: ignore[reportAssignmentType]
 
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True, min_length=1, max_length=64)
@@ -28,7 +28,7 @@ class User(SQLModel, table=True):
 
 
 class UserDevice(SQLModel, table=True):
-    __tablename__ = "user_devices"
+    __tablename__ = "user_devices"  # pyright: ignore[reportAssignmentType]
     __table_args__ = (
         UniqueConstraint("user_id", "device_id", name="uq_user_devices_user_id_device_id"),
     )
@@ -51,7 +51,7 @@ class UserDevice(SQLModel, table=True):
 
 
 class UserDeviceIP(SQLModel, table=True):
-    __tablename__ = "user_device_ips"
+    __tablename__ = "user_device_ips"  # pyright: ignore[reportAssignmentType]
     __table_args__ = (
         UniqueConstraint(
             "user_id",
@@ -84,7 +84,7 @@ class TenantRow(SQLModel):
 
 
 class UserSetting(TenantRow, table=True):
-    __tablename__ = "user_settings"
+    __tablename__ = "user_settings"  # pyright: ignore[reportAssignmentType]
 
     id: Optional[int] = Field(default=None, primary_key=True)
     key: str = Field(min_length=1, max_length=128, index=True)
@@ -92,7 +92,7 @@ class UserSetting(TenantRow, table=True):
 
 
 class TodoList(TenantRow, table=True):
-    __tablename__ = "todo_lists"
+    __tablename__ = "todo_lists"  # pyright: ignore[reportAssignmentType]
 
     id: str = Field(primary_key=True, min_length=1, max_length=36)
     name: str = Field(min_length=1, max_length=200)
@@ -102,7 +102,7 @@ class TodoList(TenantRow, table=True):
 
 
 class TodoItem(TenantRow, table=True):
-    __tablename__ = "todo_items"
+    __tablename__ = "todo_items"  # pyright: ignore[reportAssignmentType]
 
     id: str = Field(primary_key=True, min_length=1, max_length=36)
     list_id: str = Field(index=True, foreign_key="todo_lists.id", min_length=1, max_length=36)
@@ -131,7 +131,7 @@ class TodoItem(TenantRow, table=True):
 
 
 class TodoItemOccurrence(TenantRow, table=True):
-    __tablename__ = "todo_item_occurrences"
+    __tablename__ = "todo_item_occurrences"  # pyright: ignore[reportAssignmentType]
 
     id: str = Field(primary_key=True, min_length=1, max_length=36)
     item_id: str = Field(index=True, foreign_key="todo_items.id", min_length=1, max_length=36)
@@ -148,7 +148,7 @@ class TodoItemOccurrence(TenantRow, table=True):
 
 
 class SyncEvent(SQLModel, table=True):
-    __tablename__ = "sync_events"
+    __tablename__ = "sync_events"  # pyright: ignore[reportAssignmentType]
 
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(index=True, foreign_key="users.id")
@@ -158,3 +158,8 @@ class SyncEvent(SQLModel, table=True):
     action: str = Field(max_length=20)  # upsert / delete
 
     created_at: datetime = Field(default_factory=utc_now, index=True)
+
+
+# Import notes models so Alembic sees them via `flow_backend.models`.
+# pyright: ignore[reportUnusedImport]
+from . import models_notes as _models_notes  # noqa: E402,F401

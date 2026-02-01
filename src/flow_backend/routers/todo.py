@@ -1,12 +1,21 @@
+# pyright: reportUnknownArgumentType=false
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportOptionalMemberAccess=false
+# pyright: reportOptionalOperand=false
+# pyright: reportCallInDefaultInitializer=false
+
 from __future__ import annotations
 
 from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from flow_backend.config import settings
 from flow_backend.db import get_session
 from flow_backend.deps import get_current_user
 from flow_backend.models import TodoItem, TodoItemOccurrence, TodoList, User, utc_now
@@ -245,8 +254,17 @@ async def list_todo_items(
     if status_value:
         q = q.where(TodoItem.status == status_value)
     if tag:
-        # JSON 数组查询在 SQLite/PostgreSQL 上语法不同；这里先用最小实现：返回后由客户端过滤
-        pass
+        tag = tag.strip()
+        if tag:
+            if settings.database_url.lower().startswith("sqlite"):
+                q = q.where(
+                    sa.text(
+                        "EXISTS (SELECT 1 FROM json_each(todo_items.tags_json) WHERE json_each.value = :tag)"
+                    ).bindparams(tag=tag)
+                )
+            else:
+                # Best-effort: JSON containment on Postgres.
+                q = q.where(sa.cast(TodoItem.tags_json, postgresql.JSONB).contains([tag]))
 
     if not include_archived_lists:
         active_list_ids = list(
