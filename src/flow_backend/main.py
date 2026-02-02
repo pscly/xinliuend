@@ -8,6 +8,7 @@ from typing import cast
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from starlette.background import BackgroundTask, BackgroundTasks
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -160,4 +161,82 @@ app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(settings_router.router, prefix=settings.api_prefix)
 app.include_router(todo.router, prefix=settings.api_prefix)
 app.include_router(sync_router.router, prefix=settings.api_prefix)
-app.include_router(admin.router)
+app.include_router(admin.router, include_in_schema=False)
+
+
+def _openapi_schema_ref(name: str) -> dict[str, str]:
+    return {"$ref": f"#/components/schemas/{name}"}
+
+
+def _ensure_components_schema(schema: dict[str, object], *, name: str, model) -> None:  # type: ignore[no-untyped-def]
+    components = cast(dict[str, object], schema.setdefault("components", {}))
+    schemas = cast(dict[str, object], components.setdefault("schemas", {}))
+    if name in schemas:
+        return
+    schemas[name] = model.model_json_schema(ref_template="#/components/schemas/{model}")
+
+
+def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
+    # v1 response envelope.
+    from flow_backend.schemas import ApiResponse  # pyright: ignore[reportMissingTypeStubs]
+
+    _ensure_components_schema(schema, name="ApiResponse", model=ApiResponse)
+
+    api_prefix = settings.api_prefix.rstrip("/")
+    paths = cast(dict[str, object], schema.get("paths") or {})
+
+    for _path, path_item_obj in paths.items():
+        if not isinstance(path_item_obj, dict):
+            continue
+        path_item = cast(dict[str, object], path_item_obj)
+
+        for method in ("get", "post", "put", "patch", "delete"):
+            op_obj = path_item.get(method)
+            if not isinstance(op_obj, dict):
+                continue
+            op = cast(dict[str, object], op_obj)
+            responses = cast(dict[str, object], op.setdefault("responses", {}))
+
+            # Document X-Request-Id response header (added by middleware).
+            for resp_obj in responses.values():
+                if not isinstance(resp_obj, dict):
+                    continue
+                headers = cast(dict[str, object], resp_obj.setdefault("headers", {}))
+                headers.setdefault(
+                    "X-Request-Id",
+                    {
+                        "schema": {"type": "string"},
+                        "description": "Echoed or generated request id.",
+                    },
+                )
+
+            # Only patch v1 API responses (keep /health and other non-v1 endpoints unchanged).
+            if not _path.startswith(api_prefix + "/"):
+                continue
+
+            # v1 endpoints return {code, data} envelope; reflect that in 200 schema.
+            resp_200 = cast(dict[str, object], responses.setdefault("200", {"description": "OK"}))
+            content = cast(dict[str, object], resp_200.setdefault("content", {}))
+            app_json = cast(dict[str, object], content.setdefault("application/json", {}))
+            app_json["schema"] = _openapi_schema_ref("ApiResponse")
+
+    return schema
+
+
+def custom_openapi() -> dict[str, object]:
+    if app.openapi_schema:
+        return cast(dict[str, object], app.openapi_schema)
+
+    schema = cast(
+        dict[str, object],
+        get_openapi(
+            title=app.title,
+            version=cast(str, app.version) if app.version else "0.1.0",
+            routes=app.routes,
+        ),
+    )
+    app.openapi_schema = _patch_main_openapi(schema)
+    return cast(dict[str, object], app.openapi_schema)
+
+
+app.openapi = custom_openapi  # type: ignore[method-assign]

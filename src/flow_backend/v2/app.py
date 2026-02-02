@@ -8,6 +8,7 @@ from typing import cast
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -117,4 +118,146 @@ v2_app.include_router(sync_router)
 if settings.environment.lower() != "production":
     from flow_backend.v2.routers.debug import router as debug_router  # pyright: ignore[reportMissingTypeStubs]
 
-    v2_app.include_router(debug_router)
+    # Debug endpoints are internal-only; keep them out of OpenAPI.
+    v2_app.include_router(debug_router, include_in_schema=False)
+
+
+def _openapi_schema_ref(name: str) -> dict[str, str]:
+    return {"$ref": f"#/components/schemas/{name}"}
+
+
+def _ensure_components_schema(schema: dict[str, object], *, name: str, model) -> None:  # type: ignore[no-untyped-def]
+    components = cast(dict[str, object], schema.setdefault("components", {}))
+    schemas = cast(dict[str, object], components.setdefault("schemas", {}))
+    if name in schemas:
+        return
+    # Pydantic v2 generates JSON Schema compatible with OpenAPI 3.1.
+    schemas[name] = model.model_json_schema(ref_template="#/components/schemas/{model}")
+
+
+def _patch_v2_openapi(schema: dict[str, object]) -> dict[str, object]:
+    # v2 is mounted at /api/v2. Add a server entry so imported clients work.
+    schema["servers"] = [{"url": "/api/v2"}]
+
+    # Pin v2 error model in schema components.
+    _ensure_components_schema(schema, name="ErrorResponse", model=ErrorResponse)
+
+    paths = cast(dict[str, object], schema.get("paths") or {})
+    for path, path_item_obj in paths.items():
+        if not isinstance(path_item_obj, dict):
+            continue
+
+        path_item = cast(dict[str, object], path_item_obj)
+        for method in ("get", "post", "put", "patch", "delete"):
+            op_obj = path_item.get(method)
+            if not isinstance(op_obj, dict):
+                continue
+
+            op = cast(dict[str, object], op_obj)
+            responses = cast(dict[str, object], op.setdefault("responses", {}))
+
+            # FastAPI default OpenAPI documents 422 as HTTPValidationError.
+            # Runtime v2 returns ErrorResponse for validation errors.
+            responses["422"] = {
+                "description": "Validation Error",
+                "content": {"application/json": {"schema": _openapi_schema_ref("ErrorResponse")}},
+            }
+
+            auth_required = bool(op.get("security"))
+
+            # Common error responses (runtime always returns ErrorResponse for these).
+            if auth_required:
+                responses.setdefault(
+                    "401",
+                    {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {"schema": _openapi_schema_ref("ErrorResponse")}
+                        },
+                    },
+                )
+                responses.setdefault(
+                    "403",
+                    {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {"schema": _openapi_schema_ref("ErrorResponse")}
+                        },
+                    },
+                )
+
+            for code, desc in (
+                ("400", "Bad Request"),
+                ("404", "Not Found"),
+                ("409", "Conflict"),
+                ("410", "Gone"),
+                ("500", "Internal Server Error"),
+            ):
+                responses.setdefault(
+                    code,
+                    {
+                        "description": desc,
+                        "content": {
+                            "application/json": {"schema": _openapi_schema_ref("ErrorResponse")}
+                        },
+                    },
+                )
+
+            # Document response header added by RequestIdMiddleware in the main app.
+            for resp_obj in responses.values():
+                if not isinstance(resp_obj, dict):
+                    continue
+                headers = cast(dict[str, object], resp_obj.setdefault("headers", {}))
+                headers.setdefault(
+                    "X-Request-Id",
+                    {
+                        "schema": {"type": "string"},
+                        "description": "Echoed or generated request id.",
+                    },
+                )
+
+            # Binary download endpoints.
+            if method == "get" and path in {
+                "/attachments/{attachment_id}",
+                "/public/shares/{share_token}/attachments/{attachment_id}",
+            }:
+                responses["200"] = {
+                    "description": "File bytes",
+                    "content": {
+                        "application/octet-stream": {
+                            "schema": {"type": "string", "format": "binary"}
+                        }
+                    },
+                    "headers": {
+                        "Content-Disposition": {
+                            "schema": {"type": "string"},
+                            "description": "attachment; filename=...",
+                        },
+                        "X-Request-Id": {
+                            "schema": {"type": "string"},
+                            "description": "Echoed or generated request id.",
+                        },
+                    },
+                }
+
+    return schema
+
+
+def custom_openapi() -> dict[str, object]:
+    # Cache the generated schema to avoid per-request work.
+    if v2_app.openapi_schema:
+        return cast(dict[str, object], v2_app.openapi_schema)
+
+    schema = cast(
+        dict[str, object],
+        get_openapi(
+            title=v2_app.title,
+            version=cast(str, v2_app.version) if v2_app.version else "0.1.0",
+            routes=v2_app.routes,
+        ),
+    )
+    v2_app.openapi_schema = _patch_v2_openapi(schema)
+    return cast(dict[str, object], v2_app.openapi_schema)
+
+
+v2_app.openapi = custom_openapi  # type: ignore[method-assign]
