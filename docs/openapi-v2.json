@@ -1238,6 +1238,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -1429,6 +1435,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -1720,6 +1732,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -1957,6 +1975,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -2200,6 +2224,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -2448,6 +2478,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -2696,6 +2732,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -2946,6 +2988,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -3196,6 +3244,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -3448,6 +3502,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -3707,6 +3767,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -3957,6 +4023,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -4161,6 +4233,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -4376,6 +4454,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -4604,6 +4688,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -4858,6 +4948,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -5097,6 +5193,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -5419,6 +5521,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -5656,6 +5764,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -5899,6 +6013,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -6147,6 +6267,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {
@@ -6397,6 +6523,12 @@
             },
             "description": "Too Many Requests",
             "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
                 "schema": {

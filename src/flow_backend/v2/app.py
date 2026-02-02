@@ -36,6 +36,7 @@ def _map_http_status_to_error(status_code: int) -> str:
         404: "not_found",
         409: "conflict",
         410: "gone",
+        413: "payload_too_large",
         429: "rate_limited",
         502: "upstream_error",
     }
@@ -216,6 +217,18 @@ def _patch_v2_openapi(schema: dict[str, object]) -> dict[str, object]:
                     {
                         "schema": {"type": "string"},
                         "description": "Echoed or generated request id.",
+                    },
+                )
+
+            # When 429 is returned by rate limiting, the response includes Retry-After.
+            resp_429 = responses.get("429")
+            if isinstance(resp_429, dict):
+                headers = cast(dict[str, object], resp_429.setdefault("headers", {}))
+                headers.setdefault(
+                    "Retry-After",
+                    {
+                        "schema": {"type": "string"},
+                        "description": "Seconds to wait before retrying.",
                     },
                 )
 
