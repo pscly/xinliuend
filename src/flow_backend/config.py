@@ -117,6 +117,8 @@ class Settings(BaseSettings):
 
     # Rate limiting (best-effort; to reduce brute-force / abuse)
     rate_limit_window_seconds: int = 60 * 5
+    rate_limit_retention_seconds: int = 60 * 60 * 24
+    rate_limit_cleanup_interval_seconds: int = 60 * 10
     auth_login_rate_limit_per_ip: int = 30
     auth_login_rate_limit_per_ip_user: int = 10
     auth_register_rate_limit_per_ip: int = 10
@@ -154,6 +156,27 @@ class Settings(BaseSettings):
 
             if self.dev_bypass_memos:
                 errors.append("DEV_BYPASS_MEMOS must be false in production")
+
+            # Core integration settings.
+            if not self.memos_admin_token.strip():
+                errors.append("MEMOS_ADMIN_TOKEN must be set in production")
+            if self.memos_base_url.strip() == "https://memos.example.com":
+                errors.append("MEMOS_BASE_URL must be set in production")
+
+            db_url = self.database_url.strip().lower()
+            if db_url.startswith("sqlite"):
+                errors.append("DATABASE_URL must not be sqlite in production")
+
+            public_base_url = self.public_base_url.strip().lower()
+            if not (
+                public_base_url.startswith("http://") or public_base_url.startswith("https://")
+            ):
+                errors.append("PUBLIC_BASE_URL must start with http(s):// in production")
+            if "localhost" in public_base_url or "127.0.0.1" in public_base_url:
+                errors.append("PUBLIC_BASE_URL must be a public URL (not localhost) in production")
+
+            if int(self.attachments_max_size_bytes) <= 0:
+                errors.append("ATTACHMENTS_MAX_SIZE_BYTES must be > 0 in production")
 
             # If any S3 setting is provided, require the full set to avoid silently falling back to local storage.
             s3_fields = {
@@ -228,6 +251,16 @@ class Settings(BaseSettings):
             warnings.append("CORS_ALLOW_ORIGINS='*' is permissive")
         if self.dev_bypass_memos:
             warnings.append("DEV_BYPASS_MEMOS=true should not be enabled in production")
+
+        if self.memos_base_url.strip() == "https://memos.example.com":
+            warnings.append("MEMOS_BASE_URL is using placeholder value")
+
+        public_base_url = self.public_base_url.strip().lower()
+        if (
+            public_base_url.startswith("http://")
+            and self.environment.strip().lower() == "production"
+        ):
+            warnings.append("PUBLIC_BASE_URL is using http:// in production (consider https://)")
         return warnings
 
 

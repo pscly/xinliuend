@@ -21,6 +21,31 @@ from flow_backend.sync_utils import now_ms
 logger = logging.getLogger(__name__)
 
 
+_last_cleanup_ms = 0
+
+
+async def _maybe_cleanup(*, session: AsyncSession, now_ms_value: int) -> None:
+    # Best-effort cleanup to avoid unbounded table growth.
+    global _last_cleanup_ms
+
+    interval_s = int(settings.rate_limit_cleanup_interval_seconds)
+    retention_s = int(settings.rate_limit_retention_seconds)
+    if interval_s <= 0 or retention_s <= 0:
+        return
+
+    interval_ms = interval_s * 1000
+    if _last_cleanup_ms and now_ms_value - _last_cleanup_ms < interval_ms:
+        return
+    _last_cleanup_ms = now_ms_value
+
+    cutoff_ms = now_ms_value - (retention_s * 1000)
+    if cutoff_ms <= 0:
+        return
+
+    table = SQLModel.metadata.tables["rate_limit_counters"]
+    await session.exec(sa.delete(table).where(table.c.window_start_ms < int(cutoff_ms)))
+
+
 def _window_start_ms(*, now_ms_value: int, window_seconds: int) -> int:
     window_ms = int(window_seconds) * 1000
     if window_ms <= 0:
@@ -134,6 +159,7 @@ async def enforce_rate_limit(*, scope: str, key: str, limit: int, window_seconds
             count = await _hit_counter(
                 session=session, scope=scope, key=key, window_start_ms=start_ms
             )
+            await _maybe_cleanup(session=session, now_ms_value=now_ms_value)
             await session.commit()
         except Exception:
             # Best-effort: rate limiting must never break primary request flows.
