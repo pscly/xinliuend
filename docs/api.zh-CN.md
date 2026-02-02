@@ -174,6 +174,7 @@ v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构�
 - 409 `{"detail":"username already exists"}`
 - 400 `{"detail":"..."}`（密码过长等）
 - 502 `{"detail":"..."}`（对接 Memos 失败）
+- 429 `{"detail":"too many requests"}`（请求过于频繁；响应头带 `Retry-After` 秒数）
 
 说明：注册/登录阶段也会 best-effort 记录设备/IP（不会影响返回）。
 
@@ -192,6 +193,7 @@ v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构�
 - 401 `{"detail":"invalid credentials"}`
 - 403 `{"detail":"user disabled"}`
 - 409 `{"detail":"memos token not set; contact admin"}`
+- 429 `{"detail":"too many requests"}`（请求过于频繁；响应头带 `Retry-After` 秒数）
 
 ### 5.2 Settings
 
@@ -498,6 +500,11 @@ v1 sync `data` 字段约定（按服务端实际读取的 key）：
 
 登录态通过 Cookie（`ADMIN_SESSION_COOKIE_NAME`，默认 `flow_admin_session`）维持，且仅作用于 `/admin` path。
 
+注意：
+
+- 登录接口有 rate limit（过于频繁会提示稍后再试）。
+- 若在反代/TLS 终止后面部署，想让 Cookie 正确带 `Secure` 标记，需要在后端启用：`TRUST_X_FORWARDED_PROTO=true`，并确保反代设置 `X-Forwarded-Proto: https`。
+
 ## 6. v2 接口（/api/v2）
 
 ### 6.1 Health
@@ -616,6 +623,11 @@ Query：
 
 返回文件 bytes（Content-Disposition 为 attachment；LocalStorage 会直接走文件响应）。
 
+常见错误：
+
+- 413（文件过大）：`{"error":"http_413","message":"attachment too large"...}`
+  - 上限由 `ATTACHMENTS_MAX_SIZE_BYTES` 控制（默认 25MB）。
+
 ### 6.5 Shares（鉴权）
 
 #### POST /api/v2/notes/{note_id}/shares
@@ -663,6 +675,11 @@ Query：
 ### 6.7 TODO Items（v2，lite）
 
 鉴权：需要 Bearer Token。
+
+重要说明：v2 **不提供** todo list 的 CRUD（list 仍沿用 v1 的数据模型）。
+
+- `list_id` 需要来自 v1：`GET/POST/PATCH/DELETE /api/v1/todo/lists` 或 v1 sync 拉取的 `todo_lists`。
+- 如果客户端只接 v2，请务必先用 v1 创建/同步 list，否则 v2 创建/更新 todo item 会返回 `404 todo list not found`。
 
 #### GET /api/v2/todo/items
 
