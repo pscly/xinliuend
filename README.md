@@ -98,6 +98,10 @@ docker compose down -v
 - `POST /admin/logout`（退出登录）
 - `GET /health`
 
+更完整的客户端对接文档（v1 + v2，含同步协议/冲突处理/分享/附件）：
+
+- `docs/api.zh-CN.md`
+
 成功返回示例：
 
 ```json
