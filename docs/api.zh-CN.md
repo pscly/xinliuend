@@ -486,6 +486,16 @@ v1 sync `data` 字段约定（按服务端实际读取的 key）：
 - `POST /admin/login`：提交登录（form fields: `username`, `password`, `next`）
 - `POST /admin/logout`：登出
 
+用户管理（后台页面表单提交用；一般不需要客户端对接）：
+
+- `POST /admin/users/create`
+- `POST /admin/users/{user_id}/toggle-active`
+- `POST /admin/users/{user_id}/set-token`
+- `POST /admin/users/{user_id}/delete`
+- `GET /admin/users/{user_id}/devices`
+
+说明：这些接口依赖后台登录态 Cookie + CSRF token（表单字段 `csrf_token`），并且返回多为 303 重定向或 HTML。
+
 登录态通过 Cookie（`ADMIN_SESSION_COOKIE_NAME`，默认 `flow_admin_session`）维持，且仅作用于 `/admin` path。
 
 ## 6. v2 接口（/api/v2）
@@ -775,7 +785,13 @@ v2 sync `data` 字段约定（按服务端实际行为）：
 
 #### POST /api/v2/debug/tx-fail
 
-用途：验证事务回滚；不要在客户端正式使用。
+请求体（JSON）：
+
+```json
+{"key":"any-string"}
+```
+
+用途：验证事务回滚；会在写入后主动抛 500；不要在客户端正式使用。
 
 ## 7. 客户端对接工作流建议
 
@@ -830,6 +846,15 @@ v2 sync 的差异点：
 - 推荐直接导入 OpenAPI JSON：
   - v1：`GET /openapi.json`
   - v2：`GET /api/v2/openapi.json`
+
+仓库内也提供“离线快照”（已包含 v2 的 `/api/v2` servers 配置，适合直接导入）：
+
+- `docs/openapi-v1.json`
+- `docs/openapi-v2.json`
+
+内部/调试接口说明：
+
+- `/admin/*` 与 v2 debug 接口是内部用途，默认不包含在 OpenAPI schema 中
 
 如果你需要把文档交付给外部团队（离线），可让运维在目标环境执行：
 
