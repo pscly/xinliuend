@@ -15,9 +15,27 @@ from flow_backend.integrations.storage.object_storage import ObjectStorage, get_
 from flow_backend.models import User
 from flow_backend.repositories import attachments_repo
 from flow_backend.services import attachments_service
+from flow_backend.config import settings
 from flow_backend.v2.schemas.attachments import Attachment as AttachmentSchema
 
 router = APIRouter()
+
+
+async def _read_upload_file_limited(*, file: UploadFile, max_bytes: int) -> bytes:
+    # Read the file in chunks and hard-stop once size exceeds max_bytes.
+    buf = bytearray()
+    chunk_size = 1024 * 1024
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        buf.extend(chunk)
+        if len(buf) > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="attachment too large",
+            )
+    return bytes(buf)
 
 
 @router.post(
@@ -38,7 +56,11 @@ async def upload_note_attachment(
             detail="user missing id",
         )
 
-    data = await file.read()
+    max_bytes = int(settings.attachments_max_size_bytes)
+    if max_bytes > 0:
+        data = await _read_upload_file_limited(file=file, max_bytes=max_bytes)
+    else:
+        data = await file.read()
     row = await attachments_service.create_note_attachment(
         session=session,
         storage=storage,

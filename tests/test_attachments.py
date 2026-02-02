@@ -29,9 +29,11 @@ def _alembic_upgrade_head() -> None:
 async def test_attachments_upload_and_download_local_storage(tmp_path: Path):
     old_db = settings.database_url
     old_dir = settings.attachments_local_dir
+    old_max = settings.attachments_max_size_bytes
     try:
         settings.database_url = f"sqlite:///{tmp_path / 'test-attachments.db'}"
         settings.attachments_local_dir = str(tmp_path / "attachments")
+        settings.attachments_max_size_bytes = 25 * 1024 * 1024
         reset_engine_cache()
         _alembic_upgrade_head()
 
@@ -104,3 +106,53 @@ async def test_attachments_upload_and_download_local_storage(tmp_path: Path):
     finally:
         settings.database_url = old_db
         settings.attachments_local_dir = old_dir
+        settings.attachments_max_size_bytes = old_max
+
+
+@pytest.mark.anyio
+async def test_attachments_upload_rejects_too_large(tmp_path: Path):
+    old_db = settings.database_url
+    old_dir = settings.attachments_local_dir
+    old_max = settings.attachments_max_size_bytes
+    try:
+        settings.database_url = f"sqlite:///{tmp_path / 'test-attachments-too-large.db'}"
+        settings.attachments_local_dir = str(tmp_path / "attachments")
+        settings.attachments_max_size_bytes = 4
+        reset_engine_cache()
+        _alembic_upgrade_head()
+
+        async with session_scope() as session:
+            user = User(
+                username="u1",
+                password_hash="x",
+                memos_id=None,
+                memos_token="tok-u1",
+                is_active=True,
+            )
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+            assert user.id is not None
+
+            note = Note(
+                id="note-1",
+                user_id=int(user.id),
+                title="n1",
+                body_md="hello",
+                client_updated_at_ms=1,
+                updated_at=utc_now(),
+            )
+            session.add(note)
+            await session.commit()
+
+        async with _make_async_client() as client:
+            r = await client.post(
+                "/api/v2/notes/note-1/attachments",
+                headers={"Authorization": "Bearer tok-u1"},
+                files={"file": ("big.txt", b"hello", "text/plain")},
+            )
+            assert r.status_code == 413
+    finally:
+        settings.database_url = old_db
+        settings.attachments_local_dir = old_dir
+        settings.attachments_max_size_bytes = old_max

@@ -191,6 +191,9 @@ def _patch_v2_openapi(schema: dict[str, object]) -> dict[str, object]:
                 ("404", "Not Found"),
                 ("409", "Conflict"),
                 ("410", "Gone"),
+                ("413", "Payload Too Large"),
+                ("429", "Too Many Requests"),
+                ("502", "Upstream Error"),
                 ("500", "Internal Server Error"),
             ):
                 responses.setdefault(

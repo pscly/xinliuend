@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError
@@ -17,7 +17,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
 from flow_backend.db import get_session
+from flow_backend.device_tracking import extract_client_ip
 from flow_backend.models import User, UserDevice, UserDeviceIP
+from flow_backend.rate_limiting import build_ip_key, enforce_rate_limit
 from flow_backend.security import hash_password
 
 router = APIRouter(tags=["admin"])
@@ -104,14 +106,26 @@ def _clear_admin_session_cookie(resp: RedirectResponse) -> None:
 
 def _set_admin_session_cookie(resp: RedirectResponse, csrf_token: str, request: Request) -> None:
     cookie_value = _make_admin_session_cookie_value(csrf_token=csrf_token)
-    # SameSite=Lax + HttpOnly：兼顾易用性与安全性；Secure 仅在 https 下生效
+
+    def _is_secure_request() -> bool:
+        if settings.trust_x_forwarded_proto:
+            raw = request.headers.get("x-forwarded-proto")
+            if raw:
+                # Take the left-most (original) scheme.
+                proto = raw.split(",")[0].strip().lower()
+                if proto:
+                    return proto == "https"
+        return request.url.scheme == "https"
+
+    # SameSite=Lax + HttpOnly：兼顾易用性与安全性；
+    # Secure 需要在 https 或可信反代（X-Forwarded-Proto=https）下开启。
     resp.set_cookie(
         key=settings.admin_session_cookie_name,
         value=cookie_value,
         max_age=int(settings.admin_session_max_age_seconds),
         httponly=True,
         samesite="lax",
-        secure=(request.url.scheme == "https"),
+        secure=_is_secure_request(),
         path="/admin",
     )
 
@@ -162,6 +176,19 @@ async def admin_login_submit(request: Request):
     password = str(form.get("password") or "")
     next_url = _normalize_next_url(str(form.get("next") or ""))
 
+    try:
+        ip = extract_client_ip(request)
+        await enforce_rate_limit(
+            scope="admin_login",
+            key=build_ip_key(ip),
+            limit=settings.admin_login_rate_limit_per_ip,
+            window_seconds=settings.rate_limit_window_seconds,
+        )
+    except HTTPException as e:
+        if e.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            return _redirect_to_login(next_url=next_url, err="请求过于频繁，请稍后再试")
+        raise
+
     ok_user = secrets.compare_digest(username, settings.admin_basic_user)
     ok_pass = secrets.compare_digest(password, settings.admin_basic_password)
     if not (ok_user and ok_pass):
@@ -189,7 +216,10 @@ async def admin_index(
     if not sess:
         return _redirect_to_login(next_url="/admin")
 
-    users = list(await session.exec(select(User).order_by(User.__table__.c.id.desc())))
+    users = list(
+        # SQLModel typing: use the underlying SQLAlchemy table for ordering.
+        await session.exec(select(User).order_by(User.__table__.c.id.desc()))  # pyright: ignore[reportAttributeAccessIssue]
+    )
     msg = request.query_params.get("msg")
     err = request.query_params.get("err")
     return templates.TemplateResponse(
@@ -392,15 +422,15 @@ async def admin_user_devices(
         await session.exec(
             select(UserDevice)
             .where(UserDevice.user_id == user_id)
-            .where(UserDevice.__table__.c.revoked_at.is_(None))
-            .order_by(UserDevice.__table__.c.last_seen.desc())
+            .where(UserDevice.__table__.c.revoked_at.is_(None))  # pyright: ignore[reportAttributeAccessIssue]
+            .order_by(UserDevice.__table__.c.last_seen.desc())  # pyright: ignore[reportAttributeAccessIssue]
         )
     )
     ip_rows = list(
         await session.exec(
             select(UserDeviceIP)
             .where(UserDeviceIP.user_id == user_id)
-            .order_by(UserDeviceIP.__table__.c.last_seen.desc())
+            .order_by(UserDeviceIP.__table__.c.last_seen.desc())  # pyright: ignore[reportAttributeAccessIssue]
         )
     )
     ips_by_device_id: dict[str, list[UserDeviceIP]] = {}

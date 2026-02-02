@@ -9,11 +9,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
 from flow_backend.db import get_session, session_scope
-from flow_backend.device_tracking import record_device_activity
+from flow_backend.device_tracking import extract_client_ip, record_device_activity
 from flow_backend.memos_client import MemosClient, MemosClientError
 from flow_backend.models import User
 from flow_backend.schemas import LoginRequest, RegisterRequest
 from flow_backend.security import hash_password, verify_password
+from flow_backend.rate_limiting import build_ip_key, build_ip_username_key, enforce_rate_limit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -34,6 +35,14 @@ async def register(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ):
+    ip = extract_client_ip(request)
+    await enforce_rate_limit(
+        scope="auth_register",
+        key=build_ip_key(ip),
+        limit=settings.auth_register_rate_limit_per_ip,
+        window_seconds=settings.rate_limit_window_seconds,
+    )
+
     existing = (await session.exec(select(User).where(User.username == payload.username))).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
@@ -98,6 +107,20 @@ async def login(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ):
+    ip = extract_client_ip(request)
+    await enforce_rate_limit(
+        scope="auth_login_ip",
+        key=build_ip_key(ip),
+        limit=settings.auth_login_rate_limit_per_ip,
+        window_seconds=settings.rate_limit_window_seconds,
+    )
+    await enforce_rate_limit(
+        scope="auth_login_user",
+        key=build_ip_username_key(ip=ip, username=payload.username),
+        limit=settings.auth_login_rate_limit_per_ip_user,
+        window_seconds=settings.rate_limit_window_seconds,
+    )
+
     user = (await session.exec(select(User).where(User.username == payload.username))).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")

@@ -1,3 +1,7 @@
+# basedpyright: reportAssignmentType=false
+# basedpyright: reportIncompatibleVariableOverride=false
+# basedpyright: reportUnusedImport=false
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -13,7 +17,7 @@ def utc_now() -> datetime:
 
 
 class User(SQLModel, table=True):
-    __tablename__ = "users"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "users"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
 
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True, min_length=1, max_length=64)
@@ -28,7 +32,7 @@ class User(SQLModel, table=True):
 
 
 class UserDevice(SQLModel, table=True):
-    __tablename__ = "user_devices"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "user_devices"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
     __table_args__ = (
         UniqueConstraint("user_id", "device_id", name="uq_user_devices_user_id_device_id"),
     )
@@ -51,7 +55,7 @@ class UserDevice(SQLModel, table=True):
 
 
 class UserDeviceIP(SQLModel, table=True):
-    __tablename__ = "user_device_ips"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "user_device_ips"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
     __table_args__ = (
         UniqueConstraint(
             "user_id",
@@ -74,6 +78,30 @@ class UserDeviceIP(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utc_now, index=True)
 
 
+class RateLimitCounter(SQLModel, table=True):
+    __tablename__ = "rate_limit_counters"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
+    __table_args__ = (
+        UniqueConstraint(
+            "scope",
+            "key",
+            "window_start_ms",
+            name="uq_rate_limit_counters_scope_key_window",
+        ),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Scope indicates which endpoint/feature the limiter applies to.
+    scope: str = Field(index=True, max_length=64)
+    # Key is the subject we rate-limit on (e.g., ip:1.2.3.4).
+    key: str = Field(index=True, max_length=128)
+    window_start_ms: int = Field(index=True)
+    count: int = Field(default=0)
+
+    created_at: datetime = Field(default_factory=utc_now, index=True)
+    updated_at: datetime = Field(default_factory=utc_now, index=True)
+
+
 class TenantRow(SQLModel):
     user_id: int = Field(index=True, foreign_key="users.id")
 
@@ -84,7 +112,7 @@ class TenantRow(SQLModel):
 
 
 class UserSetting(TenantRow, table=True):
-    __tablename__ = "user_settings"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "user_settings"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
 
     id: Optional[int] = Field(default=None, primary_key=True)
     key: str = Field(min_length=1, max_length=128, index=True)
@@ -92,7 +120,7 @@ class UserSetting(TenantRow, table=True):
 
 
 class TodoList(TenantRow, table=True):
-    __tablename__ = "todo_lists"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "todo_lists"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
 
     id: str = Field(primary_key=True, min_length=1, max_length=36)
     name: str = Field(min_length=1, max_length=200)
@@ -102,7 +130,7 @@ class TodoList(TenantRow, table=True):
 
 
 class TodoItem(TenantRow, table=True):
-    __tablename__ = "todo_items"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "todo_items"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
 
     id: str = Field(primary_key=True, min_length=1, max_length=36)
     list_id: str = Field(index=True, foreign_key="todo_lists.id", min_length=1, max_length=36)
@@ -131,7 +159,7 @@ class TodoItem(TenantRow, table=True):
 
 
 class TodoItemOccurrence(TenantRow, table=True):
-    __tablename__ = "todo_item_occurrences"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "todo_item_occurrences"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
 
     id: str = Field(primary_key=True, min_length=1, max_length=36)
     item_id: str = Field(index=True, foreign_key="todo_items.id", min_length=1, max_length=36)
@@ -148,7 +176,7 @@ class TodoItemOccurrence(TenantRow, table=True):
 
 
 class SyncEvent(SQLModel, table=True):
-    __tablename__ = "sync_events"  # pyright: ignore[reportAssignmentType]
+    __tablename__ = "sync_events"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
 
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(index=True, foreign_key="users.id")
@@ -161,5 +189,4 @@ class SyncEvent(SQLModel, table=True):
 
 
 # Import notes models so Alembic sees them via `flow_backend.models`.
-# pyright: ignore[reportUnusedImport]
-from . import models_notes as _models_notes  # noqa: E402,F401
+from . import models_notes as _models_notes  # noqa: E402,F401  # type: ignore

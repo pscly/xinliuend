@@ -63,6 +63,7 @@ class Settings(BaseSettings):
 
     # Attachments
     attachments_local_dir: str = ".data/attachments"
+    attachments_max_size_bytes: int = 25 * 1024 * 1024
 
     # S3 / Tencent Cloud COS
     s3_endpoint_url: str = ""
@@ -103,6 +104,10 @@ class Settings(BaseSettings):
     # Device/IP tracking (for admin dashboard)
     # If true, use X-Forwarded-For to determine client IP. Only enable behind a trusted proxy.
     trust_x_forwarded_for: bool = False
+
+    # If true, trust X-Forwarded-Proto (for Secure cookies behind a reverse proxy).
+    # Only enable behind a trusted proxy.
+    trust_x_forwarded_proto: bool = False
     # Consider a device "online" if it has called any authenticated API within this window.
     device_active_window_seconds: int = 60 * 60 * 24  # 24 hours
 
@@ -110,11 +115,18 @@ class Settings(BaseSettings):
     # Tests can set DEVICE_TRACKING_ASYNC=false to make writes deterministic.
     device_tracking_async: bool = True
 
+    # Rate limiting (best-effort; to reduce brute-force / abuse)
+    rate_limit_window_seconds: int = 60 * 5
+    auth_login_rate_limit_per_ip: int = 30
+    auth_login_rate_limit_per_ip_user: int = 10
+    auth_register_rate_limit_per_ip: int = 10
+    admin_login_rate_limit_per_ip: int = 20
+
     # Validate production settings early to fail fast on unsafe defaults.
     if model_validator is not None:
 
         @model_validator(mode="after")
-        def _validate_production_settings(self) -> "Settings":  # pyright: ignore[reportUnusedFunction]
+        def _validate_production_settings(self) -> "Settings":  # pyright: ignore[reportUnusedFunction]  # basedpyright: ignore[reportUnusedFunction]
             if self.environment.strip().lower() != "production":
                 return self
 
@@ -217,6 +229,11 @@ class Settings(BaseSettings):
         if self.dev_bypass_memos:
             warnings.append("DEV_BYPASS_MEMOS=true should not be enabled in production")
         return warnings
+
+
+if model_validator is not None:
+    # The validator is invoked by Pydantic at runtime.
+    _ = Settings._validate_production_settings
 
 
 settings = Settings()
