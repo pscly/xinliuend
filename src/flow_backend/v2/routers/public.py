@@ -9,6 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from flow_backend.db import get_session
 from flow_backend.integrations.storage.local_storage import LocalObjectStorage
 from flow_backend.integrations.storage.object_storage import ObjectStorage, get_object_storage
+from flow_backend.http_headers import build_content_disposition_attachment, sanitize_filename
 from flow_backend.services import shares_service
 from flow_backend.v2.schemas.notes import Note as NoteSchema
 from flow_backend.v2.schemas.shares import SharedAttachment, SharedNote
@@ -63,7 +64,7 @@ async def download_shared_attachment(
     )
 
     media_type = attachment.content_type or "application/octet-stream"
-    filename = attachment.filename or attachment.id
+    filename = sanitize_filename(attachment.filename or attachment.id)
     if isinstance(storage, LocalObjectStorage):
         path = storage.resolve_path(attachment.storage_key)
         if not path.exists():
@@ -72,5 +73,5 @@ async def download_shared_attachment(
         return FileResponse(path, media_type=media_type, filename=filename)
 
     data = await storage.get_bytes(attachment.storage_key)
-    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    headers = {"Content-Disposition": build_content_disposition_attachment(filename)}
     return Response(content=data, media_type=media_type, headers=headers)
