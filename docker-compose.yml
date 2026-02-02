@@ -12,10 +12,18 @@ services:
       # 数据库连接统一从 .env 读取（SQLite / 外部 PostgreSQL 均可）
       DATABASE_URL: ${DATABASE_URL:-sqlite:///./dev.db}
 
+      # 运行环境：development | production
+      # 生产环境务必设置为 production，否则不会启用生产安全校验/禁用调试能力。
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+
       # 其它配置建议写到 .env（见 .env.example）
       MEMOS_BASE_URL: ${MEMOS_BASE_URL:-https://memos.example.com}
       MEMOS_ADMIN_TOKEN: ${MEMOS_ADMIN_TOKEN:-}
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
+
+      # Proxy headers（仅在可信反代后启用）
+      TRUST_X_FORWARDED_FOR: ${TRUST_X_FORWARDED_FOR:-false}
+      TRUST_X_FORWARDED_PROTO: ${TRUST_X_FORWARDED_PROTO:-false}
 
       ADMIN_BASIC_USER: ${ADMIN_BASIC_USER:-pscly}
       ADMIN_BASIC_PASSWORD: ${ADMIN_BASIC_PASSWORD:-admin_password_change_me}
@@ -30,6 +38,16 @@ services:
       SYNC_MAX_CLIENT_CLOCK_SKEW_SECONDS: ${SYNC_MAX_CLIENT_CLOCK_SKEW_SECONDS:-300}
       SYNC_PULL_LIMIT: ${SYNC_PULL_LIMIT:-200}
       DEFAULT_TZID: ${DEFAULT_TZID:-Asia/Shanghai}
+
+      # Attachments
+      ATTACHMENTS_MAX_SIZE_BYTES: ${ATTACHMENTS_MAX_SIZE_BYTES:-26214400}
+
+      # Rate limiting
+      RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-300}
+      AUTH_LOGIN_RATE_LIMIT_PER_IP: ${AUTH_LOGIN_RATE_LIMIT_PER_IP:-30}
+      AUTH_LOGIN_RATE_LIMIT_PER_IP_USER: ${AUTH_LOGIN_RATE_LIMIT_PER_IP_USER:-10}
+      AUTH_REGISTER_RATE_LIMIT_PER_IP: ${AUTH_REGISTER_RATE_LIMIT_PER_IP:-10}
+      ADMIN_LOGIN_RATE_LIMIT_PER_IP: ${ADMIN_LOGIN_RATE_LIMIT_PER_IP:-20}
 
   postgres:
     image: postgres:16-alpine

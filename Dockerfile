@@ -4,6 +4,8 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Default to production safety in containers; override via .env/env_file when needed.
+    ENVIRONMENT=production \
     PYTHONPATH=/app/src \
     VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
