@@ -220,6 +220,42 @@ def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
             app_json = cast(dict[str, object], content.setdefault("application/json", {}))
             app_json["schema"] = _openapi_schema_ref("ApiResponse")
 
+            # Auth endpoints are rate-limited and can return 429 with Retry-After.
+            if _path in {f"{api_prefix}/auth/login", f"{api_prefix}/auth/register"}:
+                resp_429 = cast(
+                    dict[str, object],
+                    responses.setdefault(
+                        "429",
+                        {
+                            "description": "Too Many Requests",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {"detail": {"type": "string"}},
+                                        "required": ["detail"],
+                                    }
+                                }
+                            },
+                        },
+                    ),
+                )
+                headers = cast(dict[str, object], resp_429.setdefault("headers", {}))
+                headers.setdefault(
+                    "Retry-After",
+                    {
+                        "schema": {"type": "string"},
+                        "description": "Seconds to wait before retrying.",
+                    },
+                )
+                headers.setdefault(
+                    "X-Request-Id",
+                    {
+                        "schema": {"type": "string"},
+                        "description": "Echoed or generated request id.",
+                    },
+                )
+
     return schema
 
 
