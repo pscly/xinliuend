@@ -1303,7 +1303,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Download Attachment"
+        "summary": "Download Attachment",
+        "tags": [
+          "attachments"
+        ]
       }
     },
     "/health": {
@@ -1506,7 +1509,10 @@
             }
           }
         },
-        "summary": "Health"
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
       }
     },
     "/notes": {
@@ -1817,7 +1823,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "List Notes"
+        "summary": "List Notes",
+        "tags": [
+          "notes"
+        ]
       },
       "post": {
         "operationId": "create_note_notes_post",
@@ -2071,7 +2080,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Create Note"
+        "summary": "Create Note",
+        "tags": [
+          "notes"
+        ]
       }
     },
     "/notes/{note_id}": {
@@ -2329,7 +2341,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Delete Note"
+        "summary": "Delete Note",
+        "tags": [
+          "notes"
+        ]
       },
       "get": {
         "operationId": "get_note_notes__note_id__get",
@@ -2592,7 +2607,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Get Note"
+        "summary": "Get Note",
+        "tags": [
+          "notes"
+        ]
       },
       "patch": {
         "operationId": "patch_note_notes__note_id__patch",
@@ -2855,7 +2873,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Patch Note"
+        "summary": "Patch Note",
+        "tags": [
+          "notes"
+        ]
       }
     },
     "/notes/{note_id}/attachments": {
@@ -3120,7 +3141,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Upload Note Attachment"
+        "summary": "Upload Note Attachment",
+        "tags": [
+          "attachments"
+        ]
       }
     },
     "/notes/{note_id}/restore": {
@@ -3385,7 +3409,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Restore Note"
+        "summary": "Restore Note",
+        "tags": [
+          "notes"
+        ]
       }
     },
     "/notes/{note_id}/revisions": {
@@ -3652,7 +3679,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "List Revisions"
+        "summary": "List Revisions",
+        "tags": [
+          "revisions"
+        ]
       }
     },
     "/notes/{note_id}/revisions/{revision_id}/restore": {
@@ -3926,7 +3956,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Restore Revision"
+        "summary": "Restore Revision",
+        "tags": [
+          "revisions"
+        ]
       }
     },
     "/notes/{note_id}/shares": {
@@ -4191,7 +4224,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Create Share"
+        "summary": "Create Share",
+        "tags": [
+          "shares"
+        ]
       }
     },
     "/public/shares/{share_token}": {
@@ -4405,7 +4441,10 @@
             }
           }
         },
-        "summary": "Get Shared Note"
+        "summary": "Get Shared Note",
+        "tags": [
+          "public"
+        ]
       }
     },
     "/public/shares/{share_token}/attachments/{attachment_id}": {
@@ -4635,7 +4674,10 @@
             }
           }
         },
-        "summary": "Download Shared Attachment"
+        "summary": "Download Shared Attachment",
+        "tags": [
+          "public"
+        ]
       }
     },
     "/shares/{share_id}": {
@@ -4883,7 +4925,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Revoke Share"
+        "summary": "Revoke Share",
+        "tags": [
+          "shares"
+        ]
       }
     },
     "/sync/pull": {
@@ -5152,7 +5197,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Pull Sync"
+        "summary": "Pull Sync",
+        "tags": [
+          "sync"
+        ]
       }
     },
     "/sync/push": {
@@ -5408,7 +5456,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Push Sync"
+        "summary": "Push Sync",
+        "tags": [
+          "sync"
+        ]
       }
     },
     "/todo/items": {
@@ -5745,7 +5796,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "List Todo Items"
+        "summary": "List Todo Items",
+        "tags": [
+          "todo"
+        ]
       },
       "post": {
         "operationId": "create_todo_item_todo_items_post",
@@ -5999,7 +6053,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Create Todo Item"
+        "summary": "Create Todo Item",
+        "tags": [
+          "todo"
+        ]
       }
     },
     "/todo/items/{item_id}": {
@@ -6257,7 +6314,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Delete Todo Item"
+        "summary": "Delete Todo Item",
+        "tags": [
+          "todo"
+        ]
       },
       "patch": {
         "operationId": "patch_todo_item_todo_items__item_id__patch",
@@ -6520,7 +6580,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Patch Todo Item"
+        "summary": "Patch Todo Item",
+        "tags": [
+          "todo"
+        ]
       }
     },
     "/todo/items/{item_id}/restore": {
@@ -6785,7 +6848,10 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Restore Todo Item"
+        "summary": "Restore Todo Item",
+        "tags": [
+          "todo"
+        ]
       }
     }
   },

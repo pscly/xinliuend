@@ -2535,6 +2535,17 @@
     "/health": {
       "get": {
         "operationId": "health_health_get",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
