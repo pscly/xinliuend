@@ -13,7 +13,7 @@ from flow_backend.db import get_session
 from flow_backend.deps import get_current_user
 from flow_backend.models import User, UserSetting
 
-router = APIRouter()
+router = APIRouter(tags=["debug"])
 
 
 class TxFailRequest(BaseModel):

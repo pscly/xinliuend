@@ -36,7 +36,7 @@ from flow_backend.v2.schemas.todo import (
     TodoItemRestoreRequest,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["todo"])
 
 
 def _is_sqlite() -> bool:

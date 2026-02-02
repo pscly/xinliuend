@@ -19,7 +19,7 @@ from flow_backend.services import attachments_service
 from flow_backend.config import settings
 from flow_backend.v2.schemas.attachments import Attachment as AttachmentSchema
 
-router = APIRouter()
+router = APIRouter(tags=["attachments"])
 
 
 async def _read_upload_file_limited(*, file: UploadFile, max_bytes: int) -> bytes:

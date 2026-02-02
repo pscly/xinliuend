@@ -14,7 +14,7 @@ from flow_backend.services import shares_service
 from flow_backend.v2.schemas.notes import Note as NoteSchema
 from flow_backend.v2.schemas.shares import SharedAttachment, SharedNote
 
-router = APIRouter()
+router = APIRouter(tags=["public"])
 
 
 @router.get("/public/shares/{share_token}", response_model=SharedNote)

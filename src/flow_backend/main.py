@@ -210,10 +210,6 @@ def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
                     },
                 )
 
-            # Only patch v1 API responses (keep /health and other non-v1 endpoints unchanged).
-            if not _path.startswith(api_prefix + "/"):
-                continue
-
             # Document optional inbound request id header.
             # The middleware accepts X-Request-Id from clients (or generates one if absent).
             params_obj = op.setdefault("parameters", [])
@@ -223,6 +219,10 @@ def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
                 for param_obj in params:
                     if not isinstance(param_obj, dict):
                         continue
+                    ref = param_obj.get("$ref")
+                    if isinstance(ref, str) and "x-request-id" in ref.lower():
+                        has_x_request_id = True
+                        break
                     name = param_obj.get("name")
                     location = param_obj.get("in")
                     if (
@@ -243,6 +243,10 @@ def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
                             "description": "Optional client-provided request id; echoed back in responses.",
                         }
                     )
+
+            # Only patch v1 API responses (keep /health and other non-v1 endpoints unchanged).
+            if not _path.startswith(api_prefix + "/"):
+                continue
 
             # v1 endpoints return {code, data} envelope; reflect that in 200 schema.
             resp_200 = cast(dict[str, object], responses.setdefault("200", {"description": "OK"}))

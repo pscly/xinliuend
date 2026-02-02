@@ -11,7 +11,7 @@ from flow_backend.models import User
 from flow_backend.services import shares_service
 from flow_backend.v2.schemas.shares import ShareCreateRequest, ShareCreated
 
-router = APIRouter()
+router = APIRouter(tags=["shares"])
 
 
 @router.post(

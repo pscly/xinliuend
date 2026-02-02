@@ -21,7 +21,7 @@ from flow_backend.v2.schemas.sync import (
     SyncPushResponse,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["sync"])
 
 
 @router.get("/sync/pull", response_model=SyncPullResponse)

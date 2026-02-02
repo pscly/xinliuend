@@ -19,7 +19,7 @@ from flow_backend.v2.schemas import (
     NoteRestoreRequest,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["notes"])
 
 
 @router.post("/notes", response_model=NoteSchema, status_code=status.HTTP_201_CREATED)

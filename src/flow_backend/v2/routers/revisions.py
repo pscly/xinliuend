@@ -19,7 +19,7 @@ from flow_backend.v2.schemas.revisions import (
     NoteSnapshot,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["revisions"])
 
 
 @router.get("/notes/{note_id}/revisions", response_model=NoteRevisionList)
