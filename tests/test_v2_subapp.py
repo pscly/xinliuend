@@ -38,6 +38,25 @@ async def test_v2_openapi_includes_core_paths():
         assert "/health" in paths
         assert "/notes" in paths
 
+        # v2 OpenAPI should document the optional inbound X-Request-Id header.
+        notes_path_obj = paths.get("/notes")
+        assert isinstance(notes_path_obj, dict)
+        notes_path = cast(dict[str, object], notes_path_obj)
+
+        notes_get_obj = notes_path.get("get")
+        assert isinstance(notes_get_obj, dict)
+        notes_get = cast(dict[str, object], notes_get_obj)
+
+        params_obj = notes_get.get("parameters", [])
+        params = params_obj if isinstance(params_obj, list) else []
+        assert any(
+            isinstance(p, dict)
+            and p.get("in") == "header"
+            and isinstance(p.get("name"), str)
+            and cast(str, p.get("name")).lower() == "x-request-id"
+            for p in params
+        )
+
 
 @pytest.mark.anyio
 async def test_v2_notes_list_pinned_shape(tmp_path: Path):

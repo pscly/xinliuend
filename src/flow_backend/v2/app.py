@@ -157,6 +157,36 @@ def _patch_v2_openapi(schema: dict[str, object]) -> dict[str, object]:
             op = cast(dict[str, object], op_obj)
             responses = cast(dict[str, object], op.setdefault("responses", {}))
 
+            # Document optional inbound request id header.
+            # The middleware accepts X-Request-Id from clients (or generates one if absent).
+            params_obj = op.setdefault("parameters", [])
+            if isinstance(params_obj, list):
+                params = cast(list[object], params_obj)
+                has_x_request_id = False
+                for param_obj in params:
+                    if not isinstance(param_obj, dict):
+                        continue
+                    name = param_obj.get("name")
+                    location = param_obj.get("in")
+                    if (
+                        isinstance(name, str)
+                        and isinstance(location, str)
+                        and location == "header"
+                        and name.lower() == "x-request-id"
+                    ):
+                        has_x_request_id = True
+                        break
+                if not has_x_request_id:
+                    params.append(
+                        {
+                            "name": "X-Request-Id",
+                            "in": "header",
+                            "required": False,
+                            "schema": {"type": "string"},
+                            "description": "Optional client-provided request id; echoed back in responses.",
+                        }
+                    )
+
             # FastAPI default OpenAPI documents 422 as HTTPValidationError.
             # Runtime v2 returns ErrorResponse for validation errors.
             responses["422"] = {
