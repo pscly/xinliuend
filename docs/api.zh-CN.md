@@ -145,9 +145,11 @@ v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构�
 }
 ```
 
-- `error`：基于 HTTP status 映射（400/401/403/404/409/410/413/429/502 等；其它为 `http_<code>`）
+- `error`：基于 HTTP status 映射（400/401/403/404/409/410/413/429/502 等；其它为 `http_<code>`；详见 4.2.1）
   - 其中：413 会映射为 `payload_too_large`
-  - 未处理异常（500）固定为 `internal_error`（而不是 `http_500`）
+  - 500 的细节：
+    - 未处理异常（500）固定为 `internal_error`
+    - 若业务代码主动抛出 `HTTPException(500, ...)`，则会返回 `http_500`
 - `message`：人类可读提示
 - `details`：可选；常用于 422 校验错误或 409 冲突快照
 
@@ -157,6 +159,268 @@ v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构�
 - 若业务代码主动抛出 `HTTPException(status_code=422, ...)`，则 `error` 可能为 `http_422`
 
 定义见：`src/flow_backend/v2/schemas/errors.py`
+
+#### 4.2.1 错误码与 error 字段对照
+
+> 目标：让客户端能用 `error` 做稳定分支；`message` 只用于展示/日志，不建议做强依赖。
+
+| HTTP 状态码 | `error` | 典型场景（示例） |
+|---:|---|---|
+| 400 | `bad_request` | 业务参数不合法、无法解析的请求 |
+| 401 | `unauthorized` | `missing token` / `invalid token` |
+| 403 | `forbidden` | `user disabled` |
+| 404 | `not_found` | note 不存在 / share 不存在 |
+| 409 | `conflict` | 并发冲突（stale update / tombstone 等），常带 `details.server_snapshot` |
+| 410 | `gone` | `share expired` |
+| 413 | `payload_too_large` | `attachment too large` |
+| 422 | `validation_error` / `http_422` | 框架校验失败 vs 业务主动抛出 422 |
+| 429 | `rate_limited` | 频控命中；响应头常带 `Retry-After` |
+| 500 | `internal_error` / `http_500` | 未处理异常 vs 业务主动抛出 `HTTPException(500, ...)` |
+| 502 | `upstream_error` | 上游（例如对接 Memos）异常 |
+
+其它未在表中列出的状态码：`error = "http_<code>"`（例如 409 已固定为 `conflict`，但 418 会是 `http_418`）。
+
+#### 4.2.2 常见错误示例（含 headers）
+
+说明：
+
+- v2 **总会**在响应头返回 `X-Request-Id`。
+- v2 错误 JSON **通常**会带 `request_id`（best-effort）；客户端建议同时记录两者。
+
+401（缺少 token）：`error = unauthorized`
+
+```text
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+X-Request-Id: 2f6d8d9d-9d8a-4c2b-9d0b-5e0f3a9b4b4a
+```
+
+```json
+{
+  "error": "unauthorized",
+  "message": "missing token",
+  "request_id": "2f6d8d9d-9d8a-4c2b-9d0b-5e0f3a9b4b4a"
+}
+```
+
+401（token 无效）：`error = unauthorized`
+
+```text
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+X-Request-Id: 8a0b9b43-1c9c-4c6d-a5ad-9b6e4c0c3b4f
+```
+
+```json
+{
+  "error": "unauthorized",
+  "message": "invalid token",
+  "request_id": "8a0b9b43-1c9c-4c6d-a5ad-9b6e4c0c3b4f"
+}
+```
+
+403（用户被禁用）：`error = forbidden`
+
+```text
+HTTP/1.1 403 Forbidden
+Content-Type: application/json
+X-Request-Id: 4d1c0b41-8f1c-4d80-8c5b-93b29e34d3c6
+```
+
+```json
+{
+  "error": "forbidden",
+  "message": "user disabled",
+  "request_id": "4d1c0b41-8f1c-4d80-8c5b-93b29e34d3c6"
+}
+```
+
+404（资源不存在，例如 note 不存在）：`error = not_found`
+
+```text
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+X-Request-Id: 7c1f2c8d-6b7f-4a2d-8f1d-3e2c1a0b9c8d
+```
+
+```json
+{
+  "error": "not_found",
+  "message": "note not found",
+  "request_id": "7c1f2c8d-6b7f-4a2d-8f1d-3e2c1a0b9c8d"
+}
+```
+
+409（并发冲突，带服务端快照）：`error = conflict`
+
+```text
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+X-Request-Id: 0f2b3c4d-5e6f-4a7b-8c9d-1e2f3a4b5c6d
+```
+
+```json
+{
+  "error": "conflict",
+  "message": "conflict",
+  "request_id": "0f2b3c4d-5e6f-4a7b-8c9d-1e2f3a4b5c6d",
+  "details": {
+    "server_snapshot": {
+      "id": "note_123",
+      "client_updated_at_ms": 1700000000001
+    }
+  }
+}
+```
+
+410（分享已过期）：`error = gone`
+
+```text
+HTTP/1.1 410 Gone
+Content-Type: application/json
+X-Request-Id: 3a2b1c0d-9e8f-4d7c-8b6a-5f4e3d2c1b0a
+```
+
+```json
+{
+  "error": "gone",
+  "message": "share expired",
+  "request_id": "3a2b1c0d-9e8f-4d7c-8b6a-5f4e3d2c1b0a"
+}
+```
+
+413（附件过大）：`error = payload_too_large`
+
+```text
+HTTP/1.1 413 Payload Too Large
+Content-Type: application/json
+X-Request-Id: b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e
+```
+
+```json
+{
+  "error": "payload_too_large",
+  "message": "attachment too large",
+  "request_id": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e"
+}
+```
+
+422（框架请求校验失败）：`error = validation_error`
+
+注：`details` 字段为示例，实际可能会因 FastAPI/Pydantic 版本或校验场景不同而包含额外 key。
+
+```text
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+X-Request-Id: 9f8e7d6c-5b4a-4c3d-2e1f-0a9b8c7d6e5f
+```
+
+```json
+{
+  "error": "validation_error",
+  "message": "Request validation error",
+  "request_id": "9f8e7d6c-5b4a-4c3d-2e1f-0a9b8c7d6e5f",
+  "details": [
+    {
+      "loc": ["body", "expires_in_seconds"],
+      "msg": "ensure this value is greater than 0",
+      "type": "value_error.number.not_gt"
+    }
+  ]
+}
+```
+
+422（业务主动抛出 422，例如无字段可更新）：`error = http_422`
+
+```text
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/json
+X-Request-Id: 11111111-2222-3333-4444-555555555555
+```
+
+```json
+{
+  "error": "http_422",
+  "message": "no fields to update",
+  "request_id": "11111111-2222-3333-4444-555555555555"
+}
+```
+
+429（请求过于频繁）：`error = rate_limited`（带 `Retry-After`）
+
+```text
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+Retry-After: 30
+X-Request-Id: 22222222-3333-4444-5555-666666666666
+```
+
+```json
+{
+  "error": "rate_limited",
+  "message": "too many requests",
+  "request_id": "22222222-3333-4444-5555-666666666666"
+}
+```
+
+500（未处理异常）：`error = internal_error`
+
+```text
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+X-Request-Id: 33333333-4444-5555-6666-777777777777
+```
+
+```json
+{
+  "error": "internal_error",
+  "message": "Internal server error",
+  "request_id": "33333333-4444-5555-6666-777777777777"
+}
+```
+
+500（业务代码主动抛出 `HTTPException(500, ...)`，较少见）：`error = http_500`
+
+```text
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+X-Request-Id: 44444444-5555-6666-7777-888888888888
+```
+
+```json
+{
+  "error": "http_500",
+  "message": "user missing id",
+  "request_id": "44444444-5555-6666-7777-888888888888"
+}
+```
+
+502（上游异常，例如对接 Memos 失败）：`error = upstream_error`
+
+```text
+HTTP/1.1 502 Bad Gateway
+Content-Type: application/json
+X-Request-Id: 55555555-6666-7777-8888-999999999999
+```
+
+```json
+{
+  "error": "upstream_error",
+  "message": "upstream error",
+  "request_id": "55555555-6666-7777-8888-999999999999"
+}
+```
+
+#### 4.2.3 客户端处理建议
+
+- 统一解析：对所有非 2xx，优先解析 JSON 的 `error`/`message`/`details`；未知 `error` 时按“通用错误”处理，不要因为字段缺失/新增导致崩溃。
+- Request ID：务必在日志/埋点/崩溃上报里同时记录响应头 `X-Request-Id` 与响应体 `request_id`（如果有），并在反馈/工单里附上。
+- 401 `unauthorized`：清理本地 token，提示重新登录（或走 token 刷新流程）；一般不建议无脑重试。
+- 403 `forbidden`（`user disabled`）：提示账号已被禁用；停止自动重试。
+- 404 `not_found` / 410 `gone`：当作资源已不存在/已失效；更新本地缓存与 UI；不建议重试。
+- 409 `conflict`：若存在 `details.server_snapshot`，用其提示用户冲突或做自动合并；合并后使用更大的 `client_updated_at_ms` 重试。
+- 429 `rate_limited`：读取 `Retry-After`（秒）并按其延迟重试；建议退避（backoff）+ 抖动（jitter）。
+- 500 `internal_error` / `http_500` / 502 `upstream_error`：都视为服务端问题；对幂等读请求可退避重试；对写请求建议提示用户稍后重试，并把 `X-Request-Id`/`request_id` 上报到日志。
 
 ## 5. v1 接口（/api/v1）
 
