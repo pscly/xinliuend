@@ -792,6 +792,17 @@
     "/api/v1/auth/login": {
       "post": {
         "operationId": "login_api_v1_auth_login_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -881,6 +892,17 @@
     "/api/v1/auth/register": {
       "post": {
         "operationId": "register_api_v1_auth_register_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -970,6 +992,17 @@
     "/api/v1/settings": {
       "get": {
         "operationId": "list_settings_api_v1_settings_get",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1011,6 +1044,15 @@
             "required": true,
             "schema": {
               "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -1082,6 +1124,15 @@
             "required": true,
             "schema": {
               "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -1170,6 +1221,15 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1224,6 +1284,17 @@
     "/api/v1/sync/push": {
       "post": {
         "operationId": "push_api_v1_sync_push_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1374,6 +1445,15 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1426,6 +1506,17 @@
       },
       "post": {
         "operationId": "upsert_todo_item_api_v1_todo_items_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1488,6 +1579,17 @@
     "/api/v1/todo/items/bulk": {
       "post": {
         "operationId": "bulk_upsert_todo_items_api_v1_todo_items_bulk_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1573,6 +1675,15 @@
               "title": "Client Updated At Ms",
               "type": "integer"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1632,6 +1743,15 @@
             "required": true,
             "schema": {
               "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -1708,6 +1828,15 @@
               "title": "Include Archived",
               "type": "boolean"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1760,6 +1889,17 @@
       },
       "post": {
         "operationId": "upsert_todo_list_api_v1_todo_lists_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1822,6 +1962,17 @@
     "/api/v1/todo/lists/reorder": {
       "post": {
         "operationId": "reorder_todo_lists_api_v1_todo_lists_reorder_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1907,6 +2058,15 @@
               "title": "Client Updated At Ms",
               "type": "integer"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1966,6 +2126,15 @@
             "required": true,
             "schema": {
               "title": "List Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -2073,6 +2242,15 @@
               ],
               "title": "To"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2125,6 +2303,17 @@
       },
       "post": {
         "operationId": "upsert_occurrence_api_v1_todo_occurrences_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2187,6 +2376,17 @@
     "/api/v1/todo/occurrences/bulk": {
       "post": {
         "operationId": "bulk_upsert_occurrences_api_v1_todo_occurrences_bulk_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2271,6 +2471,15 @@
               "default": 0,
               "title": "Client Updated At Ms",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],

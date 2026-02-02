@@ -1056,6 +1056,15 @@
               "title": "Attachment Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1300,6 +1309,17 @@
     "/health": {
       "get": {
         "operationId": "health_health_get",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1557,6 +1577,15 @@
               "title": "Include Deleted",
               "type": "boolean"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1792,6 +1821,17 @@
       },
       "post": {
         "operationId": "create_note_notes_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2056,6 +2096,15 @@
               "title": "Client Updated At Ms",
               "type": "integer"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2303,6 +2352,15 @@
               "title": "Include Deleted",
               "type": "boolean"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2545,6 +2603,15 @@
             "required": true,
             "schema": {
               "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -2803,6 +2870,15 @@
               "title": "Note Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -3057,6 +3133,15 @@
             "required": true,
             "schema": {
               "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -3327,6 +3412,15 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3580,6 +3674,15 @@
             "required": true,
             "schema": {
               "title": "Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -3838,6 +3941,15 @@
               "title": "Note Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -4094,6 +4206,15 @@
               "title": "Share Token",
               "type": "string"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -4308,6 +4429,15 @@
               "title": "Attachment Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -4518,6 +4648,15 @@
             "required": true,
             "schema": {
               "title": "Share Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -4773,6 +4912,15 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5010,6 +5158,17 @@
     "/sync/push": {
       "post": {
         "operationId": "push_sync_sync_push_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -5346,6 +5505,15 @@
               "title": "Include Deleted",
               "type": "boolean"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5581,6 +5749,17 @@
       },
       "post": {
         "operationId": "create_todo_item_todo_items_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -5845,6 +6024,15 @@
               "title": "Client Updated At Ms",
               "type": "integer"
             }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -6080,6 +6268,15 @@
             "required": true,
             "schema": {
               "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }
@@ -6336,6 +6533,15 @@
             "required": true,
             "schema": {
               "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
               "type": "string"
             }
           }

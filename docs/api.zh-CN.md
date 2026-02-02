@@ -1,6 +1,6 @@
 # Flow Backend API 文档（v1 + v2）
 
-最后更新：2026-02-01
+最后更新：2026-02-02
 
 本文件面向 APK / Web 客户端开发团队，覆盖：鉴权、请求头约定、错误格式、同步协议、以及所有已实现的 v1/v2 接口。
 
@@ -145,9 +145,16 @@ v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构�
 }
 ```
 
-- `error`：基于 HTTP status 映射（400/401/403/404/409/410/429/502 等；其它为 `http_<code>`）
+- `error`：基于 HTTP status 映射（400/401/403/404/409/410/413/429/502 等；其它为 `http_<code>`）
+  - 其中：413 会映射为 `payload_too_large`
+  - 未处理异常（500）固定为 `internal_error`（而不是 `http_500`）
 - `message`：人类可读提示
 - `details`：可选；常用于 422 校验错误或 409 冲突快照
+
+422 特别说明：
+
+- 若是框架层请求校验失败（FastAPI `RequestValidationError`），则返回 `error = "validation_error"`
+- 若业务代码主动抛出 `HTTPException(status_code=422, ...)`，则 `error` 可能为 `http_422`
 
 定义见：`src/flow_backend/v2/schemas/errors.py`
 
@@ -619,13 +626,18 @@ Query：
 }
 ```
 
+说明：
+
+- `storage_key` 是服务端存储层使用的对象 key（内部字段，非 URL；客户端不应将其当作可访问链接）
+- 服务端存储可能是本地磁盘或 S3（对客户端透明；下载统一通过附件下载接口）
+
 #### GET /api/v2/attachments/{attachment_id}
 
 返回文件 bytes（Content-Disposition 为 attachment；LocalStorage 会直接走文件响应）。
 
 常见错误：
 
-- 413（文件过大）：`{"error":"http_413","message":"attachment too large"...}`
+- 413（文件过大）：`{"error":"payload_too_large","message":"attachment too large"...}`
   - 上限由 `ATTACHMENTS_MAX_SIZE_BYTES` 控制（默认 25MB）。
 
 ### 6.5 Shares（鉴权）
@@ -637,6 +649,11 @@ Query：
 ```json
 {"expires_in_seconds": 3600}
 ```
+
+说明：
+
+- `expires_in_seconds`：可选，分享有效期（秒）。缺省/传 null 时默认 7 天；最大 30 天。
+- 超出范围会返回 422（通常为框架校验错误：`error = "validation_error"`）。
 
 成功：201，返回：
 
