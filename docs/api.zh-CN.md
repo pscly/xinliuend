@@ -664,6 +664,11 @@ Query：
 
 鉴权：需要 Bearer Token。
 
+重要说明：v2 **不提供** todo list 的 CRUD（list 仍沿用 v1 的数据模型）。
+
+- `list_id` 需要来自 v1：`GET/POST/PATCH/DELETE /api/v1/todo/lists` 或 v1 sync 拉取的 `todo_lists`。
+- 如果客户端只接 v2，请务必先用 v1 创建/同步 list，否则 v2 创建/更新 todo item 会返回 `404 todo list not found`。
+
 #### GET /api/v2/todo/items
 
 Query：

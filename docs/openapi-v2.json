@@ -1210,6 +1210,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -1219,6 +1237,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -1347,6 +1383,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -1356,6 +1410,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -1584,6 +1656,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -1593,6 +1683,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -1767,6 +1875,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -1776,6 +1902,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -1956,6 +2100,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -1965,6 +2127,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -2150,6 +2330,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -2159,6 +2357,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -2344,6 +2560,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -2353,6 +2587,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -2540,6 +2792,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -2549,6 +2819,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -2736,6 +3024,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -2745,6 +3051,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -2934,6 +3258,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -2943,6 +3285,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -3139,6 +3499,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -3148,6 +3526,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -3335,6 +3731,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -3344,6 +3758,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -3485,6 +3917,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -3494,6 +3944,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -3646,6 +4114,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -3655,6 +4141,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -3820,6 +4324,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -3829,6 +4351,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -4020,6 +4560,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -4029,6 +4587,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -4205,6 +4781,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -4214,6 +4808,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -4473,6 +5085,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -4482,6 +5112,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -4656,6 +5304,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -4665,6 +5331,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -4845,6 +5529,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -4854,6 +5556,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -5039,6 +5759,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -5048,6 +5786,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
@@ -5235,6 +5991,24 @@
               }
             }
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -5244,6 +6018,24 @@
               }
             },
             "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
             "headers": {
               "X-Request-Id": {
                 "description": "Echoed or generated request id.",
