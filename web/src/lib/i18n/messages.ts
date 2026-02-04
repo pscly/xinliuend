@@ -20,6 +20,8 @@ export type MessageKey =
   | "page.settings.title"
   | "page.settings.admin.title"
   | "page.settings.admin.subtitle"
+  | "page.settings.password.title"
+  | "page.settings.password.subtitle"
   | "page.notifications.title"
   | "page.notifications.subtitle"
   | "notifications.unreadOnly"
@@ -35,12 +37,26 @@ export type MessageKey =
   | "settings.account.role"
   | "settings.account.role.admin"
   | "settings.account.role.user"
+  | "settings.account.changePassword"
   | "settings.admin.title"
   | "settings.admin.subtitle"
   | "settings.admin.openAppAdmin"
   | "settings.admin.openBackendAdmin"
   | "settings.admin.page.description"
   | "settings.admin.page.backToSettings"
+  | "settings.password.form.title"
+  | "settings.password.current"
+  | "settings.password.new"
+  | "settings.password.confirm"
+  | "settings.password.hint"
+  | "settings.password.submit"
+  | "settings.password.submitting"
+  | "settings.password.back"
+  | "settings.password.success"
+  | "settings.password.errorInvalidCurrent"
+  | "settings.password.errorMismatch"
+  | "settings.password.errorGeneric"
+  | "settings.password.errorNetwork"
   | "auth.username"
   | "auth.password"
   | "auth.login"
@@ -76,6 +92,8 @@ const zhCN: Messages = {
   "page.settings.title": "设置",
   "page.settings.admin.title": "管理区",
   "page.settings.admin.subtitle": "仅管理员可访问的用户端管理功能。",
+  "page.settings.password.title": "修改密码",
+  "page.settings.password.subtitle": "修改后端账号密码，并同步更新 Memos 密码。",
   "page.notifications.title": "通知中心",
   "page.notifications.subtitle": "提及、分享等提醒（支持未读筛选）。",
   "notifications.unreadOnly": "只看未读",
@@ -91,12 +109,26 @@ const zhCN: Messages = {
   "settings.account.role": "角色",
   "settings.account.role.admin": "管理员",
   "settings.account.role.user": "普通用户",
+  "settings.account.changePassword": "修改密码",
   "settings.admin.title": "管理",
   "settings.admin.subtitle": "管理入口（仅管理员可见）。",
   "settings.admin.openAppAdmin": "打开应用管理区",
   "settings.admin.openBackendAdmin": "打开后端 /admin",
   "settings.admin.page.description": "这里是用户端的管理区（/settings/admin）。后端的 /admin 使用自己的登录体系，因此仅提供外链入口。",
   "settings.admin.page.backToSettings": "返回设置",
+  "settings.password.form.title": "修改密码",
+  "settings.password.current": "当前密码",
+  "settings.password.new": "新密码",
+  "settings.password.confirm": "确认新密码",
+  "settings.password.hint": "要求：至少 6 位；为了兼容 Memos 密码规则（+x），UTF-8 不能超过 71 字节。",
+  "settings.password.submit": "保存",
+  "settings.password.submitting": "保存中…",
+  "settings.password.back": "返回设置",
+  "settings.password.success": "密码修改成功。",
+  "settings.password.errorInvalidCurrent": "当前密码错误。",
+  "settings.password.errorMismatch": "两次输入的新密码不一致。",
+  "settings.password.errorGeneric": "修改失败，请稍后重试。",
+  "settings.password.errorNetwork": "网络错误或服务不可用，请稍后重试。",
   "auth.username": "用户名",
   "auth.password": "密码",
   "auth.login": "登录",
@@ -131,6 +163,8 @@ const en: Messages = {
   "page.settings.title": "Settings",
   "page.settings.admin.title": "Admin",
   "page.settings.admin.subtitle": "Admin-only tools inside the user app.",
+  "page.settings.password.title": "Change password",
+  "page.settings.password.subtitle": "Update your backend password and sync Memos password.",
   "page.notifications.title": "Notification Center",
   "page.notifications.subtitle": "Mentions and updates (with unread filter).",
   "notifications.unreadOnly": "Unread only",
@@ -146,12 +180,26 @@ const en: Messages = {
   "settings.account.role": "Role",
   "settings.account.role.admin": "Admin",
   "settings.account.role.user": "User",
+  "settings.account.changePassword": "Change password",
   "settings.admin.title": "Admin",
   "settings.admin.subtitle": "Admin entry points.",
   "settings.admin.openAppAdmin": "Open app admin",
   "settings.admin.openBackendAdmin": "Open backend /admin",
   "settings.admin.page.description": "This is the user-app admin area (/settings/admin). The backend /admin has its own login, so we only provide an external link.",
   "settings.admin.page.backToSettings": "Back to Settings",
+  "settings.password.form.title": "Change password",
+  "settings.password.current": "Current password",
+  "settings.password.new": "New password",
+  "settings.password.confirm": "Confirm password",
+  "settings.password.hint": "Requirements: 6+ chars. For Memos (+x) compatibility, UTF-8 must be ≤ 71 bytes.",
+  "settings.password.submit": "Save",
+  "settings.password.submitting": "Saving…",
+  "settings.password.back": "Back to Settings",
+  "settings.password.success": "Password updated.",
+  "settings.password.errorInvalidCurrent": "Current password is incorrect.",
+  "settings.password.errorMismatch": "Passwords do not match.",
+  "settings.password.errorGeneric": "Update failed. Please try again.",
+  "settings.password.errorNetwork": "Network error or service unavailable. Please try again.",
   "auth.username": "Username",
   "auth.password": "Password",
   "auth.login": "Sign in",

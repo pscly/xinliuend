@@ -9,7 +9,7 @@
 3. 开发/部署建议与风险点
 4. 后续路线图（可选增强，不代表已交付）
 
-> 说明：完整 API 细节与同步协议请看 `docs/api.zh-CN.md`。本文更偏“宏观架构与工程化说明”。
+> 说明：完整 API 细节与同步协议请看 `apidocs/api.zh-CN.md`。本文更偏“宏观架构与工程化说明”。
 
 ---
 
@@ -55,7 +55,7 @@ Flow Backend (FastAPI)
   - 本地开发可用 Next rewrites 代理后端（同源体验更好）
   - 生产可静态导出到 `web/out` 并由后端同源托管（可选）
 - 文档：
-  - API 总文档：`docs/api.zh-CN.md`
+  - API 总文档：`apidocs/api.zh-CN.md`
   - Web 联调/部署专题：`docs/web-dev-and-deploy.md`
 
 ---
@@ -130,7 +130,7 @@ TODO 同时存在 v1 与 v2：
 
 强烈建议：
 
-- 客户端严格遵循 `docs/api.zh-CN.md` 中对 `client_updated_at_ms`、cursor、tombstone 的约定。
+- 客户端严格遵循 `apidocs/api.zh-CN.md` 中对 `client_updated_at_ms`、cursor、tombstone 的约定。
 
 ### 3.6 Attachments（附件）
 
@@ -252,4 +252,3 @@ Admin 形态：
 3. 更完善的观测性：结构化日志、trace/span、指标（限流命中、同步耗时、附件吞吐等）
 4. Token 轮换与安全策略（例如强制登出、设备撤销、token 过期策略可配置）
 5. 更丰富的搜索能力（全文索引、标签/时间/状态组合过滤）
-

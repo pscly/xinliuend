@@ -44,6 +44,23 @@ export default function SettingsPage() {
                 {user?.isAdmin ? t("settings.account.role.admin") : t("settings.account.role.user")}
               </span>
             </div>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+              <Link
+                href="/settings/password"
+                style={{
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-1)",
+                  background: "var(--color-surface)",
+                  color: "var(--color-text)",
+                  padding: "8px 10px",
+                  fontFamily: "var(--font-body)",
+                  textDecoration: "none",
+                }}
+              >
+                {t("settings.account.changePassword")}
+              </Link>
+            </div>
           </div>
         </section>
 

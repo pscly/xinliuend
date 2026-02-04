@@ -20,6 +20,35 @@
         "title": "ApiResponse",
         "type": "object"
       },
+      "ChangePasswordRequest": {
+        "properties": {
+          "current_password": {
+            "maxLength": 72,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 72,
+            "minLength": 6,
+            "title": "New Password",
+            "type": "string"
+          },
+          "new_password2": {
+            "maxLength": 72,
+            "minLength": 6,
+            "title": "New Password2",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password",
+          "new_password2"
+        ],
+        "title": "ChangePasswordRequest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -889,6 +918,47 @@
         ]
       }
     },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "Clear the user session cookie.\n\n- Idempotent: OK even when already logged out.\n- If a valid cookie-session exists, enforce CSRF to prevent cross-site logout.\n- Bearer-token clients should not need CSRF for this endpoint.",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/register": {
       "post": {
         "operationId": "register_api_v1_auth_register_post",
@@ -986,6 +1056,124 @@
         "summary": "Register",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "get_me_api_v1_me_get",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Me",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/password": {
+      "post": {
+        "operationId": "change_password_api_v1_me_password_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Password",
+        "tags": [
+          "me"
         ]
       }
     },

@@ -18,6 +18,7 @@ def test_settings_production_requires_secrets_and_core_config():
     assert "ADMIN_BASIC_PASSWORD" in msg
     assert "ADMIN_SESSION_SECRET" in msg
     assert "USER_SESSION_SECRET" in msg
+    assert "USER_PASSWORD_ENCRYPTION_KEY" in msg
     assert "SHARE_TOKEN_SECRET" in msg
     assert "CORS_ALLOW_ORIGINS" in msg
     assert "MEMOS_ADMIN_TOKEN" in msg
@@ -37,6 +38,7 @@ def test_settings_production_allows_safe_defaults_when_configured():
             "admin_basic_password": "strong-password",
             "admin_session_secret": "strong-session-secret",
             "user_session_secret": "strong-user-session-secret",
+            "user_password_encryption_key": "WmfpBBPjCEIb_IJvZP_t6aG9AZ51qHm_iNg0Q_y6Bno=",
             "share_token_secret": "strong-share-secret",
             "cors_allow_origins": "https://example.com",
             "dev_bypass_memos": False,
@@ -57,6 +59,7 @@ def test_settings_production_rejects_partial_s3_config():
                 "admin_basic_password": "strong-password",
                 "admin_session_secret": "strong-session-secret",
                 "user_session_secret": "strong-user-session-secret",
+                "user_password_encryption_key": "WmfpBBPjCEIb_IJvZP_t6aG9AZ51qHm_iNg0Q_y6Bno=",
                 "share_token_secret": "strong-share-secret",
                 "cors_allow_origins": "https://example.com",
                 "dev_bypass_memos": False,

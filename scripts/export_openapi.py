@@ -14,12 +14,12 @@ def _write_json(path: Path, data: object) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Export FastAPI OpenAPI specs to docs/ as JSON snapshots."
+        description="Export FastAPI OpenAPI specs to apidocs/ as JSON snapshots."
     )
     parser.add_argument(
         "--out-dir",
-        default="docs",
-        help="Output directory (default: docs)",
+        default="apidocs",
+        help="Output directory (default: apidocs)",
     )
     args = parser.parse_args()
 

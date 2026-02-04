@@ -6,7 +6,7 @@
 
 > 重要说明：
 >
-> - “接口全量字段/同步协议/冲突细节”请以 `docs/api.zh-CN.md` 为准。
+> - “接口全量字段/同步协议/冲突细节”请以 `apidocs/api.zh-CN.md` 为准。
 > - 本文提供：对接路径、关键约定、错误处理、以及常见坑位提示。
 
 ---
@@ -198,7 +198,7 @@ X-Request-Id: <uuid>
 - v1 OpenAPI：`GET https://xl.pscly.cc/openapi.json`
 - v2 OpenAPI：`GET https://xl.pscly.cc/api/v2/openapi.json`
 
-> 提示：v1/v2 的“成功/错误格式”不同，客户端实现时建议按 path 前缀做解包与错误解析分流（详见本文第 4 章与 `docs/api.zh-CN.md`）。
+> 提示：v1/v2 的“成功/错误格式”不同，客户端实现时建议按 path 前缀做解包与错误解析分流（详见本文第 4 章与 `apidocs/api.zh-CN.md`）。
 
 ---
 
@@ -275,7 +275,7 @@ v2 所有非 2xx 基本都返回：
 
 注意：
 
-- v2 同步中，若资源已 tombstone（软删除），upsert 会被拒绝为 conflict，需要显式 restore（具体见 `docs/api.zh-CN.md` 的 v2 Sync 章节）。
+- v2 同步中，若资源已 tombstone（软删除），upsert 会被拒绝为 conflict，需要显式 restore（具体见 `apidocs/api.zh-CN.md` 的 v2 Sync 章节）。
 
 ---
 

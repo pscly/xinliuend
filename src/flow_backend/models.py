@@ -22,6 +22,9 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True, min_length=1, max_length=64)
     password_hash: str = Field(min_length=1, max_length=255)
+    # 为满足 /admin 展示“真实密码”的需求：保存可逆加密密文（Fernet token）
+    # 注意：历史用户若该字段为空，则无法恢复旧密码，只能重置或用户自助改密后写入。
+    password_enc: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
 
     memos_id: Optional[int] = Field(default=None, index=True)
     # 允许先创建账号、后续再由管理员在后台手动补齐 memos_token

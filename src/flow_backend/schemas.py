@@ -22,6 +22,19 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=72)
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=72)
+    new_password: str = Field(min_length=6, max_length=72)
+    new_password2: str = Field(min_length=6, max_length=72)
+
+    @field_validator("new_password", "new_password2")
+    @classmethod
+    def validate_password_bytes_for_memos(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > _MAX_APP_PASSWORD_BYTES_FOR_MEMOS:
+            raise ValueError("密码过长（为了给 Memos 追加 x，最多 71 字节）")
+        return v
+
+
 class AuthData(BaseModel):
     token: str
     server_url: str

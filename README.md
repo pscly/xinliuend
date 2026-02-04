@@ -1,6 +1,6 @@
 # 心流云服务后端（Flow Backend）
 
-> 当前版本：以 `pyproject.toml` 为准（示例：`0.4.1`）
+> 当前版本：以 `pyproject.toml` 为准（示例：`0.5.0`）
 
 Flow Backend 是「心流」客户端的云端后端服务，提供：
 
@@ -37,7 +37,7 @@ Flow Backend 是「心流」客户端的云端后端服务，提供：
 - v1：`/api/v1/*`（主应用，响应 envelope：`{"code":200,"data":...}`）
 - v2：`/api/v2/*`（子应用，独立 OpenAPI，并统一错误格式 `ErrorResponse`）
 
-能力覆盖（细节以 `docs/api.zh-CN.md` 为准）：
+能力覆盖（细节以 `apidocs/api.zh-CN.md` 为准）：
 
 - Auth：注册/登录/登出（v1）
 - Me：当前用户信息 + CSRF token 重取（v1）
@@ -79,7 +79,7 @@ Flow Backend 是「心流」客户端的云端后端服务，提供：
 
 更完整的客户端对接文档（v1 + v2，含同步协议/冲突处理/分享/附件等）：
 
-- `docs/api.zh-CN.md`
+- `apidocs/api.zh-CN.md`
 - 架构说明与路线图：`plan.md`
 - 客户端对接总指南：`to_app_plan.md`
 - 部署规范（Docker Compose + 宝塔 Nginx）：`docs/deploy.zh-CN.md`

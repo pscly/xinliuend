@@ -242,7 +242,7 @@
                 <td class="px-5 py-4 text-zinc-200">{{ u.id }}</td>
                 <td class="px-5 py-4">
                   <div class="flex items-center gap-2">
-                    <div class="font-semibold">{{ u.username }}</div>
+                    <a href="/admin/users/{{ u.id }}" class="font-semibold hover:underline">{{ u.username }}</a>
                     {% if u.is_admin %}
                       <span class="inline-flex items-center rounded-full bg-indigo-500/15 ring-1 ring-indigo-400/25 px-2 py-0.5 text-xs text-indigo-200">管理员</span>
                     {% endif %}

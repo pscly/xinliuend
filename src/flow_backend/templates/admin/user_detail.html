@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Flow 管理后台 - 用户详情</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: [
+                "ui-sans-serif",
+                "system-ui",
+                "-apple-system",
+                "Segoe UI",
+                "Roboto",
+                "Helvetica",
+                "Arial",
+                "Noto Sans SC",
+                "PingFang SC",
+                "Microsoft YaHei",
+                "sans-serif",
+              ],
+              mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "monospace"],
+            },
+            boxShadow: {
+              soft: "0 10px 30px rgba(0,0,0,.35)",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+    <div class="pointer-events-none fixed inset-0 -z-10">
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(99,102,241,0.18),transparent_55%)]"></div>
+      <div class="absolute inset-0 opacity-20 [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <div class="mb-6 sm:mb-8">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-10 rounded-xl bg-indigo-500/15 ring-1 ring-indigo-400/25 flex items-center justify-center shadow-soft">
+                <svg viewBox="0 0 24 24" class="h-5 w-5 text-indigo-300" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 3l8 4v6c0 5-3 9-8 11C7 22 4 18 4 13V7l8-4z"></path>
+                </svg>
+              </div>
+              <div>
+                <h1 class="text-xl sm:text-2xl font-semibold tracking-tight">用户详情</h1>
+                <div class="mt-1 text-sm text-zinc-400 break-all">
+                  <span class="text-zinc-500">Memos：</span>{{ memos_base_url }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+            <a
+              href="/admin"
+              class="rounded-xl bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-2 text-xs font-semibold ring-1 ring-zinc-700"
+            >
+              返回列表
+            </a>
+            <a
+              href="/admin/users/{{ user.id }}/devices"
+              class="rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 active:bg-indigo-600/20 px-3 py-2 text-xs font-semibold text-indigo-200 ring-1 ring-indigo-400/25"
+            >
+              设备/IP
+            </a>
+            <form method="post" action="/admin/logout">
+              <button class="rounded-xl bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-2 text-xs font-semibold ring-1 ring-zinc-700" type="submit">
+                退出登录
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {% if err %}
+      <div class="mb-4 rounded-xl border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm text-red-200 ring-1 ring-red-900/30">
+        <div class="flex items-start gap-3">
+          <div class="mt-0.5">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 text-red-300" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 9v4"></path>
+              <path d="M12 17h.01"></path>
+              <path d="M10.29 3.86l-8.1 14.02A2 2 0 004 21h16a2 2 0 001.73-3.12L13.64 3.86a2 2 0 00-3.35 0z"></path>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="font-medium">操作失败</div>
+            <div class="mt-1 text-red-200/90">{{ err }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% if msg %}
+      <div class="mb-4 rounded-xl border border-emerald-900/60 bg-emerald-950/25 px-4 py-3 text-sm text-emerald-200 ring-1 ring-emerald-900/25">
+        <div class="flex items-start gap-3">
+          <div class="mt-0.5">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 text-emerald-300" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 6L9 17l-5-5"></path>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="font-medium">已完成</div>
+            <div class="mt-1 text-emerald-200/90">{{ msg }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="grid gap-4">
+        <div class="rounded-2xl bg-zinc-900/50 ring-1 ring-zinc-800 shadow-soft overflow-hidden">
+          <div class="px-5 py-4 border-b border-zinc-800">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div class="text-base font-semibold">账号信息</div>
+                <div class="mt-1 text-sm text-zinc-400">用户基础信息与状态</div>
+              </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                {% if user.is_admin %}
+                  <span class="inline-flex items-center rounded-full bg-indigo-500/15 ring-1 ring-indigo-400/25 px-2 py-0.5 text-xs text-indigo-200">管理员</span>
+                {% else %}
+                  <span class="inline-flex items-center rounded-full bg-zinc-700/25 ring-1 ring-zinc-600/35 px-2 py-0.5 text-xs text-zinc-200">普通用户</span>
+                {% endif %}
+                {% if user.is_active %}
+                  <span class="inline-flex items-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-400/25 px-2 py-0.5 text-xs text-emerald-200">启用</span>
+                {% else %}
+                  <span class="inline-flex items-center rounded-full bg-red-500/15 ring-1 ring-red-400/25 px-2 py-0.5 text-xs text-red-200">禁用</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="px-5 py-4 grid gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-3">
+                <div class="text-xs text-zinc-400">用户 ID</div>
+                <div class="mt-1 text-lg font-semibold">{{ user.id }}</div>
+              </div>
+              <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-3">
+                <div class="text-xs text-zinc-400">用户名</div>
+                <div class="mt-1 text-lg font-semibold">{{ user.username }}</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-3">
+                <div class="text-xs text-zinc-400">Memos 用户 ID</div>
+                <div class="mt-1 text-lg font-semibold">{{ user.memos_id }}</div>
+              </div>
+              <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-3">
+                <div class="text-xs text-zinc-400">创建时间</div>
+                <div class="mt-1 text-sm text-zinc-200">{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '' }}</div>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-3">
+              <div class="text-xs text-zinc-400">Memos Token</div>
+              <div class="mt-2 flex items-center gap-2 flex-wrap">
+                <code id="memosToken" class="text-xs text-zinc-200 font-mono break-all">{{ user.memos_token or '未设置' }}</code>
+                <button
+                  type="button"
+                  class="rounded-lg bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-1.5 text-xs font-semibold ring-1 ring-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onclick="copyById('memosToken', '已复制 Token')"
+                  {% if not user.memos_token %}disabled{% endif %}
+                >
+                  复制
+                </button>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <form method="post" action="/admin/users/{{ user.id }}/toggle-admin">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <input type="hidden" name="next" value="/admin/users/{{ user.id }}" />
+                <button class="rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 active:bg-indigo-600/20 px-3 py-1.5 text-xs font-semibold text-indigo-200 ring-1 ring-indigo-400/25" type="submit">
+                  {{ '取消管理员' if user.is_admin else '设为管理员' }}
+                </button>
+              </form>
+              <form method="post" action="/admin/users/{{ user.id }}/toggle-active">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <input type="hidden" name="next" value="/admin/users/{{ user.id }}" />
+                <button class="rounded-lg bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-1.5 text-xs font-semibold ring-1 ring-zinc-700" type="submit">
+                  {{ '启用' if not user.is_active else '禁用' }}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl bg-zinc-900/50 ring-1 ring-zinc-800 shadow-soft overflow-hidden">
+          <div class="px-5 py-4 border-b border-zinc-800">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div class="text-base font-semibold">密码与凭据</div>
+                <div class="mt-1 text-sm text-zinc-400">
+                  {% if has_password_enc %}
+                    已记录可解密密码（可查看“真实密码”）。
+                  {% else %}
+                    未记录可解密密码（旧版本数据不可恢复；可通过重置密码写入）。
+                  {% endif %}
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  class="rounded-xl bg-emerald-600/90 hover:bg-emerald-500 active:bg-emerald-600 px-3 py-2 text-xs font-semibold text-white ring-1 ring-emerald-400/25"
+                  onclick="fetchSecrets()"
+                >
+                  点击展示真实密码
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-5 py-4 grid gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-3">
+                <div class="text-xs text-zinc-400">用户密码（App）</div>
+                <div class="mt-2 flex items-center gap-2 flex-wrap">
+                  <code id="appPassword" class="text-xs text-zinc-200 font-mono break-all">（未显示）</code>
+                  <button
+                    type="button"
+                    class="rounded-lg bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-1.5 text-xs font-semibold ring-1 ring-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onclick="copyById('appPassword', '已复制用户密码')"
+                    disabled
+                    id="appPasswordCopyBtn"
+                  >
+                    复制
+                  </button>
+                </div>
+              </div>
+              <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-3">
+                <div class="text-xs text-zinc-400">Memos 密码（真实）</div>
+                <div class="mt-2 flex items-center gap-2 flex-wrap">
+                  <code id="memosPassword" class="text-xs text-zinc-200 font-mono break-all">（未显示）</code>
+                  <button
+                    type="button"
+                    class="rounded-lg bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-1.5 text-xs font-semibold ring-1 ring-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onclick="copyById('memosPassword', '已复制 Memos 密码')"
+                    disabled
+                    id="memosPasswordCopyBtn"
+                  >
+                    复制
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-zinc-950/35 ring-1 ring-zinc-800 px-4 py-3 text-sm text-zinc-300">
+              提示：Memos 密码 = 用户密码 + <code class="font-mono">x</code>（用于避免直接用同一密码登录 Memos）。
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl bg-zinc-900/50 ring-1 ring-zinc-800 shadow-soft overflow-hidden">
+          <div class="px-5 py-4 border-b border-zinc-800">
+            <div>
+              <div class="text-base font-semibold">管理操作</div>
+              <div class="mt-1 text-sm text-zinc-400">设置 Token / 重置密码</div>
+            </div>
+          </div>
+
+          <div class="px-5 py-4 grid gap-4">
+            <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-4">
+              <div class="text-sm font-semibold text-zinc-200">设置/清空 Token</div>
+              <form method="post" action="/admin/users/{{ user.id }}/set-token" class="mt-3 grid grid-cols-1 md:grid-cols-6 gap-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <input type="hidden" name="next" value="/admin/users/{{ user.id }}" />
+                <input
+                  name="memos_id"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  placeholder="Memos ID（留空=清空）"
+                  class="md:col-span-2 rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-sm"
+                />
+                <input
+                  name="memos_token"
+                  placeholder="粘贴 Token（留空=清空）"
+                  class="md:col-span-3 rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-sm font-mono"
+                />
+                <button class="md:col-span-1 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 active:bg-indigo-600 px-3 py-2 text-sm font-semibold text-white ring-1 ring-indigo-400/25" type="submit">
+                  保存
+                </button>
+              </form>
+            </div>
+
+            <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-4">
+              <div class="text-sm font-semibold text-zinc-200">重置密码</div>
+              <div class="mt-1 text-xs text-zinc-400">重置后会同步更新 Memos 侧密码（若该用户有 Memos 用户 ID）。</div>
+              <form method="post" action="/admin/users/{{ user.id }}/reset-password" class="mt-3 grid grid-cols-1 md:grid-cols-6 gap-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <input type="hidden" name="next" value="/admin/users/{{ user.id }}" />
+                <input
+                  name="password"
+                  type="password"
+                  placeholder="新密码（至少 6 位）"
+                  class="md:col-span-2 rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-sm"
+                  autocomplete="new-password"
+                />
+                <input
+                  name="password2"
+                  type="password"
+                  placeholder="确认新密码"
+                  class="md:col-span-2 rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-sm"
+                  autocomplete="new-password"
+                />
+                <button class="md:col-span-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 active:bg-emerald-600 px-3 py-2 text-sm font-semibold text-white ring-1 ring-emerald-400/25" type="submit">
+                  重置并保存
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="toastHost" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+      <script>
+        function showToast(message, type) {
+          const host = document.getElementById("toastHost");
+          if (!host) return;
+
+          const el = document.createElement("div");
+          const ok = type === "ok";
+          el.className =
+            "max-w-sm rounded-xl px-4 py-3 text-sm ring-1 shadow-soft " +
+            (ok
+              ? "bg-emerald-950/60 text-emerald-200 ring-emerald-900/40"
+              : "bg-red-950/60 text-red-200 ring-red-900/40");
+          el.textContent = message;
+          host.appendChild(el);
+          setTimeout(() => el.classList.add("opacity-0"), 2200);
+          setTimeout(() => el.remove(), 2600);
+        }
+
+        async function copyById(id, okMessage) {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const text = el.textContent || "";
+          if (!text || text === "（未显示）" || text === "未设置") return;
+          try {
+            await navigator.clipboard.writeText(text);
+            showToast(okMessage || "已复制", "ok");
+          } catch {
+            showToast("复制失败（浏览器权限/协议限制）", "err");
+          }
+        }
+
+        async function fetchSecrets() {
+          try {
+            const csrfToken = "{{ csrf_token }}";
+            const res = await fetch("/admin/users/{{ user.id }}/secrets", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ csrf_token: csrfToken }).toString(),
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+              const msg = (data && data.error) || (data && data.detail) || `HTTP ${res.status}`;
+              showToast(msg, "err");
+              return;
+            }
+
+            if (!data || data.ok !== true) {
+              showToast((data && data.error) || "无法获取密码", "err");
+              return;
+            }
+
+            const appPassword = document.getElementById("appPassword");
+            const memosPassword = document.getElementById("memosPassword");
+            if (appPassword) appPassword.textContent = data.password || "";
+            if (memosPassword) memosPassword.textContent = data.memos_password || "";
+
+            const appCopyBtn = document.getElementById("appPasswordCopyBtn");
+            const memosCopyBtn = document.getElementById("memosPasswordCopyBtn");
+            if (appCopyBtn) appCopyBtn.disabled = !data.password;
+            if (memosCopyBtn) memosCopyBtn.disabled = !data.memos_password;
+
+            showToast("已展示密码（注意安全）", "ok");
+          } catch {
+            showToast("请求失败，请稍后重试", "err");
+          }
+        }
+      </script>
+    </div>
+  </body>
+</html>
+

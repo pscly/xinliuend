@@ -13,6 +13,7 @@ from flow_backend.db import get_session, session_scope
 from flow_backend.device_tracking import extract_client_ip, record_device_activity
 from flow_backend.memos_client import MemosClient, MemosClientError
 from flow_backend.models import User
+from flow_backend.password_crypto import encrypt_password
 from flow_backend.schemas import LoginRequest, RegisterRequest
 from flow_backend.security import hash_password, verify_password
 from flow_backend.rate_limiting import build_ip_key, build_ip_username_key, enforce_rate_limit
@@ -88,6 +89,10 @@ async def register(
         user.password_hash = hash_password(payload.password)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    try:
+        user.password_enc = encrypt_password(payload.password)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     try:
         session.add(user)
         await session.commit()

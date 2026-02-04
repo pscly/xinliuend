@@ -26,6 +26,12 @@ OpenAPI / Swagger UI：
 - `GET /health`（主应用）
 - `GET /api/v2/health`（v2 子应用）
 
+管理后台（内部）：
+
+- `GET /admin`（独立登录体系，不在 OpenAPI schema 中）
+- 若需要在 `/admin` 查看用户“真实密码”（含 memos 真实密码），需要配置 `USER_PASSWORD_ENCRYPTION_KEY`（Fernet key）
+  - 风险提示：一旦该 key 泄漏，所有可解密的历史密码都会暴露
+
 ## 2. 鉴权与通用请求头
 
 ### 2.1 Bearer Token
@@ -520,6 +526,41 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 ```json
 {"code":200,"data":{"username":"alice","is_admin":false,"csrf_token":"..."}}
 ```
+
+#### POST /api/v1/me/password
+
+用途：修改当前用户密码（Web/移动端均可用）。会同步更新 Memos 侧密码。
+
+鉴权：
+
+- Bearer Token：可用
+- Cookie Session：可用（属于写方法，必须带 CSRF header）
+
+请求体：`ChangePasswordRequest`
+
+```json
+{"current_password":"old-pass","new_password":"new-pass-123","new_password2":"new-pass-123"}
+```
+
+成功：
+
+```json
+{"code":200,"data":{"ok":true,"csrf_token":"..."}}
+```
+
+说明：
+
+- 成功后会重新签发用户会话 cookie，并返回新的 `csrf_token`（前端建议调用一次 `GET /api/v1/me` 刷新本地 token）。
+- 密码限制：至少 6 位；为兼容 Memos 密码规则（`+x`），UTF-8 不能超过 71 字节。
+
+常见错误：
+
+- 401 `{"detail":"invalid credentials"}`（当前密码不正确）
+- 400 `{"detail":"password mismatch"}`（两次输入的新密码不一致）
+- 403 `{"detail":"csrf failed"}`（Cookie Session 写请求未带/带错 CSRF）
+- 409 `{"detail":"memos token not set; contact admin"}`（用户未配置 memos token）
+- 409 `{"detail":"memos user id not set; contact admin"}`（用户未配置 memos user id）
+- 502 `{"detail":"..."}`（对接 Memos 更新密码失败；本次改密会整体失败回滚）
 
 ### 5.2 Settings
 
@@ -1202,8 +1243,8 @@ v2 sync 的差异点：
 
 仓库内也提供“离线快照”（已包含 v2 的 `/api/v2` servers 配置，适合直接导入）：
 
-- `docs/openapi-v1.json`
-- `docs/openapi-v2.json`
+- `apidocs/openapi-v1.json`
+- `apidocs/openapi-v2.json`
 
 内部/调试接口说明：
 
