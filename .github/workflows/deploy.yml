@@ -14,6 +14,26 @@ on:
         required: false
         type: boolean
         default: false
+      node_image:
+        description: "Optional Docker build arg: NODE_IMAGE (e.g. docker.m.daocloud.io/library/node:20-alpine)"
+        required: false
+        default: ""
+      python_image:
+        description: "Optional Docker build arg: PYTHON_IMAGE (e.g. docker.m.daocloud.io/library/python:3.11-slim)"
+        required: false
+        default: ""
+      npm_registry:
+        description: "Optional Docker build arg: NPM_REGISTRY (e.g. https://registry.npmmirror.com)"
+        required: false
+        default: ""
+      pip_index_url:
+        description: "Optional Docker build arg: PIP_INDEX_URL (e.g. https://mirrors.aliyun.com/pypi/simple)"
+        required: false
+        default: ""
+      pip_trusted_host:
+        description: "Optional Docker build arg: PIP_TRUSTED_HOST (e.g. mirrors.aliyun.com)"
+        required: false
+        default: ""
 
 concurrency:
   group: deploy-main
@@ -26,6 +46,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -50,6 +77,16 @@ jobs:
       - name: Test
         run: uv run pytest
 
+      - name: Web install
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Web build (export)
+        working-directory: web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
   deploy:
     needs: verify
     runs-on: ubuntu-latest
@@ -69,6 +106,11 @@ jobs:
       APP_DIR: ${{ matrix.app_dir }}
       DEPLOY_PROFILES: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_profiles || '' }}
       DEPLOY_WIPE_VOLUMES: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.wipe_volumes || 'false' }}
+      NODE_IMAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.node_image || '' }}
+      PYTHON_IMAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.python_image || '' }}
+      NPM_REGISTRY: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.npm_registry || '' }}
+      PIP_INDEX_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pip_index_url || '' }}
+      PIP_TRUSTED_HOST: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pip_trusted_host || '' }}
     steps:
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -85,7 +127,7 @@ jobs:
           echo "[deploy] target=${DEPLOY_NAME} ${DEPLOY_HOST}:${DEPLOY_PORT} dir=${APP_DIR}"
           # 将 APP_DIR 通过 SSH 环境变量传到远端，避免 heredoc 内部变量展开导致的混淆
           ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" \
-            "APP_DIR='${APP_DIR}' DEPLOY_SKIP_GIT='true' DEPLOY_COMPOSE_PROFILES='${DEPLOY_PROFILES}' DEPLOY_WIPE_VOLUMES='${DEPLOY_WIPE_VOLUMES}' bash -s" <<'EOF'
+            "APP_DIR='${APP_DIR}' DEPLOY_SKIP_GIT='true' DEPLOY_COMPOSE_PROFILES='${DEPLOY_PROFILES}' DEPLOY_WIPE_VOLUMES='${DEPLOY_WIPE_VOLUMES}' NODE_IMAGE='${NODE_IMAGE}' PYTHON_IMAGE='${PYTHON_IMAGE}' NPM_REGISTRY='${NPM_REGISTRY}' PIP_INDEX_URL='${PIP_INDEX_URL}' PIP_TRUSTED_HOST='${PIP_TRUSTED_HOST}' bash -s" <<'EOF'
           set -euo pipefail
 
           : "${APP_DIR:?APP_DIR 未设置}"
