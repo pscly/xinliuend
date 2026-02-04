@@ -18,3 +18,13 @@ __pycache__
 .vscode
 .idea
 
+# Web 前端构建产物 / 依赖（避免把本机 node_modules 或 out 打进 build context）
+web/node_modules
+web/.next
+web/out
+web/test-results
+web/playwright-report
+
+# 本地持久化数据（docker compose bind mount 的目录）
+.data
+data

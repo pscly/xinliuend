@@ -1,5 +1,36 @@
 # syntax=docker/dockerfile:1.6
-FROM python:3.11-slim
+
+#
+# 说明：
+# - 本仓库包含 `web/`（Next.js）前端，且使用 `output: "export"` 静态导出到 `web/out/`
+# - 后端在启动时会“尽力”挂载 `web/out` 到 `/`（同源），从而简化 Cookie Session / CSRF / CORS
+# - 因此这里采用 multi-stage：在构建镜像时产出静态站并 COPY 到最终镜像中
+#
+
+ARG NODE_IMAGE=node:20-alpine
+ARG PYTHON_IMAGE=python:3.11-slim
+
+FROM ${NODE_IMAGE} AS web_builder
+
+WORKDIR /web
+
+# 禁用 Next telemetry；避免在构建日志里产生干扰
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# 生产镜像构建不需要 E2E 浏览器，且 web/package.json 存在 postinstall（Playwright）
+# 使用 --ignore-scripts 跳过 postinstall，避免拉取 Chromium 导致构建巨大且缓慢
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN npm config set registry "${NPM_REGISTRY}"
+
+COPY web/package.json web/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts --no-audit --no-fund
+
+COPY web/ ./
+RUN npm run build
+
+
+FROM ${PYTHON_IMAGE}
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -31,6 +62,8 @@ RUN pip install --no-cache-dir -i "${PIP_INDEX_URL}" --trusted-host "${PIP_TRUST
 
 # pydantic-settings 读取 .env 时，若文件不存在可能导致启动/迁移报错；这里放一个空文件兜底
 RUN touch .env
+# 约定：容器内的持久化目录统一放在 /app/.data 下（便于 docker compose bind mount）
+RUN mkdir -p .data
 
 # 先拷贝依赖描述文件，利用 Docker layer cache 加速构建
 COPY pyproject.toml uv.lock ./
@@ -47,6 +80,9 @@ COPY README.md ./
 # - `--no-deps`：依赖已在上一层通过 uv sync 安装
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --no-deps -e .
+
+# 将前端静态导出产物打进镜像（默认同源托管）
+COPY --from=web_builder /web/out ./web/out
 
 EXPOSE 31031
 

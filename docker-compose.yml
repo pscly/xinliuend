@@ -3,14 +3,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # 允许在 Docker Hub 限流/国内网络环境下切换镜像源或 npm registry（可不配，默认可用）
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-alpine}
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.11-slim}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple}
+        PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-mirrors.aliyun.com}
     restart: unless-stopped
     ports:
       - "${FLOW_BACKEND_PORT:-31031}:31031"
+    volumes:
+      # 持久化目录（附件、本地对象存储、SQLite 等）：
+      # 推荐把仓库放到 ~/dockers/xinliuend 后直接映射 ./data -> /app/.data
+      - ./data:/app/.data
     env_file:
       - .env
     environment:
       # 数据库连接统一从 .env 读取（SQLite / 外部 PostgreSQL 均可）
-      DATABASE_URL: ${DATABASE_URL:-sqlite:///./dev.db}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///./.data/dev.db}
 
       # 运行环境：development | production
       # 生产环境务必设置为 production，否则不会启用生产安全校验/禁用调试能力。

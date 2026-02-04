@@ -19,6 +19,10 @@
   - 当前实现中，该 token 存储在服务端数据库字段名为 `memos_token`
   - 若启用了 Memos 集成，该 token 往往也同时是一个可用于 Memos 的 access token（取决于配置）
 
+生产环境示例（仅示例，实际以你的部署域名为准）：
+
+- `https://xl.pscly.cc`（推荐一个公网 origin：Web UI + API + /admin 同域）
+
 ---
 
 ## 1. 推荐对接路线（分阶段，最稳妥）
@@ -75,7 +79,19 @@
 
 ### 2.1 Base URL
 
-客户端通常需要同时配置两个 URL（取决于你是否保留旧模式）：
+移动端/桌面端客户端（App）推荐只配置一个地址：Flow Backend 的**公网 origin**，例如：
+
+- `FLOW_BACKEND_BASE_URL=https://xl.pscly.cc`（示例）
+
+然后按固定前缀拼接：
+
+- v1：`{FLOW_BACKEND_BASE_URL}/api/v1/...`
+- v2：`{FLOW_BACKEND_BASE_URL}/api/v2/...`
+- 健康检查：`{FLOW_BACKEND_BASE_URL}/health`
+
+> 建议：客户端把 Base URL 标准化（去掉末尾 `/`），避免出现双斜杠 `//api/v1/...`。
+
+如果你的客户端仍保留“直连 Memos（旧模式）”，则可能需要同时配置两个 URL：
 
 1) `FLOW_BACKEND_BASE_URL`（必需）：Flow 后端地址
 2) `MEMOS_BASE_URL`（可选）：仅当你仍保留“直连 Memos”模式才需要
@@ -106,6 +122,83 @@ CSRF token 获取：
 - SPA 刷新后：`GET /api/v1/me` → `data.csrf_token`
 
 移动端一般不建议走 Cookie Session，直接 Bearer 即可。
+
+### 2.4 移动端典型请求示例（建议照抄）
+
+下面以生产域名 `https://xl.pscly.cc` 为例，展示最常见的 v1/v2 调用方式。
+
+#### 2.4.1 登录（v1）
+
+请求：
+
+```http
+POST https://xl.pscly.cc/api/v1/auth/login
+Content-Type: application/json
+X-Request-Id: <uuid>
+X-Device-Id: <stable-device-id>      # 可选但推荐
+X-Device-Name: <device-model/name>   # 可选但推荐
+
+{"username":"demo","password":"pass1234"}
+```
+
+响应（成功时，v1 envelope）：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "token": "<flow_access_token>",
+    "server_url": "https://memos.example.com",
+    "csrf_token": "<csrf>"
+  }
+}
+```
+
+移动端处理要点：
+
+- **保存 `data.token`**（后续所有受保护接口都要带 `Authorization: Bearer ...`）
+- `csrf_token` 一般可忽略（主要给 Web Cookie Session 用）
+
+#### 2.4.2 调用 v2 业务接口（Bearer）
+
+示例：获取 v2 健康检查：
+
+```http
+GET https://xl.pscly.cc/api/v2/health
+Authorization: Bearer <flow_access_token>
+X-Request-Id: <uuid>
+```
+
+示例：拉取 Notes 列表（v2）：
+
+```http
+GET https://xl.pscly.cc/api/v2/notes?limit=50&offset=0
+Authorization: Bearer <flow_access_token>
+X-Request-Id: <uuid>
+```
+
+示例：拉取 TODO 列表（v2）：
+
+```http
+GET https://xl.pscly.cc/api/v2/todo/items?limit=200&offset=0
+Authorization: Bearer <flow_access_token>
+X-Request-Id: <uuid>
+```
+
+示例：获取当前用户（v1）：
+
+```http
+GET https://xl.pscly.cc/api/v1/me
+Authorization: Bearer <flow_access_token>
+X-Request-Id: <uuid>
+```
+
+你也可以用 OpenAPI 快速生成/校验客户端对接：
+
+- v1 OpenAPI：`GET https://xl.pscly.cc/openapi.json`
+- v2 OpenAPI：`GET https://xl.pscly.cc/api/v2/openapi.json`
+
+> 提示：v1/v2 的“成功/错误格式”不同，客户端实现时建议按 path 前缀做解包与错误解析分流（详见本文第 4 章与 `docs/api.zh-CN.md`）。
 
 ---
 

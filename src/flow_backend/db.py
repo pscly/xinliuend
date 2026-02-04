@@ -9,12 +9,13 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.config import settings
-from flow_backend.db_urls import normalize_database_url_for_async
+from flow_backend.db_urls import ensure_sqlite_parent_dir, normalize_database_url_for_async
 
 
 def _create_async_engine(database_url: str) -> AsyncEngine:
     # 运行时统一使用异步 driver，避免在 Docker/线上因默认 driver 选择导致不可预期行为
     url = normalize_database_url_for_async(database_url)
+    ensure_sqlite_parent_dir(url)
     return create_async_engine(url, echo=False, pool_pre_ping=True)
 
 

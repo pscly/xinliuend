@@ -9,7 +9,7 @@ from sqlmodel import SQLModel
 
 from flow_backend.config import settings
 from flow_backend import models  # noqa: F401  # 确保 SQLModel metadata 已加载
-from flow_backend.db_urls import normalize_database_url_for_alembic
+from flow_backend.db_urls import ensure_sqlite_parent_dir, normalize_database_url_for_alembic
 
 
 config = context.config
@@ -22,7 +22,9 @@ target_metadata = SQLModel.metadata
 def _get_database_url() -> str:
     # 优先使用环境变量，便于 CI/部署覆写；否则读取 .env 中的 DATABASE_URL
     raw = os.getenv("DATABASE_URL") or settings.database_url
-    return normalize_database_url_for_alembic(raw)
+    url = normalize_database_url_for_alembic(raw)
+    ensure_sqlite_parent_dir(url)
+    return url
 
 
 def run_migrations_offline() -> None:

@@ -1,7 +1,6 @@
 此目录由 Alembic 使用，用于数据库结构的版本化迁移。
 
 约定：
-- 本项目本地开发默认使用 SQLite（`DATABASE_URL=sqlite:///./dev.db`）。
+- 本项目本地开发默认使用 SQLite（`DATABASE_URL=sqlite:///./.data/dev.db`）。
 - 部署可切换 PostgreSQL（通过 `.env` 或环境变量 `DATABASE_URL`）。
 - 启动服务前先执行：`alembic upgrade head`
-

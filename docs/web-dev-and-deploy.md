@@ -19,7 +19,7 @@ In repo root:
 Copy-Item .env.example .env -Force
 
 # Stable local defaults
-$env:DATABASE_URL = "sqlite:///./dev.db"
+$env:DATABASE_URL = "sqlite:///./.data/dev.db"
 $env:DEV_BYPASS_MEMOS = "true"
 
 uv sync
@@ -247,7 +247,7 @@ Notes:
 
 Backend (common local / CI smoke):
 
-- `DATABASE_URL=sqlite:///./dev.db`
+- `DATABASE_URL=sqlite:///./.data/dev.db`
 - `DEV_BYPASS_MEMOS=true` (local dev only)
 
 Backend (when running cross-origin without Next proxy):

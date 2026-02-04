@@ -82,6 +82,7 @@ Flow Backend 是「心流」客户端的云端后端服务，提供：
 - `docs/api.zh-CN.md`
 - 架构说明与路线图：`plan.md`
 - 客户端对接总指南：`to_app_plan.md`
+- 部署规范（Docker Compose + 宝塔 Nginx）：`docs/deploy.zh-CN.md`
 
 前端说明：
 
@@ -106,7 +107,7 @@ cp .env.example .env
 
 本地开发常用推荐值（可以直接写进 `.env` 或临时导出环境变量）：
 
-- `DATABASE_URL=sqlite:///./dev.db`
+- `DATABASE_URL=sqlite:///./.data/dev.db`
 - `DEV_BYPASS_MEMOS=true`（本地不对接 Memos，直接生成假 token，便于纯后端联调）
 
 ### 3.3 安装依赖 & 运行迁移
@@ -195,7 +196,7 @@ CSRF token 的获取方式：
 
 ## 5. 生产部署
 
-### 5.1 Docker Compose（一键部署 API）
+### 5.1 Docker Compose（一键部署：API + Web 同源）
 
 1）准备 `.env`：
 
@@ -231,6 +232,12 @@ PostgreSQL（推荐）：启用 `postgres` profile（会同时启动内置 postg
 docker compose --profile postgres up -d --build
 ```
 
+说明：
+
+- `docker-compose.yml` 默认会把宿主机的 `./data` 映射到容器内 `/app/.data` 用于持久化（附件/本地对象存储/SQLite 等）。
+- 当前 `Dockerfile` 会在构建镜像阶段自动构建 `web/` 的静态导出（`web/out`）并打包到镜像中；后端启动时会同源托管该静态站到 `/`。
+- 若你只希望运行 API（不托管 Web UI），可在 `.env` 设置：`FLOW_DISABLE_WEB_STATIC=1`。
+
 3）查看日志：
 
 ```bash
@@ -239,6 +246,7 @@ docker compose logs -f api
 
 4）访问：
 
+- Web：`http://localhost:31031/`
 - 健康检查：`http://localhost:31031/health`
 - 管理后台：`http://localhost:31031/admin`
 
@@ -259,6 +267,8 @@ docker compose down
 
 - `TRUST_X_FORWARDED_PROTO=true`（TLS 终止在反代时，确保 Secure Cookie 正确）
 - `TRUST_X_FORWARDED_FOR=true`（仅在可信反代后启用，用于真实 client IP 与限流/设备统计）
+
+宝塔 Nginx 反代示例（含“全站反代”与“静态直出 + API 反代”两种形态）见：`docs/deploy.zh-CN.md`。
 
 ### 5.3 同源静态站（后端托管 `web/out`）
 
@@ -282,9 +292,13 @@ npm run build
 - Web：`http://localhost:31031/`
 - API：`http://localhost:31031/api/v1/...`、`/api/v2/...`
 
-注意：仓库自带的 `Dockerfile` 默认不会把 `web/out` 打进镜像；若你希望容器内同源托管静态站点，建议：
+注意：仓库自带的 `Dockerfile` 已默认把 `web/out` 打进镜像；若你希望自定义 UI 产物（例如替换为宿主机/CI 构建出来的 `web/out`），可参考：
 
-1. 在镜像构建阶段构建 `web/out` 并 COPY 进镜像，或
+目前仓库已默认采用“在镜像构建阶段构建 `web/out` 并 COPY 进镜像”的方式，因此 docker compose 部署时通常**无需**在宿主机手动执行 `npm run build`。
+
+若你选择“非 Docker 运行”，或希望挂载/替换 UI 产物目录（例如用 CI 产出的 `web/out`），仍可通过以下方式：
+
+1. 在宿主机构建 `web/out`，然后让后端同源托管；或
 2. 通过 volume 把宿主机构建好的 `web/out` 挂载到容器中，并设置 `FLOW_WEB_OUT_DIR`
 
 ---
@@ -295,7 +309,7 @@ npm run build
 
 - 基础：
   - `ENVIRONMENT=development|production`
-  - `DATABASE_URL=sqlite:///./dev.db`（本地）或 `postgresql+psycopg://...`（生产）
+  - `DATABASE_URL=sqlite:///./.data/dev.db`（本地）或 `postgresql+psycopg://...`（生产）
   - `LOG_LEVEL=INFO`
 - Memos：
   - `MEMOS_BASE_URL`

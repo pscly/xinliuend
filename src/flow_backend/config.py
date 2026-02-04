@@ -45,7 +45,8 @@ class Settings(BaseSettings):
     # Environment (ENVIRONMENT): development | production
     environment: str = "development"
 
-    database_url: str = "sqlite:///./dev.db"
+    # 默认使用 SQLite（本地/开发）；建议把运行时数据统一放到 `.data/` 下，避免污染仓库根目录
+    database_url: str = "sqlite:///./.data/dev.db"
 
     memos_base_url: str = "https://memos.example.com"
     memos_admin_token: str = ""
