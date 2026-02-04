@@ -1,0 +1,202 @@
+.wrap {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.header {
+  max-width: var(--page-max);
+  width: 100%;
+  margin: 0 auto;
+  padding: 22px 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brandMark {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, var(--color-accent-gold) 30%);
+  background:
+    radial-gradient(18px 18px at 30% 30%, color-mix(in srgb, var(--color-surface) 85%, transparent), transparent 60%),
+    radial-gradient(22px 22px at 72% 78%, color-mix(in srgb, var(--color-accent) 18%, transparent), transparent 72%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-accent) 88%, var(--color-border)),
+      color-mix(in srgb, var(--color-accent-2) 78%, var(--color-accent-gold) 22%)
+    );
+  box-shadow:
+    0 10px 28px color-mix(in srgb, var(--color-accent) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-surface) 55%, transparent);
+}
+
+.brandName {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: 18px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.pill:hover {
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+
+.pillLabel {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.pillValue {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.main {
+  max-width: var(--page-max);
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 16px 40px;
+  display: grid;
+  place-items: center;
+}
+
+.card {
+  width: 100%;
+  max-width: 520px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.cardInner {
+  padding: 18px 18px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.subtitle {
+  margin: 10px 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.form {
+  padding: 18px;
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-2) 58%, transparent);
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.input {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  color: var(--color-text);
+  outline: none;
+}
+
+.input:focus {
+  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent-gold) 12%, transparent);
+}
+
+.help {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.error {
+  border: 1px solid color-mix(in srgb, var(--color-accent-gold) 38%, var(--color-border));
+  border-radius: var(--radius-1);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--color-accent-gold) 10%, transparent);
+}
+
+.submit {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-1);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 54%, var(--color-border));
+  background:
+    radial-gradient(140% 120% at 20% 20%, color-mix(in srgb, var(--color-accent) 18%, transparent), transparent 62%),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 60%),
+    color-mix(in srgb, var(--color-surface) 84%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.submit:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--color-accent-gold) 36%, var(--color-accent));
+}
+
+.submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
+@media (max-width: 560px) {
+  .title {
+    font-size: 26px;
+  }
+}

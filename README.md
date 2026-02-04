@@ -39,6 +39,110 @@ uv run pytest
 uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031 --reload
 ```
 
+## 本地联调：后端 + Web 前端（双端口）
+
+本仓库同时包含一个 Next.js 用户前端：`web/`。
+
+本地开发通常需要两个进程：
+
+- 后端 API：`http://localhost:31031`
+- Web Dev Server：`http://localhost:3000`
+
+启动方式（建议开两个终端）：
+
+终端 A（后端）：
+
+```powershell
+uv sync
+uv run uvicorn flow_backend.main:app --host 127.0.0.1 --port 31031 --reload
+```
+
+终端 B（前端）：
+
+```powershell
+cd web
+npm ci
+npm run dev
+```
+
+前端默认会通过 Next rewrites 将 `/api/v1/*`、`/api/v2/*` 代理到后端（见 `web/next.config.ts`），这样浏览器侧仍是同源请求（对 Cookie 会话更友好）。
+
+- 关闭代理：`NEXT_DISABLE_BACKEND_PROXY=1`
+- 覆写后端地址：`BACKEND_BASE_URL=http://localhost:31031`
+
+### Cookie 会话 + CSRF（重要）
+
+当你使用 Cookie 会话鉴权时，后端会对非安全方法（POST/PUT/PATCH/DELETE）强制要求 `X-CSRF-Token`（Bearer Token 不需要 CSRF）。
+
+- 前端的 CSRF token 来自 `GET /api/v1/me`（返回 `csrf_token`），并由 `web/src/lib/api/client.ts` 在写请求里自动注入 `X-CSRF-Token`。
+- 如果你绕过前端代理，直接从浏览器跨端口/跨域访问 `http://localhost:31031`，需要额外处理 CORS + `credentials: "include"` 等细节；推荐优先使用同源（见下一节）或 dev 代理。
+
+## 生产形态：同源部署（FastAPI 托管静态导出）
+
+本项目支持把前端构建为完全静态站点，并由后端同源托管（避免 CORS/跨域 Cookie 的复杂度）。
+
+关键点：
+
+- Next.js 使用 `output: "export"` 生成静态产物到 `web/out/`（见 `web/next.config.ts`）。
+- 后端会在启动时“尽力”检测并挂载 `web/out` 到 `/`（仅当 `web/out/index.html` 存在时生效；见 `src/flow_backend/main.py`）。
+
+操作步骤：
+
+```powershell
+cd web
+npm ci
+npm run build
+cd ..
+uv run uvicorn flow_backend.main:app --host 127.0.0.1 --port 31031
+```
+
+然后访问：
+
+- Web UI：`http://localhost:31031/`
+- API：`http://localhost:31031/api/v1/...`、`http://localhost:31031/api/v2/...`
+
+可用环境变量：
+
+- 禁用静态站挂载：`FLOW_DISABLE_WEB_STATIC=1`
+- 指定导出目录：`FLOW_WEB_OUT_DIR=...`（默认是仓库内 `web/out`）
+
+## E2E（Playwright）
+
+E2E 测试从 `web/` 目录运行（配置见 `web/playwright.config.ts`）：
+
+```powershell
+cd web
+npx playwright test
+```
+
+它会做这些事：
+
+- 运行 `npm run build` 生成静态导出（因为 `output: "export"` 不能用 `next start`）
+- 执行 `alembic upgrade head`
+- 启动后端（监听 `127.0.0.1:31031`），并在同源下跑浏览器用例
+
+Playwright 启动的后端会显式覆写一组环境变量（用于稳定性/可重复性）：
+
+- `DEV_BYPASS_MEMOS=true`
+- `DATABASE_URL=sqlite:///./playwright-e2e.db`（仓库根目录下的 SQLite 文件）
+- 登录/注册限流覆写为 0：
+  - `AUTH_REGISTER_RATE_LIMIT_PER_IP=0`
+  - `AUTH_LOGIN_RATE_LIMIT_PER_IP=0`
+  - `AUTH_LOGIN_RATE_LIMIT_PER_IP_USER=0`
+  - `ADMIN_LOGIN_RATE_LIMIT_PER_IP=0`
+- `DEVICE_TRACKING_ASYNC=false`（避免后台写入与 SQLite 写锁竞争）
+
+注意：本地运行时 Playwright 默认会复用已存在的 `http://127.0.0.1:31031` 服务（`reuseExistingServer`）；如果你希望每次都由 Playwright 启动干净的测试服务，先停掉本地后端，或临时设置 `CI=1` 再运行测试。
+
+更多细节与前端说明见：`web/README.md`。
+
+## Troubleshooting
+
+- Web UI 404：确认已构建静态导出且存在 `web/out/index.html`（运行 `cd web && npm run build`）。
+- 429 / auth 限流导致 flaky：本地并发注册/登录可能触发限流；E2E 会通过 env 覆写禁用限流（见 `web/playwright.config.ts`）。如果你在本地联调中也遇到 429，可以在 `.env` 里临时调低/关闭相关 `AUTH_*_RATE_LIMIT_*`。
+- SQLite `database is locked`：SQLite 单写入者，避免多进程同时写同一个 DB；停掉占用 DB 的进程后重试，必要时删除 `playwright-e2e.db`（仅测试用）。
+- Windows 文件锁 / `uv.lock`：如果看到“无法获取锁文件/文件被占用”，通常是另一个 `uv`/Python 进程仍在运行或杀毒软件占用文件；关闭其它终端任务后重试。
+
 ## Docker Compose 一键部署（SQLite / PostgreSQL）
 
 1）准备环境变量：

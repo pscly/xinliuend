@@ -216,10 +216,12 @@ async def admin_index(
     if not sess:
         return _redirect_to_login(next_url="/admin")
 
-    users = list(
-        # SQLModel typing: use the underlying SQLAlchemy table for ordering.
-        await session.exec(select(User).order_by(User.__table__.c.id.desc()))  # pyright: ignore[reportAttributeAccessIssue]
-    )
+    # SQLModel's __table__ exists at runtime but is not always visible to type checkers.
+    user_table = getattr(User, "__table__", None)
+    if user_table is None:
+        raise RuntimeError("User.__table__ is missing")
+
+    users = list(await session.exec(select(User).order_by(user_table.c.id.desc())))
     msg = request.query_params.get("msg")
     err = request.query_params.get("err")
     return templates.TemplateResponse(
@@ -332,6 +334,31 @@ async def toggle_active(
     return RedirectResponse(url="/admin", status_code=303)
 
 
+@router.post("/admin/users/{user_id}/toggle-admin")
+async def toggle_admin(
+    user_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = _get_admin_session(request)
+    if not sess:
+        return _redirect_to_login(next_url="/admin")
+
+    form = await request.form()
+    if not _csrf_ok(str(form.get("csrf_token") or ""), sess["csrf_token"]):
+        resp = _redirect_to_login(next_url="/admin", err="CSRF 校验失败，请重新登录")
+        _clear_admin_session_cookie(resp)
+        return resp
+
+    user = await session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
+    user.is_admin = not user.is_admin
+    session.add(user)
+    await session.commit()
+    return RedirectResponse(url="/admin", status_code=303)
+
+
 @router.post("/admin/users/{user_id}/delete")
 async def delete_user(
     user_id: int,
@@ -418,19 +445,23 @@ async def admin_user_devices(
     if not user:
         return _admin_redirect(err="用户不存在")
 
+    # SQLModel's __table__ exists at runtime but is not always visible to type checkers.
+    user_device_table = getattr(UserDevice, "__table__")
+    user_device_ip_table = getattr(UserDeviceIP, "__table__")
+
     devices = list(
         await session.exec(
             select(UserDevice)
             .where(UserDevice.user_id == user_id)
-            .where(UserDevice.__table__.c.revoked_at.is_(None))  # pyright: ignore[reportAttributeAccessIssue]
-            .order_by(UserDevice.__table__.c.last_seen.desc())  # pyright: ignore[reportAttributeAccessIssue]
+            .where(user_device_table.c.revoked_at.is_(None))
+            .order_by(user_device_table.c.last_seen.desc())
         )
     )
     ip_rows = list(
         await session.exec(
             select(UserDeviceIP)
             .where(UserDeviceIP.user_id == user_id)
-            .order_by(UserDeviceIP.__table__.c.last_seen.desc())  # pyright: ignore[reportAttributeAccessIssue]
+            .order_by(user_device_ip_table.c.last_seen.desc())
         )
     )
     ips_by_device_id: dict[str, list[UserDeviceIP]] = {}

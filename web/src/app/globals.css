@@ -1,0 +1,214 @@
+:root {
+  /* Typography */
+  /*
+    Chinese-friendly serif-first stacks.
+    We do not load webfonts here; these are graceful fallbacks.
+  */
+  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif SC",
+    "Source Han Serif SC", "Songti SC", SimSun, serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif SC",
+    "Source Han Serif SC", "Songti SC", SimSun, serif;
+
+  /* Layout */
+  --page-max: 1100px;
+  --radius-1: 12px;
+  --radius-2: 18px;
+  --shadow-1: 0 12px 40px rgba(10, 11, 13, 0.08);
+
+  /* Guofeng Qinglu palette (light baseline) */
+  --qinglu-paper: #fbfaf5;
+  --qinglu-paper-2: #fffdf8;
+  --qinglu-stone: #f1efe7;
+  --qinglu-ink: #15110f;
+  --qinglu-ink-2: #4f4a44;
+  --qinglu-jade: #1f7f6c;
+  --qinglu-azurite: #1f6c78;
+  --qinglu-gold: #c7a34a;
+
+  /* Light theme tokens */
+  --color-bg: var(--qinglu-paper);
+  --color-surface: var(--qinglu-paper-2);
+  --color-surface-2: var(--qinglu-stone);
+  --color-text: var(--qinglu-ink);
+  --color-text-muted: var(--qinglu-ink-2);
+  --color-border: rgba(21, 17, 15, 0.14);
+  --color-accent: var(--qinglu-jade);
+  --color-accent-contrast: #fffaf0;
+
+  /* Optional extras; components may ignore these. */
+  --color-accent-2: var(--qinglu-azurite);
+  --color-accent-gold: var(--qinglu-gold);
+
+  /* Background layers (paper + qinglu washes) */
+  --bg-paper-grain: radial-gradient(circle at 16% 22%, rgba(21, 17, 15, 0.05) 0 1px, transparent 1px)
+    0 0 / 36px 36px;
+  --bg-paper-fibers: repeating-linear-gradient(
+    0deg,
+    rgba(21, 17, 15, 0.012) 0px,
+    rgba(21, 17, 15, 0.012) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+  --bg-wash-1: radial-gradient(1100px 560px at 18% -18%, rgba(31, 127, 108, 0.18), transparent 60%);
+  --bg-wash-2: radial-gradient(900px 640px at 92% 0%, rgba(31, 108, 120, 0.14), transparent 62%);
+  --bg-wash-3: radial-gradient(900px 700px at 72% 115%, rgba(199, 163, 74, 0.10), transparent 58%);
+
+  --skeleton-1: rgba(21, 17, 15, 0.07);
+  --skeleton-2: rgba(21, 17, 15, 0.13);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Night Qinglu: ink-black with green/azurite undertones and subtle gold. */
+    --color-bg: #06110f;
+    --color-surface: #081715;
+    --color-surface-2: #0c211d;
+    --color-text: #e7f4ee;
+    --color-text-muted: #a6c8bb;
+    --color-border: rgba(231, 244, 238, 0.14);
+    --color-accent: #3cc7a7;
+    --color-accent-contrast: #05100e;
+
+    --color-accent-2: #37b7c2;
+    --color-accent-gold: #d7b65a;
+
+    --bg-paper-grain: radial-gradient(circle at 18% 20%, rgba(231, 244, 238, 0.032) 0 1px, transparent 1px)
+      0 0 / 40px 40px;
+    --bg-paper-fibers: repeating-linear-gradient(
+      0deg,
+      rgba(231, 244, 238, 0.016) 0px,
+      rgba(231, 244, 238, 0.016) 1px,
+      transparent 1px,
+      transparent 9px
+    );
+    --bg-wash-1: radial-gradient(1200px 620px at 14% -22%, rgba(60, 199, 167, 0.14), transparent 62%);
+    --bg-wash-2: radial-gradient(980px 740px at 94% 4%, rgba(55, 183, 194, 0.10), transparent 64%);
+    --bg-wash-3: radial-gradient(920px 760px at 78% 122%, rgba(215, 182, 90, 0.06), transparent 60%);
+
+    --skeleton-1: rgba(231, 244, 238, 0.06);
+    --skeleton-2: rgba(231, 244, 238, 0.11);
+    color-scheme: dark;
+  }
+}
+
+html[data-theme="light"] {
+  --color-bg: var(--qinglu-paper);
+  --color-surface: var(--qinglu-paper-2);
+  --color-surface-2: var(--qinglu-stone);
+  --color-text: var(--qinglu-ink);
+  --color-text-muted: var(--qinglu-ink-2);
+  --color-border: rgba(21, 17, 15, 0.14);
+  --color-accent: var(--qinglu-jade);
+  --color-accent-contrast: #fffaf0;
+
+  --color-accent-2: var(--qinglu-azurite);
+  --color-accent-gold: var(--qinglu-gold);
+
+  --bg-paper-grain: radial-gradient(circle at 16% 22%, rgba(21, 17, 15, 0.05) 0 1px, transparent 1px)
+    0 0 / 36px 36px;
+  --bg-paper-fibers: repeating-linear-gradient(
+    0deg,
+    rgba(21, 17, 15, 0.012) 0px,
+    rgba(21, 17, 15, 0.012) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+  --bg-wash-1: radial-gradient(1100px 560px at 18% -18%, rgba(31, 127, 108, 0.18), transparent 60%);
+  --bg-wash-2: radial-gradient(900px 640px at 92% 0%, rgba(31, 108, 120, 0.14), transparent 62%);
+  --bg-wash-3: radial-gradient(900px 700px at 72% 115%, rgba(199, 163, 74, 0.10), transparent 58%);
+
+  --skeleton-1: rgba(21, 17, 15, 0.07);
+  --skeleton-2: rgba(21, 17, 15, 0.13);
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --color-bg: #06110f;
+  --color-surface: #081715;
+  --color-surface-2: #0c211d;
+  --color-text: #e7f4ee;
+  --color-text-muted: #a6c8bb;
+  --color-border: rgba(231, 244, 238, 0.14);
+  --color-accent: #3cc7a7;
+  --color-accent-contrast: #05100e;
+
+  --color-accent-2: #37b7c2;
+  --color-accent-gold: #d7b65a;
+
+  --bg-paper-grain: radial-gradient(circle at 18% 20%, rgba(231, 244, 238, 0.032) 0 1px, transparent 1px)
+    0 0 / 40px 40px;
+  --bg-paper-fibers: repeating-linear-gradient(
+    0deg,
+    rgba(231, 244, 238, 0.016) 0px,
+    rgba(231, 244, 238, 0.016) 1px,
+    transparent 1px,
+    transparent 9px
+  );
+  --bg-wash-1: radial-gradient(1200px 620px at 14% -22%, rgba(60, 199, 167, 0.14), transparent 62%);
+  --bg-wash-2: radial-gradient(980px 740px at 94% 4%, rgba(55, 183, 194, 0.10), transparent 64%);
+  --bg-wash-3: radial-gradient(920px 760px at 78% 122%, rgba(215, 182, 90, 0.06), transparent 60%);
+
+  --skeleton-1: rgba(231, 244, 238, 0.06);
+  --skeleton-2: rgba(231, 244, 238, 0.11);
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  color: var(--color-text);
+  background: var(--bg-paper-grain), var(--bg-paper-fibers), var(--bg-wash-1), var(--bg-wash-2),
+    var(--bg-wash-3), var(--color-bg);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skeleton {
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--skeleton-1), var(--skeleton-2), var(--skeleton-1));
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}

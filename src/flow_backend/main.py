@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import cast
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from starlette.background import BackgroundTask, BackgroundTasks
 from starlette.responses import Response
+from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from flow_backend.config import settings  # pyright: ignore[reportMissingTypeStubs]
@@ -20,6 +23,7 @@ from flow_backend.device_tracking import extract_device_id_name, record_device_a
 from flow_backend.routers import (  # pyright: ignore[reportMissingTypeStubs]
     admin,
     auth,
+    me,
     settings as settings_router,
     sync as sync_router,
     todo,
@@ -133,7 +137,8 @@ if origins == ["*"]:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        # Bearer-token auth; no cross-site cookies needed.
+        # For cookie auth across origins, set an explicit allowlist in CORS_ALLOW_ORIGINS
+        # (no '*') so we can safely enable allow_credentials.
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -142,7 +147,8 @@ elif origins:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=False,
+        # Explicit origins -> allow cookies cross-origin for SPA session auth.
+        allow_credentials=settings.cors_allow_credentials(),
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -158,10 +164,54 @@ app.mount("/api/v2", v2_app)
 
 
 app.include_router(auth.router, prefix=settings.api_prefix)
+app.include_router(me.router, prefix=settings.api_prefix)
 app.include_router(settings_router.router, prefix=settings.api_prefix)
 app.include_router(todo.router, prefix=settings.api_prefix)
 app.include_router(sync_router.router, prefix=settings.api_prefix)
 app.include_router(admin.router, include_in_schema=False)
+
+
+@app.api_route(
+    f"{settings.api_prefix.rstrip('/')}/{{path:path}}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+    include_in_schema=False,
+)
+async def _v1_fallback_not_found(path: str) -> None:  # noqa: ARG001
+    # Without this, a frontend SPA/static mount at `/` would catch unknown
+    # `/api/v1/*` paths and return HTML instead of FastAPI's default JSON 404.
+    raise HTTPException(status_code=404, detail="Not Found")
+
+
+def _try_mount_exported_web_ui(_app: FastAPI) -> None:
+    """Best-effort mount for `web/out` (Next static export).
+
+    Goals:
+    - Same-origin web + API (cookie auth works without CORS complexity)
+    - Preserve routing precedence: `/api/*` and `/admin` must win
+
+    This mount is intentionally optional: if the export output is missing, the
+    backend still runs as an API-only service.
+    """
+
+    if os.getenv("FLOW_DISABLE_WEB_STATIC") == "1":
+        return
+
+    out_dir_env = os.getenv("FLOW_WEB_OUT_DIR")
+    if out_dir_env:
+        out_dir = Path(out_dir_env)
+    else:
+        # `src/flow_backend/main.py` -> repo root -> `web/out`
+        out_dir = Path(__file__).resolve().parents[2] / "web" / "out"
+
+    index_html = out_dir / "index.html"
+    if not out_dir.is_dir() or not index_html.is_file():
+        return
+
+    logger.info("mounting exported web UI: %s", out_dir)
+    _app.mount("/", StaticFiles(directory=str(out_dir), html=True, check_dir=False), name="web")
+
+
+_try_mount_exported_web_ui(app)
 
 
 def _openapi_schema_ref(name: str) -> dict[str, str]:
