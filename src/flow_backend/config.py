@@ -83,6 +83,12 @@ class Settings(BaseSettings):
     # 管理后台会话 Cookie 名称
     admin_session_cookie_name: str = "flow_admin_session"
 
+    # User (non-admin) session cookies + CSRF
+    user_session_secret: str = "user_session_secret_change_me"
+    user_session_cookie_name: str = "flow_session"
+    user_session_max_age_seconds: int = 60 * 60 * 24 * 30  # 30 days
+    user_csrf_header_name: str = "X-CSRF-Token"
+
     # Comma-separated endpoint list, tried in order.
     memos_create_user_endpoints: str = "/api/v1/users"
     memos_create_token_endpoints: str = "/api/v1/users/{user_id}/accessTokens"
@@ -146,6 +152,12 @@ class Settings(BaseSettings):
             ):
                 errors.append("ADMIN_SESSION_SECRET must be set in production")
 
+            if (
+                not self.user_session_secret.strip()
+                or self.user_session_secret == "user_session_secret_change_me"
+            ):
+                errors.append("USER_SESSION_SECRET must be set in production")
+
             share_secret = self.share_token_secret.strip()
             if not share_secret or share_secret == "share_token_secret_change_me":
                 errors.append("SHARE_TOKEN_SECRET must be set in production")
@@ -201,6 +213,17 @@ class Settings(BaseSettings):
             return ["*"]
         return _split_csv(v)
 
+    def cors_allow_credentials(self) -> bool:
+        """Whether CORS should allow credentials (cookies).
+
+        For cookie-based auth across origins, CORS must use explicit origins (no wildcard)
+        and set allow_credentials=True.
+        """
+
+        origins = self.cors_origins_list()
+        # Treat any wildcard as "no credentials" to avoid insecure configs like "*,http://...".
+        return bool(origins) and "*" not in origins
+
     def create_user_endpoints_list(self) -> list[str]:
         eps = _split_csv(self.memos_create_user_endpoints)
         if "/api/v1/users" in eps and "/api/v1/user" in eps:
@@ -244,6 +267,8 @@ class Settings(BaseSettings):
             warnings.append("ADMIN_BASIC_PASSWORD is using placeholder value")
         if self.admin_session_secret == "admin_session_secret_change_me":
             warnings.append("ADMIN_SESSION_SECRET is using placeholder value")
+        if self.user_session_secret == "user_session_secret_change_me":
+            warnings.append("USER_SESSION_SECRET is using placeholder value")
         share_secret = self.share_token_secret.strip()
         if not share_secret or share_secret == "share_token_secret_change_me":
             warnings.append("SHARE_TOKEN_SECRET is missing or using placeholder value")

@@ -16,6 +16,9 @@ from flow_backend.config import settings
 from flow_backend.v2.routers.attachments import router as attachments_router  # pyright: ignore[reportMissingTypeStubs]
 from flow_backend.v2.routers.health import router as health_router  # pyright: ignore[reportMissingTypeStubs]
 from flow_backend.v2.routers.notes import router as notes_router  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.v2.routers.notifications import (
+    router as notifications_router,
+)  # pyright: ignore[reportMissingTypeStubs]
 from flow_backend.v2.routers.public import router as public_router  # pyright: ignore[reportMissingTypeStubs]
 from flow_backend.v2.routers.revisions import router as revisions_router  # pyright: ignore[reportMissingTypeStubs]
 from flow_backend.v2.routers.shares import router as shares_router  # pyright: ignore[reportMissingTypeStubs]
@@ -112,6 +115,7 @@ v2_app.include_router(notes_router)
 v2_app.include_router(attachments_router)
 v2_app.include_router(shares_router)
 v2_app.include_router(public_router)
+v2_app.include_router(notifications_router)
 v2_app.include_router(revisions_router)
 v2_app.include_router(todo_router)
 v2_app.include_router(sync_router)

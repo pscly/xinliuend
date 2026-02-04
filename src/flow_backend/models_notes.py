@@ -90,6 +90,27 @@ class NoteShare(TenantRowBase, table=True):
     expires_at: Optional[datetime] = Field(default=None, index=True)
     revoked_at: Optional[datetime] = Field(default=None, index=True)
 
+    # Public share comments governance (per-share).
+    # Default: anonymous comments disabled.
+    allow_anonymous_comments: bool = Field(default=False, index=True)
+    anonymous_comments_require_captcha: bool = Field(default=True, index=True)
+
+
+class PublicShareComment(TenantRowBase, table=True):
+    __tablename__ = "public_share_comments"  # pyright: ignore[reportAssignmentType]
+
+    id: str = Field(primary_key=True, min_length=1, max_length=36)
+    share_id: str = Field(index=True, foreign_key="note_shares.id", min_length=1, max_length=36)
+
+    body: str = Field(default="", sa_column=Column(Text, nullable=False))
+    author_name: Optional[str] = Field(default=None, max_length=100)
+    attachment_ids_json: list[str] = Field(default_factory=list, sa_column=Column(SAJSON))
+
+    is_folded: bool = Field(default=False, index=True)
+    folded_at: Optional[datetime] = Field(default=None, index=True)
+    folded_reason: Optional[str] = Field(default=None, max_length=200)
+    reported_count: int = Field(default=0)
+
 
 class Attachment(TenantRowBase, table=True):
     __tablename__ = "attachments"  # pyright: ignore[reportAssignmentType]

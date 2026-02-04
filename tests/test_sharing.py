@@ -98,7 +98,7 @@ async def test_sharing_lifecycle_and_public_download(tmp_path: Path):
             share_url = cast(str, body.get("share_url"))
             assert share_id
             assert share_token
-            assert share_url.endswith(f"/api/v2/public/shares/{share_token}")
+            assert share_url.endswith(f"/share?token={share_token}")
 
             # Ensure plaintext token is not stored; only HMAC is stored.
             async with session_scope() as session:

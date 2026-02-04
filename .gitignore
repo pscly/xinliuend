@@ -37,7 +37,13 @@ tools/_*.js
 
 # Local agent/tooling state (keep out of repo)
 .serena/
+
+# Local runtime data (e.g. object storage)
+.data/
+
+# OhMyOpenCode local session state
 .sisyphus/boulder.json
-.sisyphus/notepads/
+.sisyphus/drafts/
+ 
 
 test

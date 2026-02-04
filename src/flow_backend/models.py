@@ -28,6 +28,7 @@ class User(SQLModel, table=True):
     memos_token: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
 
     is_active: bool = Field(default=True, index=True)
+    is_admin: bool = Field(default=False, index=True)
     created_at: datetime = Field(default_factory=utc_now, index=True)
 
 
@@ -190,3 +191,6 @@ class SyncEvent(SQLModel, table=True):
 
 # Import notes models so Alembic sees them via `flow_backend.models`.
 from . import models_notes as _models_notes  # noqa: E402,F401  # type: ignore
+
+# Import notifications models so Alembic sees them via `flow_backend.models`.
+from . import models_notifications as _models_notifications  # noqa: E402,F401  # type: ignore

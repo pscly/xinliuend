@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -15,6 +16,7 @@ from flow_backend.models import User
 from flow_backend.schemas import LoginRequest, RegisterRequest
 from flow_backend.security import hash_password, verify_password
 from flow_backend.rate_limiting import build_ip_key, build_ip_username_key, enforce_rate_limit
+import flow_backend.user_session
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -33,6 +35,7 @@ async def _persist_device_tracking_best_effort(user_id: int, request: Request) -
 async def register(
     payload: RegisterRequest,
     request: Request,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ):
     ip = extract_client_ip(request)
@@ -93,18 +96,34 @@ async def register(
         await session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="username already exists")
 
-    # Best-effort: record device/IP at registration time as well.
-    reg_user_id = user.id
-    if reg_user_id is not None:
-        await _persist_device_tracking_best_effort(user_id=int(reg_user_id), request=request)
+    user_id = user.id
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="user id missing after registration",
+        )
 
-    return {"code": 200, "data": {"token": user.memos_token, "server_url": settings.memos_base_url}}
+    csrf_token = secrets.token_urlsafe(24)
+    flow_backend.user_session.set_user_session_cookie(response, request, int(user_id), csrf_token)
+
+    # Best-effort: record device/IP at registration time as well.
+    await _persist_device_tracking_best_effort(user_id=int(user_id), request=request)
+
+    return {
+        "code": 200,
+        "data": {
+            "token": user.memos_token,
+            "server_url": settings.memos_base_url,
+            "csrf_token": csrf_token,
+        },
+    }
 
 
 @router.post("/login")
 async def login(
     payload: LoginRequest,
     request: Request,
+    response: Response,
     session: AsyncSession = Depends(get_session),
 ):
     ip = extract_client_ip(request)
@@ -131,9 +150,45 @@ async def login(
             status_code=status.HTTP_409_CONFLICT, detail="memos token not set; contact admin"
         )
 
-    # Record device/IP on login too (best-effort).
-    login_user_id = user.id
-    if login_user_id is not None:
-        await _persist_device_tracking_best_effort(user_id=int(login_user_id), request=request)
+    user_id = user.id
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="user id missing",
+        )
 
-    return {"code": 200, "data": {"token": user.memos_token, "server_url": settings.memos_base_url}}
+    csrf_token = secrets.token_urlsafe(24)
+    flow_backend.user_session.set_user_session_cookie(response, request, int(user_id), csrf_token)
+
+    # Record device/IP on login too (best-effort).
+    await _persist_device_tracking_best_effort(user_id=int(user_id), request=request)
+
+    return {
+        "code": 200,
+        "data": {
+            "token": user.memos_token,
+            "server_url": settings.memos_base_url,
+            "csrf_token": csrf_token,
+        },
+    }
+
+
+@router.post("/logout")
+async def logout(request: Request):
+    """Clear the user session cookie.
+
+    - Idempotent: OK even when already logged out.
+    - If a valid cookie-session exists, enforce CSRF to prevent cross-site logout.
+    - Bearer-token clients should not need CSRF for this endpoint.
+    """
+
+    cookie_value = request.cookies.get(settings.user_session_cookie_name)
+    session_payload = flow_backend.user_session.verify_user_session(cookie_value)
+    if session_payload:
+        csrf_header = request.headers.get(settings.user_csrf_header_name)
+        if not csrf_header or csrf_header != session_payload.get("csrf_token"):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="csrf failed")
+
+    resp = JSONResponse({"code": 200, "data": {"ok": True}})
+    flow_backend.user_session.clear_user_session_cookie(resp)
+    return resp
