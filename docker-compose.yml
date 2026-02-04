@@ -12,7 +12,9 @@ services:
         PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-mirrors.aliyun.com}
     restart: unless-stopped
     ports:
-      - "${FLOW_BACKEND_PORT:-31031}:31031"
+      # 生产环境建议仅监听本机回环地址，由 Nginx/网关统一对外暴露
+      # 如确需直接暴露端口，可在 .env 设置：FLOW_BACKEND_BIND_HOST=0.0.0.0
+      - "${FLOW_BACKEND_BIND_HOST:-127.0.0.1}:${FLOW_BACKEND_PORT:-31031}:31031"
     volumes:
       # 持久化目录（附件、本地对象存储、SQLite 等）：
       # 推荐把仓库放到 ~/dockers/xinliuend 后直接映射 ./data -> /app/.data
