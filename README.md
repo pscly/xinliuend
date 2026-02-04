@@ -1,178 +1,239 @@
 # 心流云服务后端（Flow Backend）
 
-本仓库用于实现 `plan.md` 里规划的后端能力：
+> 当前版本：以 `pyproject.toml` 为准（示例：`0.4.1`）
 
-- App 只向本后端发起 **注册/登录**，获取：
-  - `token`：Memos 的 Access Token
-  - `server_url`：Memos 的 Base URL
-- App 拿到 `token` 后，后续 **直接连接 Memos**（记笔记/同步/上传等不经过本后端）。
+Flow Backend 是「心流」客户端的云端后端服务，提供：
 
-## 快速开始（Windows + uv）
+1. 用户体系与鉴权：Bearer Token（移动端/脚本）+ Cookie Session（Web SPA）。
+2. 云端数据能力：笔记 / 待办 / 设置 / 附件 / 分享 / 通知 / 修订（冲突保留）等。
+3. 多端离线同步：v1 + v2 同步接口与冲突处理约定。
+4. 可选对接 Memos：注册时创建 Memos 用户并签发 Token；并提供“本地 Notes ↔ Memos”双向同步能力。
+5. 管理后台（Admin）：用户管理、设备活跃度追踪等运维能力。
 
-1）复制环境变量文件：
+仓库结构：
 
-- 将 `.env.example` 复制为 `.env`
-- 按需填写：
-  - `DATABASE_URL`
-  - `MEMOS_BASE_URL`
-  - `MEMOS_ADMIN_TOKEN`
-  - `ADMIN_BASIC_USER` / `ADMIN_BASIC_PASSWORD`
+- 后端（FastAPI）：`src/flow_backend/`
+- 用户前端（Next.js）：`web/`（可双端口开发，也可静态导出后由后端同源托管）
 
-2）安装依赖：
+---
 
-```powershell
-uv sync
+## 1. 功能总览
+
+### 1.1 鉴权与安全能力
+
+- Bearer Token：`Authorization: Bearer <token>`
+  - 当前实现中，Bearer Token **就是用户的 `memos_token`**（保存在本服务数据库中）。
+- Cookie Session（Web SPA）：
+  - httpOnly Cookie（浏览器 JS 读不到 Cookie 本体）
+  - 写请求（POST/PUT/PATCH/DELETE）强制 CSRF（默认 header：`X-CSRF-Token`）
+- 限流：登录/注册/Admin 登录均做“尽力而为”的限流（可通过 `.env` 调整）。
+- Request ID：支持客户端传入 `X-Request-Id`，服务端在响应头回显（排障必备）。
+- 设备追踪：支持通过 header 上报设备 ID/名称，用于管理后台展示最近活跃设备与 IP。
+
+### 1.2 API 版本（v1 / v2）
+
+本服务提供两套 API：
+
+- v1：`/api/v1/*`（主应用，响应 envelope：`{"code":200,"data":...}`）
+- v2：`/api/v2/*`（子应用，独立 OpenAPI，并统一错误格式 `ErrorResponse`）
+
+能力覆盖（细节以 `docs/api.zh-CN.md` 为准）：
+
+- Auth：注册/登录/登出（v1）
+- Me：当前用户信息 + CSRF token 重取（v1）
+- Settings：用户键值配置（v1）
+- TODO：清单/任务/复发（v1 + v2）
+- Notes：笔记、标签、搜索、软删除/恢复（主要在 v2）
+- Revisions：笔记修订与冲突快照（v2）
+- Attachments：附件元数据 + 存储（本地目录或 S3/COS）（v2）
+- Shares & Public：分享链接、公开访问、匿名评论（可选验证码 token）（v2）
+- Notifications：例如评论 @mention 触发通知（v2）
+- Sync：多端离线同步（v1 + v2）
+
+### 1.3 Memos 集成（可选）
+
+- 注册时可通过 `MEMOS_ADMIN_TOKEN` 自动在 Memos 创建同名用户，并签发永久 token。
+- Notes 与 Memos 双向同步：
+  - Memos 作为权威源：当远端与本地同时修改，远端胜出，本地保留 `CONFLICT` 修订用于找回
+  - 通过远端内容 hash 与映射表识别对应关系（减少“依赖时钟一致”的问题）
+- Memos API 兼容性：
+  - 支持用环境变量覆写 endpoint 列表，适配不同 Memos 版本
+
+---
+
+## 2. 服务入口与文档
+
+默认端口：`31031`
+
+- 健康检查：`GET /health`
+- 管理后台：`GET /admin`（未登录会跳转登录页）
+- v1 OpenAPI：
+  - `GET /openapi.json`
+  - `GET /docs`
+  - `GET /redoc`
+- v2 OpenAPI（子应用）：
+  - `GET /api/v2/openapi.json`
+  - `GET /api/v2/docs`
+  - `GET /api/v2/redoc`
+  - `GET /api/v2/health`
+
+更完整的客户端对接文档（v1 + v2，含同步协议/冲突处理/分享/附件等）：
+
+- `docs/api.zh-CN.md`
+- 架构说明与路线图：`plan.md`
+- 客户端对接总指南：`to_app_plan.md`
+
+前端说明：
+
+- `web/README.md`
+- `docs/web-dev-and-deploy.md`（专题：Web 联调与部署形态）
+
+---
+
+## 3. 快速开始（推荐：Linux/macOS + uv）
+
+### 3.1 前置依赖
+
+- Python `>=3.11`
+- `uv`（Python 环境与依赖管理）
+- （可选）Node.js：仅在你需要运行 `web/` 前端或 E2E 时需要
+
+### 3.2 初始化环境变量
+
+```bash
+cp .env.example .env
 ```
 
-（可选）安装开发依赖并运行本地检查：
+本地开发常用推荐值（可以直接写进 `.env` 或临时导出环境变量）：
 
-```powershell
+- `DATABASE_URL=sqlite:///./dev.db`
+- `DEV_BYPASS_MEMOS=true`（本地不对接 Memos，直接生成假 token，便于纯后端联调）
+
+### 3.3 安装依赖 & 运行迁移
+
+```bash
+uv sync
+uv run alembic -c alembic.ini upgrade head
+```
+
+（可选）开发依赖 + 代码质量检查：
+
+```bash
 uv sync --extra dev
 uv run ruff check .
 uv run ruff format .
 uv run pytest
 ```
 
-3）启动服务：
+### 3.4 启动服务
 
-```powershell
+```bash
 uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031 --reload
 ```
 
-## 本地联调：后端 + Web 前端（双端口）
+验证：
 
-本仓库同时包含一个 Next.js 用户前端：`web/`。
+- `http://localhost:31031/health`
+- `http://localhost:31031/admin`
+- `http://localhost:31031/docs`
 
-本地开发通常需要两个进程：
+---
 
-- 后端 API：`http://localhost:31031`
-- Web Dev Server：`http://localhost:3000`
+## 4. Web 前端联调（Next.js）
 
-启动方式（建议开两个终端）：
+本仓库包含用户前端：`web/`。本地开发常见两种模式：
+
+### 4.1 推荐：Next rewrites 同源（最省心，无需处理 CORS）
+
+目标：浏览器访问 `http://localhost:3000`，同时 `/api/v1/*` 与 `/api/v2/*` 通过 Next rewrites 代理到后端 `31031`。
 
 终端 A（后端）：
 
-```powershell
+```bash
 uv sync
 uv run uvicorn flow_backend.main:app --host 127.0.0.1 --port 31031 --reload
 ```
 
 终端 B（前端）：
 
-```powershell
+```bash
 cd web
 npm ci
 npm run dev
 ```
 
-前端默认会通过 Next rewrites 将 `/api/v1/*`、`/api/v2/*` 代理到后端（见 `web/next.config.ts`），这样浏览器侧仍是同源请求（对 Cookie 会话更友好）。
+默认代理规则见：`web/next.config.ts`
 
 - 关闭代理：`NEXT_DISABLE_BACKEND_PROXY=1`
 - 覆写后端地址：`BACKEND_BASE_URL=http://localhost:31031`
 
-### Cookie 会话 + CSRF（重要）
+### 4.2 Cookie 会话 + CSRF（必读）
 
-当你使用 Cookie 会话鉴权时，后端会对非安全方法（POST/PUT/PATCH/DELETE）强制要求 `X-CSRF-Token`（Bearer Token 不需要 CSRF）。
+当你使用 Cookie Session 鉴权时：
 
-- 前端的 CSRF token 来自 `GET /api/v1/me`（返回 `csrf_token`），并由 `web/src/lib/api/client.ts` 在写请求里自动注入 `X-CSRF-Token`。
-- 如果你绕过前端代理，直接从浏览器跨端口/跨域访问 `http://localhost:31031`，需要额外处理 CORS + `credentials: "include"` 等细节；推荐优先使用同源（见下一节）或 dev 代理。
+- 安全方法（GET/HEAD/OPTIONS）不要求 CSRF
+- 写方法（POST/PUT/PATCH/DELETE）必须携带 `X-CSRF-Token`
 
-## 生产形态：同源部署（FastAPI 托管静态导出）
+CSRF token 的获取方式：
 
-本项目支持把前端构建为完全静态站点，并由后端同源托管（避免 CORS/跨域 Cookie 的复杂度）。
+- 登录/注册响应：`data.csrf_token`
+- SPA 刷新后：调用 `GET /api/v1/me` 获取 `data.csrf_token`
 
-关键点：
+前端已在 `web/src/lib/api/client.ts` 内自动注入写请求的 `X-CSRF-Token`（前提是客户端保存/恢复了 token）。
 
-- Next.js 使用 `output: "export"` 生成静态产物到 `web/out/`（见 `web/next.config.ts`）。
-- 后端会在启动时“尽力”检测并挂载 `web/out` 到 `/`（仅当 `web/out/index.html` 存在时生效；见 `src/flow_backend/main.py`）。
+### 4.3 直接跨域访问（不推荐，但有时需要）
 
-操作步骤：
+当 Web 与 API 不同源时（例如 `localhost:3000` -> `localhost:31031`），如果你想使用 Cookie Session，需要：
 
-```powershell
-cd web
-npm ci
-npm run build
-cd ..
-uv run uvicorn flow_backend.main:app --host 127.0.0.1 --port 31031
+- 后端设置 `CORS_ALLOW_ORIGINS` 为明确 allowlist（不能是 `*`），例如：
+  - `CORS_ALLOW_ORIGINS=http://localhost:3000`
+- 浏览器请求必须 `credentials: "include"`
+
+（更多细节见 `docs/web-dev-and-deploy.md`）
+
+---
+
+## 5. 生产部署
+
+### 5.1 Docker Compose（一键部署 API）
+
+1）准备 `.env`：
+
+```bash
+cp .env.example .env
 ```
 
-然后访问：
+生产建议（关键项）：
 
-- Web UI：`http://localhost:31031/`
-- API：`http://localhost:31031/api/v1/...`、`http://localhost:31031/api/v2/...`
-
-可用环境变量：
-
-- 禁用静态站挂载：`FLOW_DISABLE_WEB_STATIC=1`
-- 指定导出目录：`FLOW_WEB_OUT_DIR=...`（默认是仓库内 `web/out`）
-
-## E2E（Playwright）
-
-E2E 测试从 `web/` 目录运行（配置见 `web/playwright.config.ts`）：
-
-```powershell
-cd web
-npx playwright test
-```
-
-它会做这些事：
-
-- 运行 `npm run build` 生成静态导出（因为 `output: "export"` 不能用 `next start`）
-- 执行 `alembic upgrade head`
-- 启动后端（监听 `127.0.0.1:31031`），并在同源下跑浏览器用例
-
-Playwright 启动的后端会显式覆写一组环境变量（用于稳定性/可重复性）：
-
-- `DEV_BYPASS_MEMOS=true`
-- `DATABASE_URL=sqlite:///./playwright-e2e.db`（仓库根目录下的 SQLite 文件）
-- 登录/注册限流覆写为 0：
-  - `AUTH_REGISTER_RATE_LIMIT_PER_IP=0`
-  - `AUTH_LOGIN_RATE_LIMIT_PER_IP=0`
-  - `AUTH_LOGIN_RATE_LIMIT_PER_IP_USER=0`
-  - `ADMIN_LOGIN_RATE_LIMIT_PER_IP=0`
-- `DEVICE_TRACKING_ASYNC=false`（避免后台写入与 SQLite 写锁竞争）
-
-注意：本地运行时 Playwright 默认会复用已存在的 `http://127.0.0.1:31031` 服务（`reuseExistingServer`）；如果你希望每次都由 Playwright 启动干净的测试服务，先停掉本地后端，或临时设置 `CI=1` 再运行测试。
-
-更多细节与前端说明见：`web/README.md`。
-
-## Troubleshooting
-
-- Web UI 404：确认已构建静态导出且存在 `web/out/index.html`（运行 `cd web && npm run build`）。
-- 429 / auth 限流导致 flaky：本地并发注册/登录可能触发限流；E2E 会通过 env 覆写禁用限流（见 `web/playwright.config.ts`）。如果你在本地联调中也遇到 429，可以在 `.env` 里临时调低/关闭相关 `AUTH_*_RATE_LIMIT_*`。
-- SQLite `database is locked`：SQLite 单写入者，避免多进程同时写同一个 DB；停掉占用 DB 的进程后重试，必要时删除 `playwright-e2e.db`（仅测试用）。
-- Windows 文件锁 / `uv.lock`：如果看到“无法获取锁文件/文件被占用”，通常是另一个 `uv`/Python 进程仍在运行或杀毒软件占用文件；关闭其它终端任务后重试。
-
-## Docker Compose 一键部署（SQLite / PostgreSQL）
-
-1）准备环境变量：
-
-- 将 `.env.example` 复制为 `.env`
-- 至少配置：
-  - `DATABASE_URL`
+- `ENVIRONMENT=production`（开启生产安全校验，并禁用 v2 debug 路由）
+- `DATABASE_URL=postgresql+psycopg://...`（生产禁止 sqlite）
+- `CORS_ALLOW_ORIGINS` 必须是明确列表（生产禁止 `*`）
+- 必须设置强随机值（生产安全校验会拦截默认占位符）：
   - `ADMIN_BASIC_PASSWORD`
+  - `ADMIN_SESSION_SECRET`
+  - `USER_SESSION_SECRET`
+  - `SHARE_TOKEN_SECRET`
+- Memos 对接时必须设置：
   - `MEMOS_BASE_URL`
-  - `MEMOS_ADMIN_TOKEN`（生产必填；本地联调可临时用 `DEV_BYPASS_MEMOS=true`）
+  - `MEMOS_ADMIN_TOKEN`
 
-2）启动（首次会自动构建镜像并跑 Alembic 迁移）：
+2）启动（首次会自动构建镜像并执行 Alembic 迁移）：
 
-- SQLite（默认）：
+SQLite（演示/本地）：
 
-```powershell
+```bash
 docker compose up -d --build
 ```
 
-- PostgreSQL：将 `.env` 里的 `DATABASE_URL` 设置为 `postgresql+psycopg://...@postgres:5432/...`（或直接用 `postgresql://...`），并启用 postgres profile：
+PostgreSQL（推荐）：启用 `postgres` profile（会同时启动内置 postgres 容器）：
 
-```powershell
+```bash
 docker compose --profile postgres up -d --build
 ```
 
-说明：该 profile 会启动仓库内置的 `postgres` 服务（用户名/密码/库名通过 `.env` 里的 `POSTGRES_*` 配置）。
-
 3）查看日志：
 
-```powershell
+```bash
 docker compose logs -f api
 ```
 
@@ -183,99 +244,123 @@ docker compose logs -f api
 
 停止：
 
-```powershell
+```bash
 docker compose down
 ```
 
-（可选）清空 PostgreSQL 数据卷：
+### 5.2 反向代理（推荐：一个公网 Origin）
 
-```powershell
-docker compose down -v
+若你计划使用 Cookie Session（Web），强烈建议用 Nginx/Caddy/Traefik 在最外层提供**单一公网 origin**：
+
+- `/` -> Web（静态站或 Next server）
+- `/api/v1/*`、`/api/v2/*`、`/admin` -> 后端
+
+并在后端开启：
+
+- `TRUST_X_FORWARDED_PROTO=true`（TLS 终止在反代时，确保 Secure Cookie 正确）
+- `TRUST_X_FORWARDED_FOR=true`（仅在可信反代后启用，用于真实 client IP 与限流/设备统计）
+
+### 5.3 同源静态站（后端托管 `web/out`）
+
+后端启动时会“尽力”挂载静态导出目录到 `/`（仅当存在 `index.html`）：
+
+- 默认目录：仓库内 `web/out`
+- 环境变量：
+  - 禁用：`FLOW_DISABLE_WEB_STATIC=1`
+  - 覆写目录：`FLOW_WEB_OUT_DIR=/abs/path/to/out`
+
+本地构建导出：
+
+```bash
+cd web
+npm ci
+npm run build
 ```
 
-## 接口
+然后启动后端访问：
 
-- `POST /api/v1/auth/register`
-- `POST /api/v1/auth/login`
-- `GET /admin`（管理后台首页，未登录会跳转到登录页）
-- `GET /admin/login` / `POST /admin/login`（管理后台登录）
-- `POST /admin/logout`（退出登录）
-- `GET /health`
+- Web：`http://localhost:31031/`
+- API：`http://localhost:31031/api/v1/...`、`/api/v2/...`
 
-更完整的客户端对接文档（v1 + v2，含同步协议/冲突处理/分享/附件）：
+注意：仓库自带的 `Dockerfile` 默认不会把 `web/out` 打进镜像；若你希望容器内同源托管静态站点，建议：
 
-- `docs/api.zh-CN.md`
+1. 在镜像构建阶段构建 `web/out` 并 COPY 进镜像，或
+2. 通过 volume 把宿主机构建好的 `web/out` 挂载到容器中，并设置 `FLOW_WEB_OUT_DIR`
 
-成功返回示例：
+---
 
-```json
-{"code":200,"data":{"token":"...","server_url":"https://memos.example.com"}}
+## 6. 环境变量速查（.env）
+
+完整示例见 `.env.example`，这里列“最常用且最关键”的：
+
+- 基础：
+  - `ENVIRONMENT=development|production`
+  - `DATABASE_URL=sqlite:///./dev.db`（本地）或 `postgresql+psycopg://...`（生产）
+  - `LOG_LEVEL=INFO`
+- Memos：
+  - `MEMOS_BASE_URL`
+  - `MEMOS_ADMIN_TOKEN`（注册自动创建用户时必需）
+  - `MEMOS_CREATE_USER_ENDPOINTS`、`MEMOS_CREATE_TOKEN_ENDPOINTS`（不同 Memos 版本适配）
+  - `MEMOS_ALLOW_RESET_PASSWORD_FOR_EXISTING_USER`（修复半成品用户用，默认 false）
+  - `DEV_BYPASS_MEMOS=true|false`（本地开发兜底，生产必须 false）
+- CORS / 反代：
+  - `CORS_ALLOW_ORIGINS=*`（开发）或 `http://a.com,https://b.com`（生产）
+  - `TRUST_X_FORWARDED_FOR=true|false`
+  - `TRUST_X_FORWARDED_PROTO=true|false`
+- 管理后台：
+  - `ADMIN_BASIC_USER`
+  - `ADMIN_BASIC_PASSWORD`
+  - `ADMIN_SESSION_SECRET`
+- 用户 Cookie Session（生产环境必配）：
+  - `USER_SESSION_SECRET`
+  - `USER_SESSION_COOKIE_NAME`（默认 `flow_session`）
+  - `USER_CSRF_HEADER_NAME`（默认 `X-CSRF-Token`）
+- 分享：
+  - `PUBLIC_BASE_URL`（生成分享链接的外部访问基准 URL）
+  - `SHARE_TOKEN_SECRET`
+- 附件：
+  - `ATTACHMENTS_LOCAL_DIR`（本地存储目录）
+  - `ATTACHMENTS_MAX_SIZE_BYTES`
+  - S3/COS（可选）：`S3_ENDPOINT_URL`、`S3_BUCKET`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY` 等
+
+---
+
+## 7. 测试
+
+### 7.1 后端单测
+
+```bash
+uv sync --extra dev
+uv run pytest
 ```
 
-## 重要限制与实现说明
+### 7.2 E2E（Playwright）
 
-- 用户名校验：部分 Memos 部署对用户名校验较严格，后端已限制为 **仅字母数字**（不支持下划线）。
-- Token 生成策略：管理员 Token **无权**为“其它用户”直接创建 `accessToken`（会返回 403 `permission denied`），因此后端采用：
-  - 先用 `MEMOS_ADMIN_TOKEN` 创建 Memos 用户（密码使用你在 Backend 注册时的密码）
-  - 再用该用户的账号密码调用 `POST /api/v1/auth/sessions` 建立会话
-  - 最后以该用户身份调用 `POST /api/v1/users/{id}/accessTokens` 生成永久 Token 并返回给 App
+```bash
+cd web
+npx playwright test
+```
 
-## Memos API 兼容说明（重要）
+Playwright 会：
 
-Memos 的 API 版本变动较快，“创建用户/生成 Token”的 endpoint 与 payload 可能因版本不同而不一致。
+- 执行 `npm run build`（静态导出）
+- 执行 `alembic upgrade head`
+- 启动后端并在同源下跑浏览器用例
 
-本项目默认采用“多 endpoint + 多 payload 尝试”的策略，并提供环境变量用于覆写：
+---
 
-- `MEMOS_CREATE_USER_ENDPOINTS`
-- `MEMOS_CREATE_TOKEN_ENDPOINTS`
+## 8. 常见问题（Troubleshooting）
 
-如果注册接口返回 502（通常是 Memos 对接失败），建议你先用 Postman 在当前 Memos 实例上把流程调通，然后把正确的 endpoint 写到 `.env` 里。
+- Web UI 404（同源静态托管）：确认存在 `web/out/index.html`（运行 `cd web && npm run build`）。
+- 429 / 登录注册被限流：本地并发注册/登录可能触发；可在 `.env` 临时调低/关闭 `AUTH_*_RATE_LIMIT_*`（E2E 会自动覆写为 0）。
+- SQLite `database is locked`：避免多个进程同时写同一个 sqlite 文件；停掉占用 DB 的进程后重试。
+- 502（注册对接 Memos 失败）：优先用 Postman 在当前 Memos 实例上调通创建用户/签发 token 流程，并把正确 endpoint 写入：
+  - `MEMOS_CREATE_USER_ENDPOINTS`
+  - `MEMOS_CREATE_TOKEN_ENDPOINTS`
+- Cookie Session 跨域不生效：检查 `CORS_ALLOW_ORIGINS` 是否为明确 allowlist（不能 `*`），以及浏览器请求是否 `credentials: "include"`。
 
-另外，如果历史上出现过“用户在 Memos 已创建，但后端因为 token 生成失败而没入库”的半成品数据，可临时开启：`.env` 中 `MEMOS_ALLOW_RESET_PASSWORD_FOR_EXISTING_USER=true`，让后端在注册时对该用户名执行一次密码重置并补发 token（用完建议关闭）。
+---
 
-## 安全提醒
+## 9. Windows 一键启动（可选）
 
-- 后端只保存 `password_hash`（bcrypt）与 `memos_token`，不会明文存储 App 的登录密码。
-- `ADMIN_BASIC_PASSWORD`、`MEMOS_ADMIN_TOKEN` 属于敏感信息，务必只在服务器环境变量或 `.env` 中配置，不要提交到公开仓库。
-
-## 数据迁移（Alembic）
-
-引入 Alembic 后，建议按迁移优先的工作流运行：
-uv run alembic -c alembic.ini upgrade head
-
-也可以直接使用仓库根目录的 run.bat / stop.bat 一键启动与停止（默认端口 31031）。
-
-## 新增接口（Settings / TODO / Sync）
-
-鉴权方式：Authorization: Bearer <memos_token>
-
-Settings:
-- GET  /api/v1/settings
-- PUT  /api/v1/settings/{key}
-- DELETE /api/v1/settings/{key}
-
-TODO Lists:
-- GET    /api/v1/todo/lists
-- POST   /api/v1/todo/lists
-- PATCH  /api/v1/todo/lists/{list_id}
-- DELETE /api/v1/todo/lists/{list_id}
-- POST   /api/v1/todo/lists/reorder
-
-TODO Items:
-- GET    /api/v1/todo/items
-- POST   /api/v1/todo/items
-- POST   /api/v1/todo/items/bulk
-- PATCH  /api/v1/todo/items/{item_id}
-- DELETE /api/v1/todo/items/{item_id}
-
-RRULE Occurrences:
-- GET    /api/v1/todo/occurrences?item_id=...&from=YYYY-MM-DDTHH:mm:ss&to=YYYY-MM-DDTHH:mm:ss
-- POST   /api/v1/todo/occurrences
-- POST   /api/v1/todo/occurrences/bulk
-- DELETE /api/v1/todo/occurrences/{occurrence_id}
-
-Sync:
-- GET  /api/v1/sync/pull?cursor=0&limit=200
-- POST /api/v1/sync/push
-
-RRULE 约定：tzid 固定 Asia/Shanghai；dtstart_local/recurrence_id_local 为 YYYY-MM-DDTHH:mm:ss（无 offset）；后端不展开 RRULE，由客户端展开并通过 occurrences 记录单次例外。
+仓库提供 `run.bat` / `stop.bat`（默认端口 `31031`）。Windows 用户可直接使用；Linux/macOS 建议用上文 `uv run uvicorn ...` 的方式启动。

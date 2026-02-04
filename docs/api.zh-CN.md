@@ -1,6 +1,6 @@
 # Flow Backend API 文档（v1 + v2）
 
-最后更新：2026-02-02
+最后更新：2026-02-04
 
 本文件面向 APK / Web 客户端开发团队，覆盖：鉴权、请求头约定、错误格式、同步协议、以及所有已实现的 v1/v2 接口。
 
@@ -41,7 +41,28 @@ Token 来自：
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 
-### 2.2 Request ID
+### 2.2 Cookie Session + CSRF（Web SPA）
+
+后端同时支持 Cookie Session 鉴权（httpOnly Cookie），主要用于 Web 前端同源/同站点部署。
+
+关键配置（可通过 `.env` 覆写）：
+
+- Cookie 名称：`flow_session`（`USER_SESSION_COOKIE_NAME`）
+- CSRF Header：`X-CSRF-Token`（`USER_CSRF_HEADER_NAME`）
+
+规则：
+
+- 安全方法（GET/HEAD/OPTIONS）不要求 CSRF
+- 写方法（POST/PUT/PATCH/DELETE）必须携带 CSRF header，且值必须与会话内一致
+
+CSRF token 获取：
+
+- 登录/注册响应体会返回 `data.csrf_token`（并通过 `Set-Cookie` 写入会话 cookie）
+- SPA 刷新后可调用 `GET /api/v1/me` 重新获取 `data.csrf_token`（无需读取 httpOnly cookie）
+
+移动端一般推荐直接使用 Bearer Token（不需要 CSRF）。
+
+### 2.3 Request ID
 
 服务端支持并返回 `X-Request-Id`：
 
@@ -51,7 +72,7 @@ Token 来自：
 
 v2 的错误响应会尽量带上 `request_id` 字段（来自 `request.state.request_id`）。
 
-### 2.3 设备信息（可选，但建议客户端都带上）
+### 2.4 设备信息（可选，但建议客户端都带上）
 
 用于设备/IP 活跃度跟踪（管理后台用途）。对业务无强依赖。
 
@@ -65,7 +86,7 @@ v2 的错误响应会尽量带上 `request_id` 字段（来自 `request.state.re
 - 默认使用直连 IP（`request.client.host`）
 - 若启用 `TRUST_X_FORWARDED_FOR=true`，则使用 `X-Forwarded-For` 的第一个地址作为 client IP（仅建议在可信反代后启用）
 
-### 2.4 Content-Type
+### 2.5 Content-Type
 
 - JSON 请求体：`Content-Type: application/json`
 - 文件上传：`multipart/form-data`（见 v2 attachments）
@@ -437,7 +458,7 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 成功：
 
 ```json
-{"code":200,"data":{"token":"...","server_url":"https://memos.example.com"}}
+{"code":200,"data":{"token":"...","server_url":"https://memos.example.com","csrf_token":"..."}}
 ```
 
 常见错误：
@@ -465,6 +486,40 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 - 403 `{"detail":"user disabled"}`
 - 409 `{"detail":"memos token not set; contact admin"}`
 - 429 `{"detail":"too many requests"}`（请求过于频繁；响应头带 `Retry-After` 秒数）
+
+#### POST /api/v1/auth/logout
+
+用途：清理用户 Cookie Session（对移动端 Bearer 模式通常是可选的；移动端退出登录一般只需清理本地 token 即可）。
+
+特点：
+
+- 幂等：即使未登录也返回 ok
+- 若当前请求携带了有效的用户会话 cookie，则需要 CSRF header（防止跨站登出）
+
+成功：
+
+```json
+{"code":200,"data":{"ok":true}}
+```
+
+常见错误：
+
+- 403 `{"detail":"csrf failed"}`
+
+#### GET /api/v1/me
+
+用途：获取当前登录用户信息，并在 Cookie Session 模式下用于“刷新/重取 CSRF token”（因为 cookie 为 httpOnly）。
+
+鉴权：
+
+- Bearer Token：可用（`csrf_token` 会是 null）
+- Cookie Session：可用（`csrf_token` 为会话内 token）
+
+成功：
+
+```json
+{"code":200,"data":{"username":"alice","is_admin":false,"csrf_token":"..."}}
+```
 
 ### 5.2 Settings
 

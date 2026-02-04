@@ -1,170 +1,255 @@
-# 项目规划文档：心流云服务 (Flow Cloud)
+# 项目说明与路线图：心流云服务（Flow Cloud / Flow Backend）
 
-**版本**: v1.0 (Auth Only)
-**目标**: 构建 App 专属后端，接管用户注册/登录流程，自动对接 Memos 实例，并提供 Admin 管理面板以供 N8N 自动化集成。
+最后更新：2026-02-04
 
----
+本文用于替代早期的 “Auth Only” 规划，面向项目维护者/客户端开发者，给出：
 
-## 1. 架构设计 (System Architecture)
+1. 当前已实现能力（以代码为准）
+2. 系统架构与关键设计约定
+3. 开发/部署建议与风险点
+4. 后续路线图（可选增强，不代表已交付）
 
-我们需要明确三者的关系：
-
-*. **Android App**: 客户端。
-*. **Flow Backend (flow-backend.example.com)** : 你的 FastAPI 后端，负责处理注册逻辑、管理用户映射、提供 Admin 面板。
-*. **Memos Server (memos.example.com)** : 实际存储数据的服务器。
-
-### 核心交互流程：
-
-- **App 只是去 Backend 拿“钥匙”** ：App 登录时，请求 Backend。Backend 验证通过后，把 Memos 的 Access Token 和 Server URL 给 App。
-- **App 直接回家存数据**：App 拿到 Token 后，后续所有的记笔记、传图片、拉取列表，**直接连接 Memos Server**，不经过 Backend。
-
-  - 优点：减轻 Backend 压力，减少延迟，App 原有的同步逻辑几乎不用改。
+> 说明：完整 API 细节与同步协议请看 `docs/api.zh-CN.md`。本文更偏“宏观架构与工程化说明”。
 
 ---
 
-## 2. 后端开发规划 (Flow Backend)
+## 1. 总体目标（现在的项目在解决什么问题）
 
-**技术栈**: Python 3.11+, FastAPI, SQLModel (基于 SQLAlchemy), PostgreSQL, Jinja2 (模板), TailwindCSS (CDN, 用于前端美化).
+Flow Backend 不是单纯的“注册/登录换 token”，而是一个完整的云端后端：
 
-### 2.1 数据库设计 (PostgreSQL)
-
-我们需要一张核心表 users。
-
->  **⚠️ 安全警告**：作为专业规划，我**绝对禁止**你明文存储用户密码。这在法律和道德上都是巨大的风险。
-> **解决方案**：为了满足你“N8N 自动化”的需求，你需要的是 **Memos 的 Token**，而不是用户的登录密码。我们将明文存储 Token（或可逆加密），密码必须 Hash 处理。
-
-**Table: users**
-
-| 字段名            | 类型            | 说明                                    |
-| ------------------- | ----------------- | ----------------------------------------- |
-| id                | Integer (PK)    | 后端自增 ID                             |
-| username          | String (Unique) | 用户名                                  |
-| password\_hash | String          | 经过 bcrypt 后的密码 (App登录Backend用) |
-| memos\_id      | Integer         | 对应 Memos 里的用户 ID                  |
-| memos\_token   | String          | **关键数据**：Memos 的 API Token (供 N8N 使用)      |
-| is\_active     | Boolean         | 封号开关                                |
-| created\_at    | DateTime        | 注册时间                                |
-
-### 2.2 环境变量配置 (.env)
-
-Backend 需要拥有 Memos 的管理员权限才能帮别人注册。
-
-### 2.3 API 接口规划
-
-App 只需要两个接口。
-
-#### A. 注册接口 POST /api/v1/auth/register
-
-- **输入**: { "username": "abc", "password": "123" }
-- **后端逻辑**:
-
-  *. 检查 users 表是否已存在该用户名。
-  *. **调用 Memos Admin API**: 使用 MEMOS\_ADMIN\_TOKEN 向 https://memos.example.com/api/v1/user 发起请求，创建一个同名用户（密码随机生成或与原密码一致，建议后端随机生成一个高强度密码，因为用户不需要知道他在 Memos 的密码，他只用 Token）。
-  *. **获取 Token**: 拿到新创建的 Memos 用户 ID，生成该用户的 Access Token (永不过期)。
-  *. **入库**: 将 username、password\_hash、memos\_id、memos\_token 存入 PG 数据库。
-  *. **返回**: { "code": 200, "data": { "token": "ey...", "server\_url": "https://memos.example.com" } }
-
-#### B. 登录接口 POST /api/v1/auth/login
-
-- **输入**: { "username": "abc", "password": "123" }
-- **后端逻辑**:
-
-  *. 查库，校验密码 Hash。
-  *. 如果通过，取出数据库里的 memos\_token。
-  *. **返回**: { "code": 200, "data": { "token": "ey...", "server\_url": "https://memos.example.com" } }
+- 统一用户体系与鉴权（移动端/脚本用 Bearer，Web 用 Cookie Session）
+- 支持笔记 / 待办 / 设置 / 附件 / 分享 / 通知 / 修订（冲突保留）
+- 支持多端离线同步（v1 + v2 两套协议/接口）
+- 可选对接 Memos：
+  - 注册阶段可自动在 Memos 创建用户并签发永久 token
+  - Notes 可与 Memos 双向同步（Memos 作为权威源）
+- 提供 Admin 控制台（运维管理/设备追踪/禁用账号等）
 
 ---
 
-## 3. Admin 管理后台规划 (Web Dashboard)
+## 2. 系统架构（组件关系）
 
-既然前后端不分离，使用 FastAPI + Jinja2 模板渲染。
+### 2.1 逻辑组件
 
-**风格**: 极简深色模式 (Dark Mode)，保持“极客+国风”的调性。
+```text
+Android / iOS / Web SPA
+        |
+        | HTTPS (Bearer Token / Cookie Session)
+        v
+Flow Backend (FastAPI)
+  |-- 数据库：SQLite（本地）/ PostgreSQL（生产）
+  |-- 对象存储：本地目录（默认）/ S3 或 COS（可选）
+  |-- Admin 控制台（Jinja2 模板渲染）
+  |
+  +-- [可选] Memos 集成：
+       - 注册：创建用户/签发 token
+       - Notes：双向同步（远端权威）
+```
 
-### 3.1 页面设计
+### 2.2 仓库结构（你应该从哪里看起）
 
-- **URL**: /admin (需要 HTTP Basic Auth，账号/密码通过环境变量 ADMIN_BASIC_USER/ADMIN_BASIC_PASSWORD 配置)
-- **布局**:
-
-  - 左上角：Logo “心流控制台”。
-  - 主体：一个漂亮的卡片式表格。
-- **表格列**:
-
-  - **ID**: 用户ID
-  - **用户名**: Username
-  - **Memos关联**: Memos UserID
-  - **Token (核心)** : 显示部分 Token，点击按钮  **[复制完整 Token]**  (方便你粘贴到 N8N)。
-  - **注册时间**: YYYY-MM-DD
-  - **操作**: [禁用] [重置Token]
-
-### 3.2 模板技术建议
-
-使用 **Tailwind CSS** (CDN引入即可，不用 npm build)。
-
----
-
-## 4. Android 端改造计划
-
-App 端需要做的是“无感切换”。
-
-### 4.1 登录页改造 (LoginActivity)
-
-目前你可能有“输入 URL”和“输入 Token”的框。现在改为两个 Tab：
-
-- **Tab A: 账号登录 (默认)**
-
-  - UI: 只有“账号”和“密码”两个输入框。底部有一个“注册”按钮。
-  - 逻辑:
-
-    - 点击登录 -\> 请求 https://flow-backend.example.com/api/v1/auth/login。
-    - 成功 -\> 解析返回的 JSON，拿到 token 和 server\_url。
-    - **关键动作**: 将这两个值写入 App 的 DataStore (就像用户以前手动输入的一样)。
-    - 跳转主页。
-- **Tab B: 自定义服务器 (保留功能)**
-
-  - UI: 输入 URL + Token。
-  - 逻辑: 保持现状。
-
-### 4.2 注册页开发 (RegisterActivity)
-
-- UI: 账号、密码、确认密码。
-- 逻辑: 请求 https://flow-backend.example.com/api/v1/auth/register -\> 成功后自动执行登录逻辑。
+- 后端代码：`src/flow_backend/`
+  - v1：主应用（`/api/v1`）
+  - v2：子应用（`/api/v2`，独立 OpenAPI）
+- 前端代码：`web/`
+  - 本地开发可用 Next rewrites 代理后端（同源体验更好）
+  - 生产可静态导出到 `web/out` 并由后端同源托管（可选）
+- 文档：
+  - API 总文档：`docs/api.zh-CN.md`
+  - Web 联调/部署专题：`docs/web-dev-and-deploy.md`
 
 ---
 
-## 5. N8N 自动化集成思路
+## 3. 核心模块与能力地图（按“你能用什么”来分类）
 
-你在需求中提到是为了 N8N 自动化标签。
+### 3.1 鉴权（Auth / Session / CSRF）
 
-*. **场景**: 用户在 App 发了一条笔记。
-*. **N8N Trigger**: N8N 可以通过 Webhook (Memos支持) 或者 定时轮询 (Polling) 监听 Memos 的数据库/API。
-*. **Token 的作用**:
+接口（v1）：
 
-- 当你登录 /admin 后台时，复制用户的 **Token**。
-- 在 N8N 中，配置 HTTP Request 节点，Header 设置 Authorization: Bearer \<用户Token\>。
-- **AI 自动打标**: N8N 读取笔记内容 -\> 发送给 OpenAI/Claude -\> 返回 Tag -\> N8N 调用 Memos API (PATCH /api/v1/memos/{id}) 更新笔记加上 Tag。
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/me`（刷新 CSRF token 的“取票口”）
+
+鉴权方式：
+
+1) Bearer Token（移动端/脚本推荐）
+
+```
+Authorization: Bearer <token>
+```
+
+2) Cookie Session（Web SPA 推荐）
+
+- Cookie 为 httpOnly，JS 不可读
+- 写请求需要 CSRF header（默认 `X-CSRF-Token`）
+- CSRF token 在登录/注册时下发；页面刷新后可通过 `/api/v1/me` 重取
+
+关键设计点：
+
+- 当前实现中，Bearer Token 使用的是用户的 `memos_token` 字段（因此“token”既可用于后端鉴权，也可能用于 Memos，取决于你是否启用 Memos 集成）。
+- `DEV_BYPASS_MEMOS=true` 时会生成 `dev-...` 假 token，仅用于开发测试（不可用于 Memos）。
+
+### 3.2 v1 / v2 API 组织方式
+
+- v1（主应用）：更偏“早期协议/兼容层”，响应 envelope 统一为 `{"code":200,"data":...}`
+- v2（子应用）：更偏“新能力与长期演进”，具有：
+  - 独立 OpenAPI
+  - 统一错误格式 `ErrorResponse`
+  - 更清晰的资源模型（Notes / Attachments / Shares / Public / Notifications / Revisions / TODO / Sync）
+
+### 3.3 Notes（笔记）与搜索
+
+v2 Notes 以 Flow Backend 自己的数据库为主存：
+
+- CRUD：创建/列表/详情/更新/删除/恢复
+- Tags：标签与笔记关联（服务端维护 Tag 表与 NoteTag 关系）
+- Search：按关键字/标签过滤（具体查询能力见 API 文档与实现）
+- Revisions：保存 NORMAL/CONFLICT 修订，尤其用于冲突找回
+
+### 3.4 TODO（待办）
+
+TODO 同时存在 v1 与 v2：
+
+- v1：历史兼容与同步协议的早期形态
+- v2：更规范的资源与错误结构，并支持 `tzid`（默认 `Asia/Shanghai`，可配置）
+
+复发任务约定：
+
+- v1 对 RRULE 的部分字段使用本地时间字符串（固定格式 `YYYY-MM-DDTHH:mm:ss`）
+- 服务端不展开 RRULE（由客户端展开），服务端只提供 occurrences 记录“单次例外/完成/取消”等
+
+### 3.5 Sync（离线同步）
+
+同步设计理念：
+
+- **LWW（Last-Write-Wins）**：多数资源以 `client_updated_at_ms` 作为“新旧”判断
+- **钳制超前时间**：服务端会对明显超前的客户端时间做一定限制，降低“未来时间把所有数据覆盖”的风险
+- **冲突可恢复**：v2 中常见冲突会给出 `details.server_snapshot`，让客户端提示/合并
+- **软删除与 tombstone**：某些资源被软删除后，sync upsert 会被拒绝为 conflict，需要显式 restore
+
+强烈建议：
+
+- 客户端严格遵循 `docs/api.zh-CN.md` 中对 `client_updated_at_ms`、cursor、tombstone 的约定。
+
+### 3.6 Attachments（附件）
+
+v2 支持附件上传/下载：
+
+- 上传：`POST /api/v2/notes/{note_id}/attachments`（multipart/form-data）
+- 下载：`GET /api/v2/attachments/{attachment_id}`
+
+存储后端：
+
+- 默认本地目录（`ATTACHMENTS_LOCAL_DIR`）
+- 可选 S3 / COS（配置 `S3_*` 一组环境变量）
+
+限制：
+
+- `ATTACHMENTS_MAX_SIZE_BYTES` 控制单文件大小上限（返回 413）
+
+### 3.7 Shares / Public（分享与公开访问）
+
+v2 提供分享能力：
+
+- 私有接口（需要鉴权）：创建/管理 share
+- 公开接口（匿名访问）：通过 share token 访问笔记、附件、评论等
+
+安全约定：
+
+- **不存明文 share token**：服务端存 token 前缀 + HMAC
+- 可配置分享有效期、撤销等
+- 匿名评论可选择是否需要 captcha token（当前实现为“占位策略”，生产环境只校验 presence）
+
+### 3.8 Notifications（通知）
+
+v2 提供通知能力（例如：公开评论中的 @mention 触发通知）。
+
+### 3.9 Admin 控制台（运维）
+
+Admin 形态：
+
+- 后端渲染 HTML（Jinja2 模板）
+- 独立会话 Cookie（`ADMIN_SESSION_*`）
+- 表单提交具备 CSRF token 校验
+
+能力（以当前页面为准）：
+
+- 登录/退出
+- 用户列表、禁用/启用、密码重置/创建账号等运维操作
+- 设备与 IP 活跃度跟踪（依赖客户端上报 device headers，或至少有 IP）
 
 ---
 
-## 6. 开发注意事项 (给开发人员的 Memo)
+## 4. 关键设计约定（踩坑点集中说明）
 
-请将以下几点转达给后端开发：
+### 4.1 多租户（Tenant）与软删除
 
-*. **Memos 版本兼容性**: Memos 的 API 变动很频繁（v0.18 -\> v0.22 变化很大）。后端在调用 Memos Admin API 创建用户时，务必先在本地用 Postman 调通，确认好当前 memos.example.com 版本对应的创建用户 Payload 格式。
-*. **错误处理**: 如果 Memos 创建用户失败（比如 Memos 挂了），后端注册接口必须回滚，不能在 PG 里存了用户结果 Memos 里没号。
-*. **Token 有效期**: 确保生成的 Memos Token 是**永久有效**的（Permanent），否则用户过段时间 App 就掉线了。
-*. **CORS**: FastAPI 记得配置 CORS，允许你的 App 包名或 \* 访问。
-*. **并发锁**: 注册接口建议加一点防抖，防止用户疯狂点击注册按钮导致创建了重复账号。
+绝大多数业务表都带 `user_id`，并使用：
+
+- `deleted_at`：软删除（需要恢复时用 restore）
+- `client_updated_at_ms`：并发控制/LWW
+- `created_at` / `updated_at`：服务端维护的时间戳
+
+### 4.2 时间与时区
+
+- 默认 tzid：`DEFAULT_TZID`（默认 `Asia/Shanghai`）
+- v1 使用“本地时间字符串”字段时不带 offset（固定长度 19）
+- v2 更偏向显式 tzid 与更清晰的 schema
+
+### 4.3 环境变量与生产安全校验
+
+当 `ENVIRONMENT=production` 时会启用启动时校验（Fail Fast），典型要求：
+
+- 不允许 `DATABASE_URL=sqlite...`
+- 不允许 `CORS_ALLOW_ORIGINS=*`
+- 必须设置高强度随机值（禁止占位符）：
+  - `ADMIN_BASIC_PASSWORD`
+  - `ADMIN_SESSION_SECRET`
+  - `USER_SESSION_SECRET`
+  - `SHARE_TOKEN_SECRET`
+- 不允许 `DEV_BYPASS_MEMOS=true`
+- 若启用 Memos 对接：必须提供 `MEMOS_BASE_URL` 与 `MEMOS_ADMIN_TOKEN`
+
+### 4.4 反向代理信任边界
+
+只有在“可信反代之后”才建议启用：
+
+- `TRUST_X_FORWARDED_FOR=true`
+- `TRUST_X_FORWARDED_PROTO=true`
+
+否则会有伪造 IP / 伪造 https 导致 cookie 策略异常的风险。
 
 ---
 
-## 7. 总结
+## 5. 开发与部署建议（工程实践）
 
-**可行性**: 高。
-**成本**: 需要额外维护一个轻量级 FastAPI 服务。
-**体验**:
+### 5.1 本地开发
 
-- **对用户**: 只需要记一个账号密码，不用管什么 Token、API URL，体验达到商业软件标准。
-- **对你 (Admin)** : 拥有所有用户的 Memos Token，可以随心所欲地在后台为他们部署 N8N 自动化流。
+- 推荐：`uv + SQLite`
+- 迁移优先：`uv run alembic -c alembic.ini upgrade head`
 
+### 5.2 Web 本地联调
+
+推荐用 Next rewrites 做同源代理（cookie auth 体验最好）：
+
+- Web：`http://localhost:3000`
+- API：`http://localhost:31031`（浏览器侧通过 rewrites 看起来仍是同源）
+
+### 5.3 生产部署
+
+- 最简单：`docker compose up -d --build`
+- 推荐形态：反向代理提供单一公网 origin（`/` 给 Web、`/api/*` 和 `/admin` 给后端）
+
+---
+
+## 6. 路线图（可选增强，不代表已交付）
+
+以下是按“价值/风险”排序的可选增强项：
+
+1. Public 匿名评论接入真实验证码提供商（目前仅为占位策略，生产只校验 presence）
+2. 进一步统一 v1 错误格式（目前 v1 多为 FastAPI 默认 `detail`，v2 为 `ErrorResponse`）
+3. 更完善的观测性：结构化日志、trace/span、指标（限流命中、同步耗时、附件吞吐等）
+4. Token 轮换与安全策略（例如强制登出、设备撤销、token 过期策略可配置）
+5. 更丰富的搜索能力（全文索引、标签/时间/状态组合过滤）
 
