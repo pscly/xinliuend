@@ -79,15 +79,16 @@ Flow Backend 是「心流」客户端的云端后端服务，提供：
 
 更完整的客户端对接文档（含同步协议/冲突处理/分享/附件等）：
 
+- `apidocs/README.md`（接口文档索引）
 - `apidocs/api.zh-CN.md`
-- 架构说明与路线图：`plan.md`
-- 客户端对接总指南：`to_app_plan.md`
-- 部署规范（Docker Compose + 宝塔 Nginx）：`docs/deploy.zh-CN.md`
+- 架构说明与路线图：`apidocs/plan.md`
+- 客户端对接总指南：`apidocs/to_app_plan.md`
+- 部署规范（Docker Compose + 宝塔 Nginx）：`apidocs/deploy.zh-CN.md`
 
 前端说明：
 
 - `web/README.md`
-- `docs/web-dev-and-deploy.md`（专题：Web 联调与部署形态）
+- `apidocs/web-dev-and-deploy.md`（专题：Web 联调与部署形态）
 
 ---
 
@@ -190,7 +191,7 @@ CSRF token 的获取方式：
   - `CORS_ALLOW_ORIGINS=http://localhost:3000`
 - 浏览器请求必须 `credentials: "include"`
 
-（更多细节见 `docs/web-dev-and-deploy.md`）
+（更多细节见 `apidocs/web-dev-and-deploy.md`）
 
 ---
 
@@ -268,7 +269,7 @@ docker compose down
 - `TRUST_X_FORWARDED_PROTO=true`（TLS 终止在反代时，确保 Secure Cookie 正确）
 - `TRUST_X_FORWARDED_FOR=true`（仅在可信反代后启用，用于真实 client IP 与限流/设备统计）
 
-宝塔 Nginx 反代示例（含“全站反代”与“静态直出 + API 反代”两种形态）见：`docs/deploy.zh-CN.md`。
+宝塔 Nginx 反代示例（含“全站反代”与“静态直出 + API 反代”两种形态）见：`apidocs/deploy.zh-CN.md`。
 
 ### 5.3 同源静态站（后端托管 `web/out`）
 

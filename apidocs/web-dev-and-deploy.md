@@ -92,18 +92,18 @@ Header name (configurable):
 
 The CSRF token value is returned by:
 
-- `POST /api/v1/auth/login` -> `data.csrf_token`
-- `POST /api/v1/auth/register` -> `data.csrf_token`
+- `POST /api/v1/auth/login` -> `csrf_token`
+- `POST /api/v1/auth/register` -> `csrf_token`
 
 ### 2.3 SPA refresh / CSRF rehydration
 
 Because the session cookie is httpOnly, the SPA cannot read it directly. After a page reload, rehydrate the CSRF token by calling:
 
-- `GET /api/v1/me` -> `data.csrf_token`
+- `GET /api/v1/me` -> `csrf_token`
 
 Recommended client flow:
 
-1) On login/register success: store `data.csrf_token` in memory (or session storage).
+1) On login/register success: store `csrf_token` in memory (or session storage).
 2) On SPA boot (and whenever you lose CSRF in memory): call `GET /api/v1/me` and refresh the CSRF token.
 3) For every non-safe request under cookie auth: set header `X-CSRF-Token: <csrf_token>`.
 

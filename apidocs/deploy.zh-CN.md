@@ -24,7 +24,7 @@
 
 对移动端/桌面端（非浏览器）客户端同样建议：
 
-- 直接把 **Flow Backend 的公网 origin** 作为客户端 Base URL（例如 `https://xl.pscly.cc`），请求路径按 `/api/v1/...` 拼接即可（详见 `to_app_plan.md`）。
+- 直接把 **Flow Backend 的公网 origin** 作为客户端 Base URL（例如 `https://xl.pscly.cc`），请求路径按 `/api/v1/...` 拼接即可（详见 `apidocs/to_app_plan.md`）。
 
 ### 0.2 路由分工：/admin 为什么不会和前端冲突
 

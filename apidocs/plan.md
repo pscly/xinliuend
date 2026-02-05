@@ -56,7 +56,7 @@ Flow Backend (FastAPI)
   - 生产可静态导出到 `web/out` 并由后端同源托管（可选）
 - 文档：
   - API 总文档：`apidocs/api.zh-CN.md`
-  - Web 联调/部署专题：`docs/web-dev-and-deploy.md`
+  - Web 联调/部署专题：`apidocs/web-dev-and-deploy.md`
 
 ---
 
