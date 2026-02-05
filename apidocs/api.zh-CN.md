@@ -1249,3 +1249,226 @@ Query：
 ```bash
 curl -sS http://<host>:31031/openapi.json > openapi-v1.json
 ```
+
+## 9. 常用 curl 自测示例（可复制粘贴）
+
+> 目标：让客户端/运维在“没有 Apifox/Postman”的情况下，也能用 `curl` 快速验证鉴权、CSRF、以及核心业务接口是否可用。
+>
+> 说明：
+>
+> - 本节示例默认直连后端 `http://localhost:31031`；若你本地用 Next rewrites 同源代理，也可以把 `BASE_URL` 换成 `http://localhost:3000`。
+> - JSON 字段解析示例使用 `python3`（Ubuntu 默认可用）。
+
+### 9.1 基础：设置 Base URL + 健康检查
+
+```bash
+export BASE_URL="http://localhost:31031"
+curl -sS "$BASE_URL/health"
+```
+
+### 9.2 注册/登录（Bearer Token）
+
+注册（若用户已存在会返回 409）：
+
+```bash
+curl -sS -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"secret123"}' \
+  "$BASE_URL/api/v1/auth/register"
+```
+
+登录并提取 token：
+
+```bash
+TOKEN="$(
+  curl -sS -H "Content-Type: application/json" \
+    -d '{"username":"alice","password":"secret123"}' \
+    "$BASE_URL/api/v1/auth/login" \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["token"])'
+)"
+echo "$TOKEN"
+```
+
+### 9.3 Bearer：获取当前用户（/me）
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/api/v1/me"
+```
+
+### 9.4 Notes：创建 + 列表 + 更新 + 删除/恢复
+
+生成毫秒时间戳（GNU date 通常支持 `%3N`）：
+
+```bash
+NOW_MS="$(date +%s%3N)"
+```
+
+创建笔记并提取 `note_id`：
+
+```bash
+NOTE_ID="$(
+  curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"title\":\"demo\",\"body_md\":\"# Hello\",\"tags\":[\"work\"],\"client_updated_at_ms\":$NOW_MS}" \
+    "$BASE_URL/api/v1/notes" \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])'
+)"
+echo "$NOTE_ID"
+```
+
+列表（支持 `limit/offset/tag/q/include_deleted`）：
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/api/v1/notes?limit=50&offset=0"
+```
+
+更新（PATCH，注意必须提供 `client_updated_at_ms`）：
+
+```bash
+NOW_MS="$(date +%s%3N)"
+curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"body_md\":\"# Updated\",\"client_updated_at_ms\":$NOW_MS}" \
+  "$BASE_URL/api/v1/notes/$NOTE_ID"
+```
+
+删除（204，无 body；使用 query 传 `client_updated_at_ms`）：
+
+```bash
+NOW_MS="$(date +%s%3N)"
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  -X DELETE "$BASE_URL/api/v1/notes/$NOTE_ID?client_updated_at_ms=$NOW_MS" -i
+```
+
+恢复（restore）：
+
+```bash
+NOW_MS="$(date +%s%3N)"
+curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"client_updated_at_ms\":$NOW_MS}" \
+  "$BASE_URL/api/v1/notes/$NOTE_ID/restore"
+```
+
+### 9.5 Attachments：上传 + 下载
+
+上传附件（multipart）：
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  -F "file=@./README.md" \
+  "$BASE_URL/api/v1/notes/$NOTE_ID/attachments"
+```
+
+下载附件（需要登录态；返回 bytes）：
+
+```bash
+# 把 <attachment_id> 换成上一步响应中的 id
+curl -L -o ./download.bin -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/api/v1/attachments/<attachment_id>"
+```
+
+### 9.6 Shares：创建分享 + 匿名读取
+
+创建分享并提取 share_token（有效期示例 1 小时）：
+
+```bash
+SHARE_TOKEN="$(
+  curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{"expires_in_seconds":3600}' \
+    "$BASE_URL/api/v1/notes/$NOTE_ID/shares" \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["share_token"])'
+)"
+echo "$SHARE_TOKEN"
+```
+
+匿名读取（无需 Bearer）：
+
+```bash
+curl -sS "$BASE_URL/api/v1/public/shares/$SHARE_TOKEN"
+```
+
+### 9.7 TODO：创建 list + 创建 item + 列表
+
+创建 TODO list（返回 id）：
+
+```bash
+LIST_ID="$(
+  NOW_MS=\"$(date +%s%3N)\"; \
+  curl -sS -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \
+    -d \"{\\\"id\\\":null,\\\"name\\\":\\\"Inbox\\\",\\\"color\\\":null,\\\"sort_order\\\":0,\\\"archived\\\":false,\\\"client_updated_at_ms\\\":$NOW_MS}\" \
+    \"$BASE_URL/api/v1/todo/lists\" \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])'
+)"
+echo "$LIST_ID"
+```
+
+创建 TODO item（返回 id）：
+
+```bash
+ITEM_ID="$(
+  NOW_MS=\"$(date +%s%3N)\"; \
+  curl -sS -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \
+    -d \"{\\\"id\\\":null,\\\"list_id\\\":\\\"$LIST_ID\\\",\\\"title\\\":\\\"buy milk\\\",\\\"tags\\\":[],\\\"client_updated_at_ms\\\":$NOW_MS}\" \
+    \"$BASE_URL/api/v1/todo/items\" \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])'
+)"
+echo "$ITEM_ID"
+```
+
+查询 TODO items：
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/api/v1/todo/items?limit=50&offset=0"
+```
+
+### 9.8 Sync：pull + push（骨架示例）
+
+pull（初次 cursor=0）：
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/api/v1/sync/pull?cursor=0&limit=200"
+```
+
+push（示例：upsert 一个 note；实际请按你的本地变更组装 mutations）：
+
+```bash
+NOW_MS="$(date +%s%3N)"
+curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"mutations\":[{\"resource\":\"note\",\"op\":\"upsert\",\"entity_id\":\"$NOTE_ID\",\"client_updated_at_ms\":$NOW_MS,\"data\":{\"body_md\":\"# from sync\"}}]}" \
+  "$BASE_URL/api/v1/sync/push"
+```
+
+### 9.9 Notifications：列表 + 未读数 + 标记已读
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/api/v1/notifications?limit=50&offset=0"
+
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "$BASE_URL/api/v1/notifications/unread-count"
+
+# 把 <notification_id> 换成列表中的 id
+curl -sS -H "Authorization: Bearer $TOKEN" -X POST \
+  "$BASE_URL/api/v1/notifications/<notification_id>/read"
+```
+
+### 9.10 Cookie Session + CSRF：登录 + 写请求（示例：创建 note）
+
+说明：该模式主要给 Web SPA；但 `curl` 也能用 cookie jar 模拟。
+
+```bash
+rm -f .tmp.cookies.txt .tmp.login.json
+
+curl -sS -c .tmp.cookies.txt -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"secret123"}' \
+  "$BASE_URL/api/v1/auth/login" > .tmp.login.json
+
+CSRF="$(python3 -c 'import json; print(json.load(open(".tmp.login.json"))["csrf_token"])')"
+echo "$CSRF"
+
+NOW_MS="$(date +%s%3N)"
+curl -sS -b .tmp.cookies.txt -H "X-CSRF-Token: $CSRF" -H "Content-Type: application/json" \
+  -d "{\"title\":\"cookie-note\",\"body_md\":\"hello\",\"tags\":[],\"client_updated_at_ms\":$NOW_MS}" \
+  "$BASE_URL/api/v1/notes"
+```
