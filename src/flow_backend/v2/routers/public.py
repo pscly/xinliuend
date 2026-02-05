@@ -314,7 +314,26 @@ async def upload_shared_attachment(
     )
 
 
-@router.get("/public/shares/{share_token}/attachments/{attachment_id}")
+@router.get(
+    "/public/shares/{share_token}/attachments/{attachment_id}",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Shared attachment content (bytes).",
+            "content": {
+                "application/octet-stream": {
+                    "schema": {"type": "string", "format": "binary"},
+                }
+            },
+            "headers": {
+                "Content-Disposition": {
+                    "schema": {"type": "string"},
+                    "description": "Best-effort attachment filename.",
+                }
+            },
+        }
+    },
+)
 async def download_shared_attachment(
     share_token: str,
     attachment_id: str,

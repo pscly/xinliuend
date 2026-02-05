@@ -7,13 +7,19 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from flow_backend.db import get_session
 from flow_backend.deps import get_current_user
 from flow_backend.models import User, UserSetting, utc_now
-from flow_backend.schemas_settings import SettingDeleteRequest, SettingUpsertRequest
+from flow_backend.schemas_common import OkResponse
+from flow_backend.schemas_settings import (
+    SettingDeleteRequest,
+    SettingOut,
+    SettingUpsertRequest,
+    SettingsListResponse,
+)
 from flow_backend.sync_utils import clamp_client_updated_at_ms, now_ms, record_sync_event
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 
-@router.get("")
+@router.get("", response_model=SettingsListResponse)
 async def list_settings(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -40,7 +46,7 @@ async def list_settings(
     return {"items": data}
 
 
-@router.put("/{key}")
+@router.put("/{key}", response_model=SettingOut)
 async def upsert_setting(
     key: str,
     payload: SettingUpsertRequest,
@@ -86,7 +92,7 @@ async def upsert_setting(
     }
 
 
-@router.delete("/{key}")
+@router.delete("/{key}", response_model=OkResponse)
 async def delete_setting(
     key: str,
     payload: SettingDeleteRequest,

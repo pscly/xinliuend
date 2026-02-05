@@ -12,21 +12,21 @@ from flow_backend.deps import get_current_user
 from flow_backend.memos_client import MemosClient, MemosClientError
 from flow_backend.models import User
 from flow_backend.password_crypto import encrypt_password
-from flow_backend.schemas import ChangePasswordRequest
+from flow_backend.schemas import ChangePasswordRequest, ChangePasswordResponse, MeResponse
 from flow_backend.security import hash_password, verify_password
 import flow_backend.user_session
 
 router = APIRouter(prefix="/me", tags=["me"])
 
 
-@router.get("")
+@router.get("", response_model=MeResponse)
 async def get_me(request: Request, user: User = Depends(get_current_user)):
     # SPA can call /me after refresh to obtain a new CSRF token without reading httpOnly cookies.
     csrf_token = getattr(request.state, "user_csrf_token", None)
-    return {"username": user.username, "is_admin": user.is_admin, "csrf_token": csrf_token}
+    return MeResponse(username=user.username, is_admin=bool(user.is_admin), csrf_token=csrf_token)
 
 
-@router.post("/password")
+@router.post("/password", response_model=ChangePasswordResponse)
 async def change_password(
     payload: ChangePasswordRequest,
     request: Request,
@@ -88,4 +88,4 @@ async def change_password(
 
     csrf_token = secrets.token_urlsafe(24)
     flow_backend.user_session.set_user_session_cookie(response, request, int(user_id), csrf_token)
-    return {"ok": True, "csrf_token": csrf_token}
+    return ChangePasswordResponse(ok=True, csrf_token=csrf_token)

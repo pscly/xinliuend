@@ -32,6 +32,7 @@ from flow_backend.routers import (  # pyright: ignore[reportMissingTypeStubs]
     todo,
 )
 from flow_backend.error_handlers import register_error_handlers  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.schemas_common import HealthResponse
 from flow_backend.v2.routers.attachments import (
     router as v2_attachments_router,
 )  # pyright: ignore[reportMissingTypeStubs]
@@ -186,9 +187,9 @@ elif origins:
     )
 
 
-@app.get("/health")
-def health():
-    return {"ok": True}
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(ok=True)
 
 
 # Mounted API v2 sub-app (separate OpenAPI schema).
@@ -373,30 +374,20 @@ def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
                 },
             )
 
-            # Auth endpoints are rate-limited and can return 429 with Retry-After.
-            if _path in {f"{api_prefix}/auth/login", f"{api_prefix}/auth/register"}:
-                resp_429 = cast(
-                    dict[str, object],
-                    responses.setdefault(
-                        "429",
-                        {
-                            "description": "Too Many Requests",
-                            "content": {
-                                "application/json": {
-                                    "schema": _openapi_schema_ref("ErrorResponse"),
-                                }
-                            },
-                        },
-                    ),
-                )
-                headers = cast(dict[str, object], resp_429.setdefault("headers", {}))
-                headers.setdefault(
-                    "Retry-After",
-                    {
-                        "schema": {"type": "string"},
-                        "description": "Seconds to wait before retrying.",
-                    },
-                )
+            auth_required = bool(op.get("security"))
+
+            def _ensure_error_response(
+                code: str,
+                desc: str,
+                *,
+                include_retry_after: bool = False,
+            ) -> None:
+                resp = cast(dict[str, object], responses.setdefault(code, {"description": desc}))
+                content = cast(dict[str, object], resp.setdefault("content", {}))
+                app_json = cast(dict[str, object], content.setdefault("application/json", {}))
+                app_json["schema"] = _openapi_schema_ref("ErrorResponse")
+
+                headers = cast(dict[str, object], resp.setdefault("headers", {}))
                 headers.setdefault(
                     "X-Request-Id",
                     {
@@ -404,6 +395,32 @@ def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
                         "description": "Echoed or generated request id.",
                     },
                 )
+                if include_retry_after:
+                    headers.setdefault(
+                        "Retry-After",
+                        {
+                            "schema": {"type": "string"},
+                            "description": "Seconds to wait before retrying.",
+                        },
+                    )
+
+            # Runtime error contract: any raised HTTPException / validation errors will
+            # be mapped to ErrorResponse by error_handlers.py.
+            if auth_required:
+                _ensure_error_response("401", "Unauthorized")
+                _ensure_error_response("403", "Forbidden")
+
+            for code, desc in (
+                ("400", "Bad Request"),
+                ("404", "Not Found"),
+                ("409", "Conflict"),
+                ("410", "Gone"),
+                ("413", "Payload Too Large"),
+                ("429", "Too Many Requests"),
+                ("502", "Upstream Error"),
+                ("500", "Internal Server Error"),
+            ):
+                _ensure_error_response(code, desc, include_retry_after=(code == "429"))
 
     return schema
 

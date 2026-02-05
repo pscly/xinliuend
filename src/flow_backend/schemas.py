@@ -40,6 +40,23 @@ class AuthData(BaseModel):
     server_url: str
 
 
+class AuthTokenResponse(BaseModel):
+    token: str
+    server_url: str
+    csrf_token: str
+
+
+class MeResponse(BaseModel):
+    username: str
+    is_admin: bool
+    csrf_token: str | None = None
+
+
+class ChangePasswordResponse(BaseModel):
+    ok: bool = True
+    csrf_token: str
+
+
 class ApiResponse(BaseModel):
     code: int = 200
     data: dict

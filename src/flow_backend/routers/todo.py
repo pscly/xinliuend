@@ -19,14 +19,18 @@ from flow_backend.config import settings
 from flow_backend.db import get_session
 from flow_backend.deps import get_current_user
 from flow_backend.models import TodoItem, TodoItemOccurrence, TodoList, User, utc_now
+from flow_backend.schemas_common import IdResponse, IdsResponse, OkResponse
 from flow_backend.schemas_todo import (
     TodoItemOccurrenceUpsertRequest,
+    TodoItemListResponse,
     TodoItemPatchRequest,
     TodoItemRestoreRequest,
     TodoItemUpsertRequest,
     TodoListPatchRequest,
+    TodoListListResponse,
     TodoListReorderItem,
     TodoListUpsertRequest,
+    TodoOccurrenceListResponse,
 )
 from flow_backend.services import todo_items_service
 from flow_backend.sync_utils import clamp_client_updated_at_ms, now_ms, record_sync_event
@@ -69,7 +73,7 @@ def _validate_recurring(
         )
 
 
-@router.get("/lists")
+@router.get("/lists", response_model=TodoListListResponse)
 async def list_todo_lists(
     include_archived: bool = False,
     user: User = Depends(get_current_user),
@@ -96,7 +100,7 @@ async def list_todo_lists(
     return {"items": data}
 
 
-@router.post("/lists")
+@router.post("/lists", response_model=IdResponse)
 async def upsert_todo_list(
     payload: TodoListUpsertRequest,
     user: User = Depends(get_current_user),
@@ -132,7 +136,7 @@ async def upsert_todo_list(
     return {"id": row.id}
 
 
-@router.patch("/lists/{list_id}")
+@router.patch("/lists/{list_id}", response_model=OkResponse)
 async def patch_todo_list(
     list_id: str,
     payload: TodoListPatchRequest,
@@ -174,7 +178,7 @@ async def patch_todo_list(
     return {"ok": True}
 
 
-@router.post("/lists/reorder")
+@router.post("/lists/reorder", response_model=OkResponse)
 async def reorder_todo_lists(
     items: list[TodoListReorderItem],
     user: User = Depends(get_current_user),
@@ -205,7 +209,7 @@ async def reorder_todo_lists(
     return {"ok": True}
 
 
-@router.delete("/lists/{list_id}")
+@router.delete("/lists/{list_id}", response_model=OkResponse)
 async def delete_todo_list(
     list_id: str,
     client_updated_at_ms: int = Query(default=0),
@@ -236,7 +240,7 @@ async def delete_todo_list(
     return {"ok": True}
 
 
-@router.get("/items")
+@router.get("/items", response_model=TodoItemListResponse)
 async def list_todo_items(
     list_id: Optional[str] = None,
     status_value: Optional[str] = Query(default=None, alias="status"),
@@ -371,7 +375,7 @@ async def _upsert_item_row(
     return row
 
 
-@router.post("/items")
+@router.post("/items", response_model=IdResponse)
 async def upsert_todo_item(
     payload: TodoItemUpsertRequest,
     user: User = Depends(get_current_user),
@@ -383,7 +387,7 @@ async def upsert_todo_item(
     return {"id": item_id}
 
 
-@router.post("/items/bulk")
+@router.post("/items/bulk", response_model=IdsResponse)
 async def bulk_upsert_todo_items(
     payloads: list[TodoItemUpsertRequest],
     user: User = Depends(get_current_user),
@@ -400,7 +404,7 @@ async def bulk_upsert_todo_items(
     return {"ids": ids}
 
 
-@router.patch("/items/{item_id}")
+@router.patch("/items/{item_id}", response_model=OkResponse)
 async def patch_todo_item(
     item_id: str,
     payload: TodoItemPatchRequest,
@@ -468,7 +472,7 @@ async def patch_todo_item(
     return {"ok": True}
 
 
-@router.delete("/items/{item_id}")
+@router.delete("/items/{item_id}", response_model=OkResponse)
 async def delete_todo_item(
     item_id: str,
     client_updated_at_ms: int = Query(default=0),
@@ -498,7 +502,7 @@ async def delete_todo_item(
     return {"ok": True}
 
 
-@router.post("/items/{item_id}/restore")
+@router.post("/items/{item_id}/restore", response_model=OkResponse)
 async def restore_todo_item(
     item_id: str,
     payload: TodoItemRestoreRequest,
@@ -592,7 +596,7 @@ async def _upsert_occurrence_row(
     return row
 
 
-@router.get("/occurrences")
+@router.get("/occurrences", response_model=TodoOccurrenceListResponse)
 async def list_occurrences(
     item_id: str,
     from_local: Optional[str] = Query(default=None, alias="from"),
@@ -630,7 +634,7 @@ async def list_occurrences(
     return {"items": data}
 
 
-@router.post("/occurrences")
+@router.post("/occurrences", response_model=IdResponse)
 async def upsert_occurrence(
     payload: TodoItemOccurrenceUpsertRequest,
     user: User = Depends(get_current_user),
@@ -644,7 +648,7 @@ async def upsert_occurrence(
     return {"id": row.id}
 
 
-@router.post("/occurrences/bulk")
+@router.post("/occurrences/bulk", response_model=IdsResponse)
 async def bulk_upsert_occurrences(
     payloads: list[TodoItemOccurrenceUpsertRequest],
     user: User = Depends(get_current_user),
@@ -661,7 +665,7 @@ async def bulk_upsert_occurrences(
     return {"ids": ids}
 
 
-@router.delete("/occurrences/{occurrence_id}")
+@router.delete("/occurrences/{occurrence_id}", response_model=OkResponse)
 async def delete_occurrence(
     occurrence_id: str,
     client_updated_at_ms: int = Query(default=0),

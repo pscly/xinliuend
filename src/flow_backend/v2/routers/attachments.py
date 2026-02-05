@@ -82,7 +82,26 @@ async def upload_note_attachment(
     )
 
 
-@router.get("/attachments/{attachment_id}")
+@router.get(
+    "/attachments/{attachment_id}",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Attachment content (bytes).",
+            "content": {
+                "application/octet-stream": {
+                    "schema": {"type": "string", "format": "binary"},
+                }
+            },
+            "headers": {
+                "Content-Disposition": {
+                    "schema": {"type": "string"},
+                    "description": "Best-effort attachment filename.",
+                }
+            },
+        }
+    },
+)
 async def download_attachment(
     attachment_id: str,
     user: User = Depends(get_current_user),

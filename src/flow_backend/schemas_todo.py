@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -157,3 +158,68 @@ class TodoItemOccurrenceUpsertRequest(BaseModel):
     @classmethod
     def _validate_completed_at_local(cls, v: str | None) -> str | None:
         return validate_local_dt(v, "completed_at_local")
+
+
+class TodoListItem(BaseModel):
+    id: str = Field(min_length=1, max_length=36)
+    name: str = Field(min_length=1, max_length=200)
+    color: str | None = Field(default=None, max_length=32)
+    sort_order: int
+    archived: bool
+    client_updated_at_ms: int
+    updated_at: datetime
+
+
+class TodoListListResponse(BaseModel):
+    items: list[TodoListItem] = Field(default_factory=list)
+
+
+class TodoItemOut(BaseModel):
+    id: str = Field(min_length=1, max_length=36)
+    list_id: str = Field(min_length=1, max_length=36)
+    parent_id: str | None = Field(default=None, max_length=36)
+
+    title: str = Field(max_length=500)
+    note: str = Field(max_length=10000)
+
+    status: str = Field(max_length=20)
+    priority: int
+    due_at_local: str | None = Field(default=None, max_length=19)
+    completed_at_local: str | None = Field(default=None, max_length=19)
+
+    sort_order: int
+    tags: list[str] = Field(default_factory=list)
+
+    is_recurring: bool
+    rrule: str | None = Field(default=None, max_length=512)
+    dtstart_local: str | None = Field(default=None, max_length=19)
+    tzid: str = Field(max_length=64)
+    reminders: list[dict[str, Any]] = Field(default_factory=list)
+
+    client_updated_at_ms: int
+    updated_at: datetime
+    deleted_at: datetime | None = None
+
+
+class TodoItemListResponse(BaseModel):
+    items: list[TodoItemOut] = Field(default_factory=list)
+
+
+class TodoOccurrenceOut(BaseModel):
+    id: str = Field(min_length=1, max_length=36)
+    item_id: str = Field(min_length=1, max_length=36)
+    tzid: str = Field(max_length=64)
+    recurrence_id_local: str = Field(min_length=19, max_length=19)
+
+    status_override: str | None = Field(default=None, max_length=20)
+    title_override: str | None = Field(default=None, max_length=500)
+    note_override: str | None = Field(default=None, max_length=10000)
+    due_at_override_local: str | None = Field(default=None, max_length=19)
+    completed_at_local: str | None = Field(default=None, max_length=19)
+
+    client_updated_at_ms: int
+    updated_at: datetime
+
+
+class TodoOccurrenceListResponse(BaseModel):
+    items: list[TodoOccurrenceOut] = Field(default_factory=list)

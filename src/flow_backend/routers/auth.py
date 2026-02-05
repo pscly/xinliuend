@@ -14,7 +14,8 @@ from flow_backend.device_tracking import extract_client_ip, record_device_activi
 from flow_backend.memos_client import MemosClient, MemosClientError
 from flow_backend.models import User
 from flow_backend.password_crypto import encrypt_password
-from flow_backend.schemas import LoginRequest, RegisterRequest
+from flow_backend.schemas import AuthTokenResponse, LoginRequest, RegisterRequest
+from flow_backend.schemas_common import OkResponse
 from flow_backend.security import hash_password, verify_password
 from flow_backend.rate_limiting import build_ip_key, build_ip_username_key, enforce_rate_limit
 import flow_backend.user_session
@@ -32,13 +33,13 @@ async def _persist_device_tracking_best_effort(user_id: int, request: Request) -
         pass
 
 
-@router.post("/register")
+@router.post("/register", response_model=AuthTokenResponse)
 async def register(
     payload: RegisterRequest,
     request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
-):
+) -> AuthTokenResponse:
     ip = extract_client_ip(request)
     await enforce_rate_limit(
         scope="auth_register",
@@ -114,20 +115,20 @@ async def register(
     # Best-effort: record device/IP at registration time as well.
     await _persist_device_tracking_best_effort(user_id=int(user_id), request=request)
 
-    return {
-        "token": user.memos_token,
-        "server_url": settings.memos_base_url,
-        "csrf_token": csrf_token,
-    }
+    return AuthTokenResponse(
+        token=user.memos_token,
+        server_url=settings.memos_base_url,
+        csrf_token=csrf_token,
+    )
 
 
-@router.post("/login")
+@router.post("/login", response_model=AuthTokenResponse)
 async def login(
     payload: LoginRequest,
     request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
-):
+) -> AuthTokenResponse:
     ip = extract_client_ip(request)
     await enforce_rate_limit(
         scope="auth_login_ip",
@@ -165,14 +166,14 @@ async def login(
     # Record device/IP on login too (best-effort).
     await _persist_device_tracking_best_effort(user_id=int(user_id), request=request)
 
-    return {
-        "token": user.memos_token,
-        "server_url": settings.memos_base_url,
-        "csrf_token": csrf_token,
-    }
+    return AuthTokenResponse(
+        token=user.memos_token,
+        server_url=settings.memos_base_url,
+        csrf_token=csrf_token,
+    )
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=OkResponse)
 async def logout(request: Request):
     """Clear the user session cookie.
 

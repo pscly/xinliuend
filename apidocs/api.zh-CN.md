@@ -20,6 +20,14 @@ OpenAPI / Swagger UI：
 
 - `GET /health`（主应用）
 
+#### GET /health
+
+成功：
+
+```json
+{"ok": true}
+```
+
 管理后台（内部）：
 
 - `GET /admin`（独立登录体系，不在 OpenAPI schema 中）
@@ -1092,7 +1100,73 @@ Query：
 
 返回附件 bytes。
 
-### 6.6 Debug（仅非生产环境）
+### 6.6 Notifications（通知中心，鉴权）
+
+鉴权：
+
+- Bearer Token：需要（`Authorization: Bearer <token>`）
+- Cookie Session：若 Web 采用 Cookie 登录态，理论上也可用（同一套 `get_current_user`）；但移动端仍推荐 Bearer
+
+数据模型（核心字段）：
+
+- `Notification`：
+  - `id`: string
+  - `kind`: string（如 `mention` 等；业务可扩展）
+  - `payload`: object（事件载荷，结构由 `kind` 决定，客户端应容错解析）
+  - `created_at`: ISO8601 datetime string
+  - `read_at`: ISO8601 datetime string | null
+- 列表返回：`NotificationListResponse { notifications, total, limit, offset }`
+
+#### GET /api/v1/notifications
+
+用途：分页获取通知列表（默认按时间倒序）。
+
+Query：
+
+- `unread_only`（bool，默认 false）：只返回未读
+- `limit`（1..500，默认 50）
+- `offset`（>=0，默认 0）
+
+返回：
+
+```json
+{
+  "notifications": [
+    {
+      "id": "uuid",
+      "kind": "mention",
+      "payload": {"share_token": "...", "note_id": "...", "comment_id": "...", "snippet": "..."},
+      "created_at": "2026-02-01T00:00:00Z",
+      "read_at": null
+    }
+  ],
+  "total": 1,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+#### GET /api/v1/notifications/unread-count
+
+用途：获取未读数量（便于客户端 badge）。
+
+返回：
+
+```json
+{"unread_count": 3}
+```
+
+#### POST /api/v1/notifications/{notification_id}/read
+
+用途：将某条通知标记为已读（幂等：重复调用会返回相同结果）。
+
+成功：返回 `Notification`（`read_at` 非空）。
+
+常见错误：
+
+- 404 `ErrorResponse(message="not found")`（该通知不存在或不属于当前用户）
+
+### 6.7 Debug（仅非生产环境）
 
 #### POST /api/v1/debug/tx-fail
 
