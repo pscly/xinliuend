@@ -1,19 +1,38 @@
-# Web Local Dev & Deploy (Same-Site Cookie Auth)
+# Web 本地联调与部署（同站点 Cookie 会话 / CSRF）
 
-This doc explains how to run the backend + `web/` frontend locally, and how to deploy them in a way that keeps cookie-based auth stable (same-site, preferably same-origin).
+最后更新：2026-02-05
 
-Repo defaults (today):
+本文解释如何在本仓库中运行后端 + `web/` 前端进行本地联调，以及如何在生产环境部署成“同站点 / 最好同源”的形态，从而让 **Cookie Session 鉴权 + CSRF** 最稳定、最省心。
 
-- Backend: `http://localhost:31031`
-- Web (Next dev server): `http://localhost:3000`
+仓库默认端口（本地）：
 
-## 1) Recommended local dev: same-origin via Next rewrites (no CORS)
+- 后端（FastAPI）：`http://localhost:31031`
+- Web（Next dev server）：`http://localhost:3000`
 
-Goal: browser stays on `http://localhost:3000`, while `/api/v1/*` is proxied to the backend.
+---
 
-### 1.1 Start backend (SQLite + dev bypass)
+## 1) 推荐本地联调：Next rewrites 同源（无需 CORS）
 
-In repo root:
+目标：浏览器始终访问 `http://localhost:3000`，但把 `/api/v1/*` 通过 Next rewrites 代理到后端 `http://localhost:31031`。
+
+### 1.1 启动后端（SQLite + 本地开发绕过）
+
+在仓库根目录：
+
+Linux/macOS（bash）：
+
+```bash
+cp -f .env.example .env
+
+# 稳定的本地默认值
+export DATABASE_URL="sqlite:///./.data/dev.db"
+export DEV_BYPASS_MEMOS="true"
+
+uv sync
+uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031 --reload
+```
+
+Windows（PowerShell）：
 
 ```powershell
 Copy-Item .env.example .env -Force
@@ -26,14 +45,28 @@ uv sync
 uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031 --reload
 ```
 
-Verify:
+验证：
 
 - `http://localhost:31031/health`
-- `http://localhost:31031/admin` (backend-rendered admin UI)
+- `http://localhost:31031/admin`（后端渲染的管理后台页面）
 
-### 1.2 Start web (Next.js)
+### 1.2 启动 Web（Next.js）
 
-In a new terminal:
+新开一个终端，在仓库根目录执行：
+
+Linux/macOS（bash）：
+
+```bash
+cd web
+npm ci
+
+# 可选：显式指定 rewrites 目标后端（默认就是 http://localhost:31031）
+# export BACKEND_BASE_URL="http://localhost:31031"
+
+npm run dev
+```
+
+Windows（PowerShell）：
 
 ```powershell
 cd web
@@ -45,105 +78,132 @@ npm ci
 npm run dev
 ```
 
-Open:
+打开：
 
-- Web: `http://localhost:3000`
-- API (proxied): `http://localhost:3000/api/v1/...`
+- Web：`http://localhost:3000`
+- API（被代理）：`http://localhost:3000/api/v1/...`
 
-### 1.3 How cookie auth works in this mode
+### 1.3 为什么这种模式下 Cookie 最稳定
 
-`web/next.config.ts` rewrites:
+`web/next.config.ts` 通过 rewrites 把：
 
 - `/api/v1/*` -> `http://localhost:31031/api/v1/*`
 
-From the browser's perspective, the API is same-origin (`localhost:3000`). That means:
+从浏览器角度看，API 就是“同源”（仍然是 `localhost:3000`），因此：
 
-- No CORS preflight/config needed.
-- The backend's `Set-Cookie` is stored for host `localhost` (cookies do not depend on port), and subsequent `/api/...` requests automatically include it.
-- The frontend can keep using relative URLs like `/api/v1/me`.
+- 不需要配置 CORS（也不会遇到复杂的 preflight/credentials 问题）。
+- 后端返回的 `Set-Cookie` 会写入 host 为 `localhost` 的 cookie（**cookie 不依赖端口**）。
+- 前端可以稳定使用相对路径请求，例如 `/api/v1/me`。
 
-Important: `/admin` is NOT rewritten by Next. It remains backend-rendered and should be visited at `http://localhost:31031/admin` during local dev.
+重要：`/admin` **不会**被 Next 代理。它是后端渲染页面，本地应访问：
 
-## 2) Cookie session + CSRF (must-read)
+- `http://localhost:31031/admin`
 
-Backend supports two auth modes:
+---
 
-- Bearer token: `Authorization: Bearer <memos_token>` (no CSRF).
-- Cookie session: httpOnly session cookie (requires CSRF header for state-changing methods).
+## 2) Cookie Session + CSRF（必读）
 
-### 2.1 Session cookie details
+后端同时支持两种鉴权模式：
 
-Defaults in `src/flow_backend/config.py`:
+- Bearer Token：`Authorization: Bearer <token>`（移动端/脚本推荐；不需要 CSRF）
+- Cookie Session：httpOnly session cookie（Web SPA 常用；**写请求必须带 CSRF header**）
 
-- Cookie name: `flow_session` (`USER_SESSION_COOKIE_NAME`)
-- Cookie is `HttpOnly`, `SameSite=Lax`, `Path=/`
-- `Secure` is enabled automatically on HTTPS (or when `TRUST_X_FORWARDED_PROTO=true` behind a reverse proxy)
+### 2.1 Session Cookie 关键参数
 
-### 2.2 CSRF rule
+默认值见 `src/flow_backend/config.py`：
 
-When you authenticate via cookie session:
+- Cookie 名称：`flow_session`（`USER_SESSION_COOKIE_NAME`）
+- Cookie 属性：`HttpOnly`、`SameSite=Lax`、`Path=/`
+- `Secure`：当你使用 HTTPS（或反代后启用 `TRUST_X_FORWARDED_PROTO=true`）时会自动启用
 
-- Safe methods (`GET`, `HEAD`, `OPTIONS`) do NOT require CSRF.
-- State-changing methods (`POST`, `PUT`, `PATCH`, `DELETE`) MUST include the CSRF header.
+### 2.2 CSRF 规则
 
-Header name (configurable):
+当你通过 Cookie Session 鉴权时：
 
-- `X-CSRF-Token` (`USER_CSRF_HEADER_NAME`)
+- 安全方法（`GET`/`HEAD`/`OPTIONS`）：不要求 CSRF
+- 写方法（`POST`/`PUT`/`PATCH`/`DELETE`）：必须携带 CSRF header
 
-The CSRF token value is returned by:
+Header 名称可配置，默认：
+
+- `X-CSRF-Token`（`USER_CSRF_HEADER_NAME`）
+
+CSRF token 的获取方式：
 
 - `POST /api/v1/auth/login` -> `csrf_token`
 - `POST /api/v1/auth/register` -> `csrf_token`
 
-### 2.3 SPA refresh / CSRF rehydration
+### 2.3 SPA 刷新后的 CSRF 重新获取（rehydration）
 
-Because the session cookie is httpOnly, the SPA cannot read it directly. After a page reload, rehydrate the CSRF token by calling:
+因为 session cookie 是 httpOnly，前端 JS 无法直接读取 cookie。
+
+因此页面刷新后，需要通过 API 重新拿到 CSRF：
 
 - `GET /api/v1/me` -> `csrf_token`
 
-Recommended client flow:
+推荐客户端流程：
 
-1) On login/register success: store `csrf_token` in memory (or session storage).
-2) On SPA boot (and whenever you lose CSRF in memory): call `GET /api/v1/me` and refresh the CSRF token.
-3) For every non-safe request under cookie auth: set header `X-CSRF-Token: <csrf_token>`.
+1) 登录/注册成功后，把 `csrf_token` 存在内存（或 sessionStorage）。
+2) SPA 启动时（或内存丢失 CSRF 时），调用 `GET /api/v1/me` 重新获取 `csrf_token`。
+3) 对每个写请求（POST/PUT/PATCH/DELETE）都带上：`X-CSRF-Token: <csrf_token>`。
 
-### 2.4 Logout endpoint
+### 2.4 Logout（登出）端点注意事项
 
-Use:
+使用：
 
 - `POST /api/v1/auth/logout`
 
-Rules:
+规则：
 
-- Idempotent (OK even if already logged out).
-- If a valid cookie-session exists, CSRF is required (prevents cross-site logout).
-- If you are using Bearer auth, CSRF is NOT required for this endpoint.
+- 幂等：即使已经登出也返回 ok。
+- 如果当前请求携带了有效 cookie-session，会要求 CSRF（防止跨站强制登出）。
+- 如果你使用的是 Bearer Token 鉴权，则该端点不需要 CSRF。
 
-## 3) Local alternative: no Next proxy + direct cross-origin (CORS + cookies)
+---
 
-Use this when you want to test the real browser CORS behavior (or you plan to run web + api on different origins).
+## 3) 本地备选：不走 Next 代理，直接跨域（CORS + cookies）
 
-### 3.1 Disable Next rewrites
+当你需要验证“真实跨域行为”（或你计划把 Web 与 API 部署到不同 origin）时，可以使用这个模式。
 
-In the terminal where you run `npm run dev`:
+### 3.1 关闭 Next rewrites
+
+在运行 `npm run dev` 的终端里设置环境变量：
+
+Linux/macOS（bash）：
+
+```bash
+export NEXT_DISABLE_BACKEND_PROXY="1"
+```
+
+Windows（PowerShell）：
 
 ```powershell
 $env:NEXT_DISABLE_BACKEND_PROXY = "1"
 ```
 
-Notes:
+注意：
 
-- With rewrites disabled, calls to relative `/api/v1/...` will hit the web origin (`localhost:3000`) and will NOT reach the backend.
-- For cross-origin mode, your frontend requests must target the backend origin explicitly, e.g. `http://localhost:31031/api/v1/...`.
+- 关闭 rewrites 后，浏览器请求相对路径 `/api/v1/...` 只会打到 Web origin（`localhost:3000`），不会到后端。
+- 跨域模式下，前端请求必须显式指向后端 origin，例如 `http://localhost:31031/api/v1/...`。
 
-### 3.2 Configure backend CORS for cookie auth
+### 3.2 配置后端 CORS（为了跨域 Cookie Session）
 
-Backend uses Starlette `CORSMiddleware` and derives `allow_credentials` from `CORS_ALLOW_ORIGINS`:
+后端使用 Starlette `CORSMiddleware`，并根据 `CORS_ALLOW_ORIGINS` 决定是否允许跨域携带 cookie：
 
-- If `CORS_ALLOW_ORIGINS='*'`: `allow_credentials` is forced to `false` (cookies will not work cross-origin).
-- If `CORS_ALLOW_ORIGINS` is an explicit allowlist (comma-separated, no `*`): `allow_credentials=true` is enabled.
+- 如果 `CORS_ALLOW_ORIGINS='*'`：`allow_credentials` 会被强制为 `false`（跨域 cookie 不会工作）
+- 如果 `CORS_ALLOW_ORIGINS` 是明确 allowlist（逗号分隔、且不包含 `*`）：会启用 `allow_credentials=true`
 
-Example (allow local web origin):
+示例：允许本地 Web origin：
+
+Linux/macOS（bash）：
+
+```bash
+# 关键：需要 cookie 时，CORS_ALLOW_ORIGINS 不能是 '*'
+export CORS_ALLOW_ORIGINS="http://localhost:3000"
+
+uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031 --reload
+```
+
+Windows（PowerShell）：
 
 ```powershell
 # IMPORTANT: no '*' when you need cookies.
@@ -152,65 +212,71 @@ $env:CORS_ALLOW_ORIGINS = "http://localhost:3000"
 uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031 --reload
 ```
 
-Browser fetch requirements:
+浏览器端 `fetch` 要求：
 
-- `credentials: "include"` (already the default in `web/src/lib/api/client.ts`)
-- For cookie-session + non-safe methods: include `X-CSRF-Token`.
+- 必须带 `credentials: "include"`（仓库默认的 `web/src/lib/api/client.ts` 已处理）
+- Cookie-session + 写请求：必须带 `X-CSRF-Token`
 
-Pitfalls:
+常见坑：
 
-- Keep hostnames consistent. `http://localhost:3000` and `http://127.0.0.1:3000` are different origins.
-- If you run E2E against `http://127.0.0.1:3000`, make sure your CORS allowlist (when needed) includes that exact origin.
-- Cookies are `SameSite=Lax` (good for same-site setups like subdomains or different ports under the same site). For truly cross-site deployments, cookie auth will likely not work without changing cookie policy.
+- host 必须一致：`http://localhost:3000` 与 `http://127.0.0.1:3000` 是不同 origin。
+- Cookie `SameSite=Lax` 更适合“同站点”部署（例如同域不同端口/子域）。如果是完全跨站点（不同顶级域名），cookie 鉴权大概率行不通（除非调整 cookie 策略）。
 
-## 4) Prod-like deployment shapes (keep /admin backend-rendered)
+---
 
-Key requirement: `/admin` is backend HTML and must NOT be handled by the Next app.
+## 4) 生产部署形态（务必保证 /admin 由后端接管）
 
-### 4.1 Recommended: reverse proxy (one public origin)
+关键要求：`/admin` 是后端渲染的 HTML 管理后台，必须 **不要**被前端 SPA/静态站接管。
 
-Put Nginx/Caddy/Traefik in front of both services and make the browser see ONE origin.
+### 4.1 推荐：反向代理（一个公网 origin）
 
-Routing idea:
+在 Nginx/Caddy/Traefik 前置反代，让浏览器只看到一个公网 origin：
 
-- `/` -> Next (either `next start` or static files)
-- `/api/v1/*` -> backend (`flow_backend`)
-- `/admin` -> backend (`flow_backend`)  (do NOT let Next shadow it)
+- `/` -> Web（Next 运行或静态文件）
+- `/api/v1/*` -> 后端
+- `/admin` -> 后端（**不要让前端覆盖**）
 
-Benefits:
+收益：
 
-- No CORS.
-- Cookie auth is simplest.
-- You can terminate TLS at the proxy.
+- 无 CORS
+- Cookie Session 最稳定
+- TLS 可以在反代层终止
 
-When terminating TLS at a proxy, enable in backend:
+如果 TLS 在反代层终止，后端建议启用：
 
-- `TRUST_X_FORWARDED_PROTO=true` (so Secure cookies are set correctly)
+- `TRUST_X_FORWARDED_PROTO=true`（让后端正确设置 `Secure` cookie）
 
-### 4.2 Static export (SPA) vs running a Next server
+更完整的部署指南见：`apidocs/deploy.zh-CN.md`。
 
-If you want a pure static SPA, Next can be configured for static export (build-time HTML + assets) and served by any static server.
+### 4.2 静态导出（SPA） vs 运行 Next Server
 
-Trade-offs to keep in mind:
+如果你希望纯静态 SPA，可以使用 Next static export（build-time HTML + assets）并由任意静态服务器托管。
 
-- Static export forbids server-only runtime features (e.g. no server `cookies()`/`headers()` usage in the Next app).
-- Prefer client-side cookie auth (`fetch` with `credentials: "include"`).
-- If you later enable static export, be careful with Next built-in `i18n` config; route-segment locale patterns are more compatible.
+需要注意：
 
-If you run a Next server (`npm run build` + `npm run start`), you still typically want a reverse proxy in front to route `/admin` and `/api/*` to the backend.
+- 静态导出不支持 Next 的某些 server-only 特性（例如 server 侧 `cookies()`/`headers()` 依赖）
+- 更推荐前端用客户端请求 + cookie-session（`credentials: "include"`）
 
-### 4.3 Single service (same origin): backend serves `web/out`
+如果你运行 Next server（`npm run build` + `npm run start`），通常仍建议在前面放一个反向代理，用于保证 `/admin` 与 `/api/*` 正确路由到后端。
 
-This repo supports a production-like layout without an external reverse proxy:
+### 4.3 单服务同源：后端托管 `web/out`（最省心）
 
-- Build the Next app as a static export (`web/out/`).
-- Run ONLY the backend; it serves the exported UI on `/`.
+仓库支持一种“无需外部反代也能同源”的形态：
 
-This keeps cookie-session auth simple because the browser sees one origin.
+- Web 使用 Next 静态导出，产物在 `web/out/`
+- 只跑后端服务：后端会 best-effort 把 `web/out` 挂载到 `/`
 
-Steps:
+步骤 1：构建静态导出
 
-1) Build the static export:
+Linux/macOS（bash）：
+
+```bash
+cd web
+npm ci
+npm run build
+```
+
+Windows（PowerShell）：
 
 ```powershell
 cd web
@@ -218,74 +284,117 @@ npm ci
 npm run build
 ```
 
-Expect output under:
+期望输出：
 
-- `web/out/` (e.g. `web/out/index.html`)
+- `web/out/`（例如 `web/out/index.html`）
 
-2) Run the backend:
+步骤 2：运行后端
+
+Linux/macOS（bash）：
+
+```bash
+uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031
+```
+
+Windows（PowerShell）：
 
 ```powershell
 uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031
 ```
 
-3) Open:
+步骤 3：访问
 
-- Web UI: `http://localhost:31031/`
-- API: `http://localhost:31031/api/v1/...`
-- Admin (backend-rendered): `http://localhost:31031/admin`
+- Web UI：`http://localhost:31031/`
+- API：`http://localhost:31031/api/v1/...`
+- Admin：`http://localhost:31031/admin`
 
-Notes:
+备注：
 
-- Routing precedence is preserved because `/api/*` and `/admin` are registered before the static mount.
-- Static serving is best-effort: the backend only mounts the UI if `web/out/index.html` exists.
-- During `npm run build`, Next may warn that `rewrites` are ignored for `output: 'export'` (expected; rewrites are for `npm run dev`).
-- Disable static serving explicitly with `FLOW_DISABLE_WEB_STATIC=1`.
-- Override the export directory with `FLOW_WEB_OUT_DIR` (absolute or relative path).
+- 路由优先级已保证：`/api/*` 与 `/admin` 会先注册，再挂载静态站点。
+- 静态挂载是 best-effort：仅当 `web/out/index.html` 存在时才会挂载。
+- `npm run build` 时 Next 可能提示 rewrites 在 `output: 'export'` 下被忽略（正常；rewrites 主要用于 `npm run dev`）。
+- 禁用静态挂载：`FLOW_DISABLE_WEB_STATIC=1`
+- 覆盖导出目录：`FLOW_WEB_OUT_DIR=/abs/or/relative/path`
 
-## 5) Env vars: local + E2E stability checklist
+---
 
-Backend (common local / CI smoke):
+## 5) 环境变量速查（本地 + E2E 稳定性）
+
+后端（本地/CI 常用）：
 
 - `DATABASE_URL=sqlite:///./.data/dev.db`
-- `DEV_BYPASS_MEMOS=true` (local dev only)
+- `DEV_BYPASS_MEMOS=true`（仅本地开发）
 
-Backend (when running cross-origin without Next proxy):
+后端（跨域 Cookie Session 才需要）：
 
-- `CORS_ALLOW_ORIGINS=http://localhost:3000` (explicit allowlist; no wildcard)
+- `CORS_ALLOW_ORIGINS=http://localhost:3000`（明确 allowlist；不要用 `*`）
 
-Web:
+Web（Next rewrites）：
 
-- `BACKEND_BASE_URL=http://localhost:31031` (only affects Next rewrites)
-- `NEXT_DISABLE_BACKEND_PROXY=1` (turn off rewrites)
-- `NEXT_PUBLIC_APP_ORIGIN=http://localhost:3000` (server-side fetch base; set in deployments)
+- `BACKEND_BASE_URL=http://localhost:31031`（仅影响 Next rewrites 目标）
+- `NEXT_DISABLE_BACKEND_PROXY=1`（关闭 rewrites）
+- `NEXT_PUBLIC_APP_ORIGIN=http://localhost:3000`（部署时作为“应用自身 origin”提示）
 
-## 6) Quick manual sanity checks (copy/paste)
+---
 
-These examples assume the recommended local dev mode (API via `localhost:3000` rewrites).
+## 6) 快速手工自测（可复制粘贴）
 
-Login + save cookies:
+以下示例假设你使用“推荐本地联调模式”（API 通过 `localhost:3000` rewrites 代理）。
 
-```powershell
-curl -c .tmp.cookies.txt -H "Content-Type: application/json" `
-  -d '{"username":"demo","password":"pass1234"}' `
+登录并保存 cookie：
+
+Linux/macOS（bash）：
+
+```bash
+curl -c .tmp.cookies.txt -H "Content-Type: application/json" \
+  -d '{"username":"demo","password":"pass1234"}' \
   http://localhost:3000/api/v1/auth/login
 ```
 
-Get CSRF token after refresh (cookie-session):
+Windows（PowerShell）：
+
+```powershell
+curl -c .tmp.cookies.txt -H "Content-Type: application/json" `
+  -d '{\"username\":\"demo\",\"password\":\"pass1234\"}' `
+  http://localhost:3000/api/v1/auth/login
+```
+
+刷新后重新获取 CSRF token（cookie-session）：
+
+Linux/macOS（bash）：
+
+```bash
+curl -b .tmp.cookies.txt http://localhost:3000/api/v1/me
+```
+
+Windows（PowerShell）：
 
 ```powershell
 curl -b .tmp.cookies.txt http://localhost:3000/api/v1/me
 ```
 
-Logout (requires CSRF when cookie-session is valid):
+登出（如果 cookie-session 有效，需要 CSRF）：
+
+Linux/macOS（bash）：
+
+```bash
+# 把 <csrf> 替换为 /api/v1/me 或 login 响应里的 csrf_token
+curl -b .tmp.cookies.txt -H "X-CSRF-Token: <csrf>" -X POST \
+  http://localhost:3000/api/v1/auth/logout
+```
+
+Windows（PowerShell）：
 
 ```powershell
 # Replace <csrf> with the token from /api/v1/me or login response
 curl -b .tmp.cookies.txt -H "X-CSRF-Token: <csrf>" -X POST http://localhost:3000/api/v1/auth/logout
 ```
 
-## 7) Troubleshooting
+---
 
-- `http://localhost:31031/` returns 404: you probably didn't build the export yet. Run `cd web && npm ci && npm run build` and confirm `web/out/index.html` exists.
-- Cookies not sticking / login loops: keep hostnames consistent. `localhost` and `127.0.0.1` are different cookie hosts.
-- `/admin` looks wrong: make sure you're visiting the backend origin (`http://localhost:31031/admin`). It is not part of the Next export.
+## 7) Troubleshooting（常见问题）
+
+- `http://localhost:31031/` 返回 404：你可能还没构建静态导出。执行 `cd web && npm ci && npm run build` 并确认 `web/out/index.html` 存在。
+- Cookie 不生效 / 登录循环：请保持 host 一致。`localhost` 与 `127.0.0.1` 是不同 cookie host。
+- `/admin` 页面不对：请访问后端 origin：`http://localhost:31031/admin`（它不是前端静态导出的一部分）。
+

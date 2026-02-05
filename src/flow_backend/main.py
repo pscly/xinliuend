@@ -213,10 +213,19 @@ app.include_router(v2_notifications_router, prefix=settings.api_prefix)
 app.include_router(v2_revisions_router, prefix=settings.api_prefix)
 
 if settings.environment.strip().lower() != "production":
-    # Debug endpoints：仅非生产环境启用，并且不出现在 OpenAPI 文档中。
+    # Debug endpoints：仅非生产环境启用，默认不出现在 OpenAPI 文档中。
+    # 如需导出“开发版 OpenAPI 快照”（包含 debug 路由），可设置：
+    #   FLOW_OPENAPI_INCLUDE_DEBUG=1
+    include_debug_in_schema = (
+        os.getenv("FLOW_OPENAPI_INCLUDE_DEBUG", "").strip().lower() in {"1", "true", "yes"}
+    )
     from flow_backend.v2.routers.debug import router as v2_debug_router  # pyright: ignore[reportMissingTypeStubs]
 
-    app.include_router(v2_debug_router, prefix=settings.api_prefix, include_in_schema=False)
+    app.include_router(
+        v2_debug_router,
+        prefix=settings.api_prefix,
+        include_in_schema=include_debug_in_schema,
+    )
 
 
 @app.api_route(

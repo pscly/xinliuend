@@ -1168,6 +1168,12 @@ Query：
 
 ### 6.7 Debug（仅非生产环境）
 
+说明：
+
+- 该路由仅在 `ENVIRONMENT != production` 时挂载（生产环境默认不可用）。
+- 默认不出现在 OpenAPI schema 中（因此不会包含在 `GET /openapi.json` 与 `apidocs/openapi-v1.json`）。
+- 若你在本地联调/测试工具里希望看到 debug 端点，可导入 `apidocs/openapi-v1.dev.json`（由导出脚本 `--include-dev` 生成）。
+
 #### POST /api/v1/debug/tx-fail
 
 请求体（JSON）：
@@ -1226,10 +1232,12 @@ Query：
 仓库内也提供“离线快照”（适合直接导入）：
 
 - `apidocs/openapi-v1.json`
+- `apidocs/openapi-v1.dev.json`（开发联调快照：包含 debug；仅非生产环境可用）
 
 内部/调试接口说明：
 
-- `/admin/*` 与 `/api/v1/debug/*` 是内部用途，默认不包含在 OpenAPI schema 中
+- `/admin/*` 是内部用途，不包含在 OpenAPI schema 中
+- `/api/v1/debug/*` 仅非生产环境存在；默认不包含在对外快照中（但会包含在 `openapi-v1.dev.json`）
 
 如果你需要把文档交付给外部团队（离线），可让运维在目标环境执行：
 

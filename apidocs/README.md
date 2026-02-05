@@ -8,7 +8,9 @@
 
 1. 客户端对接总指南：[`to_app_plan.md`](to_app_plan.md)
 2. API 总文档（字段/协议/错误结构）：[`api.zh-CN.md`](api.zh-CN.md)
-3. OpenAPI 快照（机器可读）：[`openapi-v1.json`](openapi-v1.json)
+3. OpenAPI 快照（机器可读）：
+   - 对外/生产快照（不含 debug）：[`openapi-v1.json`](openapi-v1.json)
+   - 开发联调用快照（包含 debug）：[`openapi-v1.dev.json`](openapi-v1.dev.json)
 
 工程/运维相关（与接口联调强相关）：
 
@@ -20,4 +22,5 @@
 
 - 对外仅保留 `/api/v1/*`，`/api/v2/*` 已移除（访问会返回 JSON 404：`ErrorResponse`）。
 - 若你需要把 OpenAPI 导出/刷新：在仓库根目录执行：
-  - `UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/export_openapi.py --out-dir apidocs`
+  - 仅导出对外快照：`UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/export_openapi.py --out-dir apidocs`
+  - 同时导出开发联调快照（含 debug）：`UV_CACHE_DIR=/tmp/uv-cache uv run python scripts/export_openapi.py --out-dir apidocs --include-dev`
