@@ -1227,7 +1227,7 @@ Query：
 - 创建分享：`POST /api/v1/notes/{note_id}/shares` -> 保存 `share_url`（可直接对外）
 - 匿名读取：客户端打开 `share_url` 调 `GET /api/v1/public/shares/{share_token}` 获取 note + attachments 列表
 - 匿名下载附件：`GET /api/v1/public/shares/{share_token}/attachments/{attachment_id}`
-- 私有下载附件：`GET /api/v1/attachments/{attachment_id}`（需要 Bearer Token）
+- 私有下载附件：`GET /api/v1/attachments/{attachment_id}`（需要登录态）
 
 ## 8. 导入到 Apifox / Postman / Swagger
 
