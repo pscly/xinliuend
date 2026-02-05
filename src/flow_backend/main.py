@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+import inspect
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -16,8 +17,10 @@ from starlette.responses import Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from flow_backend import __version__
 from flow_backend.config import settings  # pyright: ignore[reportMissingTypeStubs]
 from flow_backend.db import dispose_engine_cache  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.db import get_engine
 from flow_backend.db import session_scope
 from flow_backend.device_tracking import extract_device_id_name, record_device_activity
 from flow_backend.routers import (  # pyright: ignore[reportMissingTypeStubs]
@@ -84,11 +87,27 @@ class RequestIdMiddleware:
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     yield
-    # Ensure sqlite/aiosqlite worker threads don't keep the process alive.
+    # 优先使用 AsyncEngine.dispose()，在事件循环仍存活时优雅关闭连接，
+    # 避免 aiosqlite 在 shutdown 过程中出现 MissingGreenlet。
+    try:
+        engine = get_engine()
+    except Exception:
+        engine = None
+
+    if engine is not None:
+        try:
+            result = engine.dispose()
+            if inspect.isawaitable(result):
+                await result
+        except Exception:
+            # Best-effort fallback below.
+            pass
+
+    # Safety net: ensure sqlite/aiosqlite worker threads don't keep the process alive.
     dispose_engine_cache()
 
 
-app = FastAPI(title=settings.app_name, lifespan=_lifespan)
+app = FastAPI(title=settings.app_name, version=__version__, lifespan=_lifespan)
 
 app.add_middleware(RequestIdMiddleware)
 register_error_handlers(app)
