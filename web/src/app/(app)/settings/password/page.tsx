@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useI18n } from "@/lib/i18n/useI18n";
 
-type ChangePasswordResponse = { code: number; data: { ok: boolean; csrf_token?: string } };
+type ChangePasswordResponse = { ok: boolean; csrf_token?: string };
 
 export default function SettingsPasswordPage() {
   const { t } = useI18n();
@@ -55,20 +55,25 @@ export default function SettingsPasswordPage() {
       const json = (await res.json().catch(() => null)) as unknown;
 
       if (!res.ok) {
-        const detail = typeof (json as any)?.detail === "string" ? ((json as any).detail as string) : null;
+        const message =
+          typeof (json as any)?.message === "string"
+            ? ((json as any).message as string)
+            : typeof (json as any)?.detail === "string"
+              ? ((json as any).detail as string)
+              : null;
 
         if (res.status === 401) {
           setError(t("settings.password.errorInvalidCurrent"));
           return;
         }
 
-        if (res.status === 400 && detail === "password mismatch") {
+        if (res.status === 400 && message === "password mismatch") {
           setError(t("settings.password.errorMismatch"));
           return;
         }
 
-        if (detail) {
-          setError(detail);
+        if (message) {
+          setError(message);
           return;
         }
 
@@ -77,7 +82,7 @@ export default function SettingsPasswordPage() {
       }
 
       const parsed = json as ChangePasswordResponse;
-      if (!parsed || parsed.code !== 200) {
+      if (!parsed || parsed.ok !== true) {
         setError(t("settings.password.errorGeneric"));
         return;
       }
@@ -246,4 +251,3 @@ export default function SettingsPasswordPage() {
     </Page>
   );
 }
-

@@ -28,7 +28,19 @@ from flow_backend.routers import (  # pyright: ignore[reportMissingTypeStubs]
     sync as sync_router,
     todo,
 )
-from flow_backend.v2.app import v2_app  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.error_handlers import register_error_handlers  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.v2.routers.attachments import (
+    router as v2_attachments_router,
+)  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.v2.routers.notes import router as v2_notes_router  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.v2.routers.notifications import (
+    router as v2_notifications_router,
+)  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.v2.routers.public import router as v2_public_router  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.v2.routers.revisions import (
+    router as v2_revisions_router,
+)  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.v2.routers.shares import router as v2_shares_router  # pyright: ignore[reportMissingTypeStubs]
 
 
 class RequestIdMiddleware:
@@ -79,6 +91,7 @@ async def _lifespan(_app: FastAPI):
 app = FastAPI(title=settings.app_name, lifespan=_lifespan)
 
 app.add_middleware(RequestIdMiddleware)
+register_error_handlers(app)
 
 
 logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
@@ -160,7 +173,7 @@ def health():
 
 
 # Mounted API v2 sub-app (separate OpenAPI schema).
-app.mount("/api/v2", v2_app)
+# /api/v2 已移除：不做兼容层（避免 APK/Web 客户端误用旧路径）。
 
 
 app.include_router(auth.router, prefix=settings.api_prefix)
@@ -169,6 +182,21 @@ app.include_router(settings_router.router, prefix=settings.api_prefix)
 app.include_router(todo.router, prefix=settings.api_prefix)
 app.include_router(sync_router.router, prefix=settings.api_prefix)
 app.include_router(admin.router, include_in_schema=False)
+
+# v2 核心能力并入 v1（统一对外路径：/api/v1）。
+# 注意：不要 include v2 的 todo/sync 路由，避免与 v1 冲突；统一 sync 将在 v1 层实现。
+app.include_router(v2_notes_router, prefix=settings.api_prefix)
+app.include_router(v2_attachments_router, prefix=settings.api_prefix)
+app.include_router(v2_shares_router, prefix=settings.api_prefix)
+app.include_router(v2_public_router, prefix=settings.api_prefix)
+app.include_router(v2_notifications_router, prefix=settings.api_prefix)
+app.include_router(v2_revisions_router, prefix=settings.api_prefix)
+
+if settings.environment.strip().lower() != "production":
+    # Debug endpoints：仅非生产环境启用，并且不出现在 OpenAPI 文档中。
+    from flow_backend.v2.routers.debug import router as v2_debug_router  # pyright: ignore[reportMissingTypeStubs]
+
+    app.include_router(v2_debug_router, prefix=settings.api_prefix, include_in_schema=False)
 
 
 @app.api_route(
@@ -179,6 +207,16 @@ app.include_router(admin.router, include_in_schema=False)
 async def _v1_fallback_not_found(path: str) -> None:  # noqa: ARG001
     # Without this, a frontend SPA/static mount at `/` would catch unknown
     # `/api/v1/*` paths and return HTML instead of FastAPI's default JSON 404.
+    raise HTTPException(status_code=404, detail="Not Found")
+
+
+@app.api_route(
+    "/api/v2/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+    include_in_schema=False,
+)
+async def _v2_removed_fallback(path: str) -> None:  # noqa: ARG001
+    # /api/v2 已移除；显式返回 JSON 404，避免被静态站点 mount 吞掉返回 HTML。
     raise HTTPException(status_code=404, detail="Not Found")
 
 
@@ -227,10 +265,11 @@ def _ensure_components_schema(schema: dict[str, object], *, name: str, model) ->
 
 
 def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
-    # v1 response envelope.
-    from flow_backend.schemas import ApiResponse  # pyright: ignore[reportMissingTypeStubs]
+    # v1 已合并 v2：成功响应不再使用 {code,data} envelope；
+    # 失败响应统一使用 ErrorResponse（见 error_handlers.py）。
+    from flow_backend.v2.schemas.errors import ErrorResponse  # pyright: ignore[reportMissingTypeStubs]
 
-    _ensure_components_schema(schema, name="ApiResponse", model=ApiResponse)
+    _ensure_components_schema(schema, name="ErrorResponse", model=ErrorResponse)
 
     api_prefix = settings.api_prefix.rstrip("/")
     paths = cast(dict[str, object], schema.get("paths") or {})
@@ -298,11 +337,22 @@ def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
             if not _path.startswith(api_prefix + "/"):
                 continue
 
-            # v1 endpoints return {code, data} envelope; reflect that in 200 schema.
-            resp_200 = cast(dict[str, object], responses.setdefault("200", {"description": "OK"}))
-            content = cast(dict[str, object], resp_200.setdefault("content", {}))
-            app_json = cast(dict[str, object], content.setdefault("application/json", {}))
-            app_json["schema"] = _openapi_schema_ref("ApiResponse")
+            # FastAPI 默认 422（HTTPValidationError）已被统一异常处理替换为 ErrorResponse。
+            resp_422 = cast(
+                dict[str, object],
+                responses.setdefault("422", {"description": "Validation Error"}),
+            )
+            content_422 = cast(dict[str, object], resp_422.setdefault("content", {}))
+            app_json_422 = cast(dict[str, object], content_422.setdefault("application/json", {}))
+            app_json_422["schema"] = _openapi_schema_ref("ErrorResponse")
+            headers_422 = cast(dict[str, object], resp_422.setdefault("headers", {}))
+            headers_422.setdefault(
+                "X-Request-Id",
+                {
+                    "schema": {"type": "string"},
+                    "description": "Echoed or generated request id.",
+                },
+            )
 
             # Auth endpoints are rate-limited and can return 429 with Retry-After.
             if _path in {f"{api_prefix}/auth/login", f"{api_prefix}/auth/register"}:
@@ -314,11 +364,7 @@ def _patch_main_openapi(schema: dict[str, object]) -> dict[str, object]:
                             "description": "Too Many Requests",
                             "content": {
                                 "application/json": {
-                                    "schema": {
-                                        "type": "object",
-                                        "properties": {"detail": {"type": "string"}},
-                                        "required": ["detail"],
-                                    }
+                                    "schema": _openapi_schema_ref("ErrorResponse"),
                                 }
                             },
                         },

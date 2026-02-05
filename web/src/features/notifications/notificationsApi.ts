@@ -20,7 +20,7 @@ export async function listNotifications(params: {
   offset?: number;
 } = {}): Promise<NotificationListResponse> {
   return await apiFetchJson<NotificationListResponse>(
-    withQuery("/api/v2/notifications", {
+    withQuery("/api/v1/notifications", {
       unread_only: params.unread_only,
       limit: params.limit,
       offset: params.offset,
@@ -30,13 +30,13 @@ export async function listNotifications(params: {
 }
 
 export async function getUnreadCount(): Promise<number> {
-  const res = await apiFetchJson<UnreadCountResponse>("/api/v2/notifications/unread-count", { method: "GET" });
+  const res = await apiFetchJson<UnreadCountResponse>("/api/v1/notifications/unread-count", { method: "GET" });
   return res.unread_count;
 }
 
 export async function markNotificationRead(notificationId: string): Promise<Notification> {
   // Uses apiFetch so cookie-session auth gets CSRF header injected.
-  const res = await apiFetch(`/api/v2/notifications/${encodeURIComponent(notificationId)}/read`, { method: "POST" });
+  const res = await apiFetch(`/api/v1/notifications/${encodeURIComponent(notificationId)}/read`, { method: "POST" });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Failed to mark notification read (${res.status})${text ? ` - ${text}` : ""}`);

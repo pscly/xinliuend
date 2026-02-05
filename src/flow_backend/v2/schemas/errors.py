@@ -4,9 +4,10 @@ from pydantic import BaseModel
 
 
 class ErrorResponse(BaseModel):
-    """Pinned v2 error contract.
+    """统一错误响应格式（Pinned Error Contract）。
 
-    Keep this shape stable and v2-only (v1 keeps FastAPI default {"detail": ...}).
+    该结构最初用于 v2，但在“合并 v2 到 v1（仅保留 /api/v1）”后，
+    服务端对外统一使用此错误响应格式，便于客户端与 Web 端做一致的错误解析。
     """
 
     error: str

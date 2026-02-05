@@ -54,13 +54,13 @@ async def test_v2_sync_todo_item_tzid_preserved_and_default(tmp_path: Path):
                 headers=headers,
             )
             assert r.status_code == 200
-            list_id = r.json()["data"]["id"]
+            list_id = r.json()["id"]
 
             id_default = str(uuid4())
             id_custom = str(uuid4())
 
             r_push = await client.post(
-                "/api/v2/sync/push",
+                "/api/v1/sync/push",
                 headers=headers,
                 json={
                     "mutations": [
@@ -93,7 +93,7 @@ async def test_v2_sync_todo_item_tzid_preserved_and_default(tmp_path: Path):
             assert r_push.status_code == 200
 
             r_list = await client.get(
-                "/api/v2/todo/items?limit=200&offset=0",
+                "/api/v1/todo/items?limit=200&offset=0",
                 headers=headers,
             )
             assert r_list.status_code == 200

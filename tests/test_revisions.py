@@ -86,7 +86,7 @@ async def test_revision_restore_updates_note_and_creates_pre_restore_snapshot(tm
 
         async with _make_async_client() as client:
             r = await client.post(
-                f"/api/v2/notes/note-1/revisions/{rev_id}/restore",
+                f"/api/v1/notes/note-1/revisions/{rev_id}/restore",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={"client_updated_at_ms": 2000},
             )
@@ -127,7 +127,7 @@ async def test_revision_restore_updates_note_and_creates_pre_restore_snapshot(tm
         # Stale restore should return 409.
         async with _make_async_client() as client:
             r2 = await client.post(
-                f"/api/v2/notes/note-1/revisions/{rev_id}/restore",
+                f"/api/v1/notes/note-1/revisions/{rev_id}/restore",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={"client_updated_at_ms": 10},
             )

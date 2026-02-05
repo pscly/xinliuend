@@ -39,7 +39,7 @@ def _compute_token_hmac_hex(*, token: str) -> str:
 
 def _build_share_url(*, token: str) -> str:
     base = settings.public_base_url.rstrip("/")
-    # UI route (Next.js static export). Backend public API stays under /api/v2/public/...
+    # UI route (Next.js static export). Backend public API stays under /api/v1/public/...
     return f"{base}/share?token={token}"
 
 

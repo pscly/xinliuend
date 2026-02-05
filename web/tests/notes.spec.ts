@@ -24,7 +24,7 @@ test("notes: register -> login -> create -> save -> reload persists", async ({ p
     });
 
     // Keep json loosely typed but avoid explicit `any` (ESLint no-explicit-any).
-    let json: ({ code?: number } & Record<string, unknown>) | null = null;
+    let json: Record<string, unknown> | null = null;
     try {
       json = await resp.json();
     } catch {
@@ -34,7 +34,10 @@ test("notes: register -> login -> create -> save -> reload persists", async ({ p
   }, { username, password });
 
   expect(registerResult.status, `register status=${registerResult.status}`).toBe(200);
-  expect(registerResult.json?.code, `register response=${JSON.stringify(registerResult.json)}`).toBe(200);
+  expect(
+    typeof registerResult.json?.token,
+    `register response=${JSON.stringify(registerResult.json)}`,
+  ).toBe("string");
 
   // Register endpoint sets an authenticated cookie-session; clear it so we can validate UI login.
   await page.context().clearCookies();

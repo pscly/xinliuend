@@ -1,6 +1,6 @@
 # 部署指南（Docker Compose + 宝塔 Nginx）
 
-最后更新：2026-02-04
+最后更新：2026-02-05
 
 本文面向“把服务跑起来”的运维/开发同学，目标是：**Web + API + /admin 统一一个公网 Origin**，从而让 Cookie Session / CSRF 最稳定、CORS 最简单。
 
@@ -24,13 +24,13 @@
 
 对移动端/桌面端（非浏览器）客户端同样建议：
 
-- 直接把 **Flow Backend 的公网 origin** 作为客户端 Base URL（例如 `https://xl.pscly.cc`），请求路径按 `/api/v1/...`、`/api/v2/...` 拼接即可（详见 `to_app_plan.md`）。
+- 直接把 **Flow Backend 的公网 origin** 作为客户端 Base URL（例如 `https://xl.pscly.cc`），请求路径按 `/api/v1/...` 拼接即可（详见 `to_app_plan.md`）。
 
 ### 0.2 路由分工：/admin 为什么不会和前端冲突
 
 约定的路由职责：
 
-- `/api/v1/*`、`/api/v2/*`：后端 API
+- `/api/v1/*`：后端 API
 - `/admin`：**后端渲染**的运维管理后台（Jinja/模板页）
 - `/`：用户 Web UI（Next.js 静态导出）
 
@@ -74,7 +74,7 @@ Docker Compose 默认 bind mount：
 
 后端在启动时会“尽力”挂载该目录到 `/`（仅当存在 `index.html`），并保持路由优先级：
 
-- `/api/v1/*`、`/api/v2/*`：后端 API
+- `/api/v1/*`：后端 API
 - `/admin`：后端渲染的管理后台（**不要让前端覆盖**）
 - `/`：静态 Web UI（同源）
 
@@ -111,7 +111,7 @@ docker compose --profile postgres up -d --build
 访问（未加反代时）：
 
 - Web：`http://<server-ip>:31031/`
-- API：`http://<server-ip>:31031/api/v1/...`、`/api/v2/...`
+- API：`http://<server-ip>:31031/api/v1/...`
 - Admin：`http://<server-ip>:31031/admin`
 
 > 说明：生产环境不建议直接暴露 31031，请用 Nginx 统一入口并启用 HTTPS。

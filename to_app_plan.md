@@ -1,6 +1,6 @@
 # 客户端对接总指南（to_app_plan.md）
 
-最后更新：2026-02-04
+最后更新：2026-02-05
 
 本文面向 Android / iOS / Web 客户端开发，目标是让客户端用最少的分叉成本接入 Flow Backend 的现有能力。
 
@@ -35,16 +35,13 @@
 - 登录：`POST /api/v1/auth/login`
 - 登出：`POST /api/v1/auth/logout`
 
-服务端成功响应（v1 envelope）：
+服务端成功响应：
 
 ```json
 {
-  "code": 200,
-  "data": {
-    "token": "<flow_access_token>",
-    "server_url": "https://memos.example.com",
-    "csrf_token": "<csrf>"
-  }
+  "token": "<flow_access_token>",
+  "server_url": "https://memos.example.com",
+  "csrf_token": "<csrf>"
 }
 ```
 
@@ -58,12 +55,12 @@
 
 ### 阶段 B：逐步切换业务接口到 Flow Backend（推荐）
 
-建议新客户端/新版本把数据能力逐步迁移到 Flow Backend 的 v2 接口：
+建议新客户端/新版本统一使用 Flow Backend 的 `/api/v1` 接口：
 
-- Notes：`/api/v2/notes*`
-- Attachments：`/api/v2/notes/{note_id}/attachments`、`/api/v2/attachments/{id}`
-- TODO：`/api/v2/todo/*`
-- Sync：`/api/v2/sync/*`
+- Notes：`/api/v1/notes*`
+- Attachments：`/api/v1/notes/{note_id}/attachments`、`/api/v1/attachments/{id}`
+- TODO：`/api/v1/todo/*`
+- Sync：`/api/v1/sync/*`
 - Shares/Public/Notifications/Revisions：按需启用
 
 ### 阶段 C：可选对接 Memos（不强制）
@@ -86,7 +83,6 @@
 然后按固定前缀拼接：
 
 - v1：`{FLOW_BACKEND_BASE_URL}/api/v1/...`
-- v2：`{FLOW_BACKEND_BASE_URL}/api/v2/...`
 - 健康检查：`{FLOW_BACKEND_BASE_URL}/health`
 
 > 建议：客户端把 Base URL 标准化（去掉末尾 `/`），避免出现双斜杠 `//api/v1/...`。
@@ -106,8 +102,8 @@ Authorization: Bearer <token>
 
 其中 `<token>` 来自：
 
-- `POST /api/v1/auth/register` → `data.token`
-- `POST /api/v1/auth/login` → `data.token`
+- `POST /api/v1/auth/register` → `token`
+- `POST /api/v1/auth/login` → `token`
 
 ### 2.3 Cookie Session + CSRF（Web SPA 才需要）
 
@@ -118,16 +114,16 @@ Web SPA 如果采用 Cookie Session：
 
 CSRF token 获取：
 
-- 登录/注册响应：`data.csrf_token`
-- SPA 刷新后：`GET /api/v1/me` → `data.csrf_token`
+- 登录/注册响应：`csrf_token`
+- SPA 刷新后：`GET /api/v1/me` → `csrf_token`
 
 移动端一般不建议走 Cookie Session，直接 Bearer 即可。
 
 ### 2.4 移动端典型请求示例（建议照抄）
 
-下面以生产域名 `https://xl.pscly.cc` 为例，展示最常见的 v1/v2 调用方式。
+下面以生产域名 `https://xl.pscly.cc` 为例，展示最常见的 v1 调用方式。
 
-#### 2.4.1 登录（v1）
+#### 2.4.1 登录
 
 请求：
 
@@ -141,51 +137,40 @@ X-Device-Name: <device-model/name>   # 可选但推荐
 {"username":"demo","password":"pass1234"}
 ```
 
-响应（成功时，v1 envelope）：
+响应（成功时）：
 
 ```json
 {
-  "code": 200,
-  "data": {
-    "token": "<flow_access_token>",
-    "server_url": "https://memos.example.com",
-    "csrf_token": "<csrf>"
-  }
+  "token": "<flow_access_token>",
+  "server_url": "https://memos.example.com",
+  "csrf_token": "<csrf>"
 }
 ```
 
 移动端处理要点：
 
-- **保存 `data.token`**（后续所有受保护接口都要带 `Authorization: Bearer ...`）
+- **保存 `token`**（后续所有受保护接口都要带 `Authorization: Bearer ...`）
 - `csrf_token` 一般可忽略（主要给 Web Cookie Session 用）
 
-#### 2.4.2 调用 v2 业务接口（Bearer）
+#### 2.4.2 调用业务接口（Bearer）
 
-示例：获取 v2 健康检查：
+示例：拉取 Notes 列表：
 
 ```http
-GET https://xl.pscly.cc/api/v2/health
+GET https://xl.pscly.cc/api/v1/notes?limit=50&offset=0
 Authorization: Bearer <flow_access_token>
 X-Request-Id: <uuid>
 ```
 
-示例：拉取 Notes 列表（v2）：
+示例：拉取 TODO Items 列表：
 
 ```http
-GET https://xl.pscly.cc/api/v2/notes?limit=50&offset=0
+GET https://xl.pscly.cc/api/v1/todo/items?limit=200&offset=0
 Authorization: Bearer <flow_access_token>
 X-Request-Id: <uuid>
 ```
 
-示例：拉取 TODO 列表（v2）：
-
-```http
-GET https://xl.pscly.cc/api/v2/todo/items?limit=200&offset=0
-Authorization: Bearer <flow_access_token>
-X-Request-Id: <uuid>
-```
-
-示例：获取当前用户（v1）：
+示例：获取当前用户：
 
 ```http
 GET https://xl.pscly.cc/api/v1/me
@@ -193,12 +178,16 @@ Authorization: Bearer <flow_access_token>
 X-Request-Id: <uuid>
 ```
 
+（可选）健康检查：
+
+```http
+GET https://xl.pscly.cc/health
+X-Request-Id: <uuid>
+```
+
 你也可以用 OpenAPI 快速生成/校验客户端对接：
 
-- v1 OpenAPI：`GET https://xl.pscly.cc/openapi.json`
-- v2 OpenAPI：`GET https://xl.pscly.cc/api/v2/openapi.json`
-
-> 提示：v1/v2 的“成功/错误格式”不同，客户端实现时建议按 path 前缀做解包与错误解析分流（详见本文第 4 章与 `apidocs/api.zh-CN.md`）。
+- OpenAPI：`GET https://xl.pscly.cc/openapi.json`
 
 ---
 
@@ -223,24 +212,16 @@ X-Request-Id: 2a8f0c6a-...
 
 ---
 
-## 4. 错误处理（必须按 v1/v2 区分）
+## 4. 错误处理（统一 ErrorResponse）
 
-### 4.1 v1（/api/v1）错误格式
-
-v1 成功响应是 `{"code":200,"data":...}`，但错误多数是 FastAPI 默认：
-
-- `{"detail":"..."}`
-- 或 `{"detail": {...} }`
-
-### 4.2 v2（/api/v2）错误格式：统一 ErrorResponse
-
-v2 所有非 2xx 基本都返回：
+服务端所有非 2xx 基本都返回 `ErrorResponse`：
 
 ```json
 {
   "error": "validation_error|unauthorized|forbidden|conflict|rate_limited|...",
   "message": "human readable message",
-  "request_id": "..."
+  "request_id": "...",
+  "details": {}
 }
 ```
 
@@ -275,38 +256,40 @@ v2 所有非 2xx 基本都返回：
 
 注意：
 
-- v2 同步中，若资源已 tombstone（软删除），upsert 会被拒绝为 conflict，需要显式 restore（具体见 `apidocs/api.zh-CN.md` 的 v2 Sync 章节）。
+- 若服务端记录已 tombstone（软删除），sync upsert 可能会被拒绝为 conflict，需要显式 restore：
+  - `POST /api/v1/notes/{note_id}/restore`
+  - `POST /api/v1/todo/items/{item_id}/restore`
 
 ---
 
-## 6. Notes / Attachments / TODO（接口选择建议）
+## 6. Notes / Attachments / TODO（常用接口速查）
 
-### 6.1 Notes（推荐走 v2）
+### 6.1 Notes
 
 基础能力（示例）：
 
-- 创建：`POST /api/v2/notes`
-- 列表：`GET /api/v2/notes?limit=...&offset=...`
-- 更新：`PATCH /api/v2/notes/{note_id}`
-- 删除：`DELETE /api/v2/notes/{note_id}?client_updated_at_ms=...`
-- 恢复：`POST /api/v2/notes/{note_id}/restore`
+- 创建：`POST /api/v1/notes`
+- 列表：`GET /api/v1/notes?limit=...&offset=...`
+- 更新：`PATCH /api/v1/notes/{note_id}`
+- 删除：`DELETE /api/v1/notes/{note_id}?client_updated_at_ms=...`
+- 恢复：`POST /api/v1/notes/{note_id}/restore`
 
-### 6.2 Attachments（v2）
+### 6.2 Attachments
 
 - 上传到某条 note：
-  - `POST /api/v2/notes/{note_id}/attachments`（multipart/form-data，字段名 `file`）
+  - `POST /api/v1/notes/{note_id}/attachments`（multipart/form-data，字段名 `file`）
 - 下载：
-  - `GET /api/v2/attachments/{attachment_id}`
+  - `GET /api/v1/attachments/{attachment_id}`
 
 注意：
 
 - 单文件上限由后端 `ATTACHMENTS_MAX_SIZE_BYTES` 控制（超过返回 413）
 
-### 6.3 TODO（v1/v2 并存，推荐新客户端走 v2）
+### 6.3 TODO
 
-- v1 中部分时间字段使用“本地时间字符串”：
+- TODO 中部分时间字段使用“本地时间字符串”：
   - `YYYY-MM-DDTHH:mm:ss`（无时区 offset）
-- v2 支持 `tzid`（默认 `Asia/Shanghai`，可通过后端配置）
+- 支持 `tzid`（未传/空字符串时使用 `DEFAULT_TZID`，默认 `Asia/Shanghai`）
 
 ---
 
@@ -321,7 +304,7 @@ v2 所有非 2xx 基本都返回：
 
 ## 8. QA / 自测验收清单（建议）
 
-1. 注册/登录：成功后能用 Bearer token 调用任意受保护接口（例如 `GET /api/v1/me` 或 `GET /api/v2/notes`）。
+1. 注册/登录：成功后能用 Bearer token 调用任意受保护接口（例如 `GET /api/v1/me` 或 `GET /api/v1/notes`）。
 2. 限流：连续错误登录触发 429 时，客户端按 `Retry-After` 正确退避。
 3. 同步：两台设备交替修改同一条数据时能正确处理 409 conflict（合并/提示）。
 4. 设备追踪：携带 device headers 后，Admin 能看到设备活跃度变化（以页面为准）。

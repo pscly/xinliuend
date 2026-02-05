@@ -49,7 +49,7 @@ async def test_v2_todo_items_tag_filter(tmp_path: Path):
             headers=headers,
         )
         assert r.status_code == 200
-        list_id = r.json()["data"]["id"]
+        list_id = r.json()["id"]
 
         r = await client.post(
             "/api/v1/todo/items",
@@ -73,7 +73,7 @@ async def test_v2_todo_items_tag_filter(tmp_path: Path):
             headers=headers,
         )
         assert r.status_code == 200
-        health_id = r.json()["data"]["id"]
+        health_id = r.json()["id"]
 
         r = await client.post(
             "/api/v1/todo/items",
@@ -97,15 +97,14 @@ async def test_v2_todo_items_tag_filter(tmp_path: Path):
             headers=headers,
         )
         assert r.status_code == 200
-        work_id = r.json()["data"]["id"]
+        work_id = r.json()["id"]
 
         r = await client.get(
-            "/api/v2/todo/items?tag=health&limit=200&offset=0",
+            "/api/v1/todo/items?tag=health&limit=200&offset=0",
             headers=headers,
         )
         assert r.status_code == 200
         body = cast(dict[str, object], r.json())
-        assert body.get("total") == 1
         items = cast(list[object], body.get("items"))
         assert len(items) == 1
         item0 = cast(dict[str, object], items[0])
@@ -113,16 +112,12 @@ async def test_v2_todo_items_tag_filter(tmp_path: Path):
         assert item0.get("tags") == ["health"]
 
         r = await client.get(
-            "/api/v2/todo/items?limit=1&offset=0",
+            "/api/v1/todo/items?limit=1&offset=0",
             headers=headers,
         )
         assert r.status_code == 200
         body2 = cast(dict[str, object], r.json())
-        assert body2.get("total") == 2
-        assert body2.get("limit") == 1
-        assert body2.get("offset") == 0
-
-        # Sanity: ensure the other id exists in the unfiltered list.
         items2 = cast(list[object], body2.get("items"))
-        got_ids = {cast(dict[str, object], x).get("id") for x in items2}
-        assert health_id in got_ids or work_id in got_ids
+        assert len(items2) == 1
+        item1 = cast(dict[str, object], items2[0])
+        assert item1.get("id") in {health_id, work_id}

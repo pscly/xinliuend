@@ -10,7 +10,7 @@ from flow_backend.models import utc_now
 from flow_backend.models_notes import Note, NoteRevision
 from flow_backend.repositories import note_revisions_repo, notes_repo
 from flow_backend.services.notes_tags_service import set_note_tags
-from flow_backend.sync_utils import clamp_client_updated_at_ms, now_ms
+from flow_backend.sync_utils import clamp_client_updated_at_ms, now_ms, record_sync_event
 
 
 def _derive_title_from_body(body_md: str) -> str:
@@ -63,6 +63,7 @@ async def create_note(
             session.add(note)
             await session.flush()
             tags_out = await set_note_tags(session, user_id=user_id, note_id=note_id, tags=tags)
+            record_sync_event(session, user_id, "note", note_id, "upsert")
             await session.commit()
             return note, tags_out
 
@@ -70,6 +71,7 @@ async def create_note(
             session.add(note)
             await session.flush()
             tags_out = await set_note_tags(session, user_id=user_id, note_id=note_id, tags=tags)
+            record_sync_event(session, user_id, "note", note_id, "upsert")
             return note, tags_out
     except Exception:
         try:
@@ -162,6 +164,7 @@ async def patch_note(
             else:
                 tags_out = current_tags
 
+            record_sync_event(session, user_id, "note", note_id, "upsert")
             await session.commit()
             return note, tags_out
 
@@ -218,6 +221,7 @@ async def patch_note(
             else:
                 tags_out = current_tags
 
+            record_sync_event(session, user_id, "note", note_id, "upsert")
             return note, tags_out
     except Exception:
         try:
@@ -278,6 +282,7 @@ async def delete_note(
     note.client_updated_at_ms = incoming_ms
     note.updated_at = utc_now()
     session.add(note)
+    record_sync_event(session, user_id, "note", note_id, "delete")
     await session.commit()
 
 
@@ -332,5 +337,6 @@ async def restore_note(
     note.client_updated_at_ms = incoming_ms
     note.updated_at = utc_now()
     session.add(note)
+    record_sync_event(session, user_id, "note", note_id, "upsert")
     await session.commit()
     return note, current_tags

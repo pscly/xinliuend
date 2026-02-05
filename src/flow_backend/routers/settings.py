@@ -37,7 +37,7 @@ async def list_settings(
         }
         for row in settings_rows
     ]
-    return {"code": 200, "data": {"items": data}}
+    return {"items": data}
 
 
 @router.put("/{key}")
@@ -78,14 +78,11 @@ async def upsert_setting(
     await session.refresh(row)
 
     return {
-        "code": 200,
-        "data": {
-            "key": row.key,
-            "value_json": row.value_json,
-            "client_updated_at_ms": row.client_updated_at_ms,
-            "updated_at": row.updated_at,
-            "deleted_at": row.deleted_at,
-        },
+        "key": row.key,
+        "value_json": row.value_json,
+        "client_updated_at_ms": row.client_updated_at_ms,
+        "updated_at": row.updated_at,
+        "deleted_at": row.deleted_at,
     }
 
 
@@ -122,4 +119,4 @@ async def delete_setting(
     )
     await session.commit()
 
-    return {"code": 200, "data": {"ok": True}}
+    return {"ok": True}

@@ -74,7 +74,7 @@ async def test_notifications_mention_mark_read_and_unread_count(tmp_path: Path):
         async with _make_async_client() as client:
             # Create a share as u1.
             r_share = await client.post(
-                "/api/v2/notes/note-1/shares",
+                "/api/v1/notes/note-1/shares",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={},
             )
@@ -87,7 +87,7 @@ async def test_notifications_mention_mark_read_and_unread_count(tmp_path: Path):
 
             # Enable anonymous comments (no captcha to keep this test focused).
             r_cfg = await client.patch(
-                f"/api/v2/shares/{share_id}/comment-config",
+                f"/api/v1/shares/{share_id}/comment-config",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={
                     "allow_anonymous_comments": True,
@@ -98,7 +98,7 @@ async def test_notifications_mention_mark_read_and_unread_count(tmp_path: Path):
 
             # Create a public comment mentioning u2 twice (dedupe) and a non-existing u3.
             r_comment = await client.post(
-                f"/api/v2/public/shares/{share_token}/comments",
+                f"/api/v1/public/shares/{share_token}/comments",
                 json={"body": "hi @u2 and again @u2 plus @u3"},
             )
             assert r_comment.status_code == 201
@@ -108,7 +108,7 @@ async def test_notifications_mention_mark_read_and_unread_count(tmp_path: Path):
 
             # u2 gets 1 unread notification.
             r_unread = await client.get(
-                "/api/v2/notifications/unread-count",
+                "/api/v1/notifications/unread-count",
                 headers={"Authorization": "Bearer tok-u2"},
             )
             assert r_unread.status_code == 200
@@ -116,7 +116,7 @@ async def test_notifications_mention_mark_read_and_unread_count(tmp_path: Path):
             assert unread_body.get("unread_count") == 1
 
             r_list = await client.get(
-                "/api/v2/notifications",
+                "/api/v1/notifications",
                 headers={"Authorization": "Bearer tok-u2"},
                 params={"unread_only": True},
             )
@@ -136,7 +136,7 @@ async def test_notifications_mention_mark_read_and_unread_count(tmp_path: Path):
 
             # Mark read.
             r_read = await client.post(
-                f"/api/v2/notifications/{nid}/read",
+                f"/api/v1/notifications/{nid}/read",
                 headers={"Authorization": "Bearer tok-u2"},
             )
             assert r_read.status_code == 200
@@ -145,7 +145,7 @@ async def test_notifications_mention_mark_read_and_unread_count(tmp_path: Path):
 
             # Unread count updates.
             r_unread2 = await client.get(
-                "/api/v2/notifications/unread-count",
+                "/api/v1/notifications/unread-count",
                 headers={"Authorization": "Bearer tok-u2"},
             )
             assert r_unread2.status_code == 200

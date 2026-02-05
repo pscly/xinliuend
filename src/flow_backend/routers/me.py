@@ -23,14 +23,7 @@ router = APIRouter(prefix="/me", tags=["me"])
 async def get_me(request: Request, user: User = Depends(get_current_user)):
     # SPA can call /me after refresh to obtain a new CSRF token without reading httpOnly cookies.
     csrf_token = getattr(request.state, "user_csrf_token", None)
-    return {
-        "code": 200,
-        "data": {
-            "username": user.username,
-            "is_admin": user.is_admin,
-            "csrf_token": csrf_token,
-        },
-    }
+    return {"username": user.username, "is_admin": user.is_admin, "csrf_token": csrf_token}
 
 
 @router.post("/password")
@@ -95,4 +88,4 @@ async def change_password(
 
     csrf_token = secrets.token_urlsafe(24)
     flow_backend.user_session.set_user_session_cookie(response, request, int(user_id), csrf_token)
-    return {"code": 200, "data": {"ok": True, "csrf_token": csrf_token}}
+    return {"ok": True, "csrf_token": csrf_token}

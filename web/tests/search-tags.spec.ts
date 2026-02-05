@@ -18,7 +18,7 @@ function expectNonNull<T>(v: T | null | undefined, message: string): asserts v i
   expect(v, message).not.toBeUndefined();
 }
 
-test("search: query + tag across notes(v2) and todos(v1)", async ({ page }) => {
+test("search: query + tag across notes(v1) and todos(v1)", async ({ page }) => {
   const username = makeUniqueUsername();
   const password = "pass1234";
   const query = "Work";
@@ -39,7 +39,7 @@ test("search: query + tag across notes(v2) and todos(v1)", async ({ page }) => {
       body: JSON.stringify({ username, password }),
     });
 
-    type RegisterJson = null | { code?: unknown; [key: string]: unknown };
+    type RegisterJson = null | { token?: unknown; [key: string]: unknown };
     let json: RegisterJson = null;
     try {
       json = (await resp.json()) as RegisterJson;
@@ -50,7 +50,10 @@ test("search: query + tag across notes(v2) and todos(v1)", async ({ page }) => {
   }, { username, password });
 
   expect(registerResult.status, `register status=${registerResult.status}`).toBe(200);
-  expect(registerResult.json?.code, `register response=${JSON.stringify(registerResult.json)}`).toBe(200);
+  expect(
+    typeof registerResult.json?.token,
+    `register response=${JSON.stringify(registerResult.json)}`,
+  ).toBe("string");
   await page.context().clearCookies();
 
   // 2) Login via UI at /login (wait for /api/v1/auth/login and /api/v1/me).
@@ -95,20 +98,19 @@ test("search: query + tag across notes(v2) and todos(v1)", async ({ page }) => {
   await saveButton.click();
   await expect(page.getByText("Saved", { exact: true })).toBeVisible();
 
-  // 4) Patch note via browser fetch to v2 using CSRF from /api/v1/me.
+  // 4) Patch note via browser fetch using CSRF from /api/v1/me.
   const patchNoteResult = await page.evaluate(async ({ noteId, noteTitle, query }) => {
     const meResp = await fetch("/api/v1/me", { method: "GET", credentials: "include" });
     const meJson: unknown = await meResp.json().catch(() => null);
     const csrfToken: string | null =
-      typeof meJson === "object" && meJson !== null &&
-      "data" in meJson &&
-      typeof (meJson as { data?: unknown }).data === "object" &&
-      (meJson as { data?: { csrf_token?: unknown } }).data !== null &&
-      typeof (meJson as { data?: { csrf_token?: unknown } }).data?.csrf_token === "string"
-        ? (meJson as { data: { csrf_token: string } }).data.csrf_token
+      typeof meJson === "object" &&
+      meJson !== null &&
+      "csrf_token" in meJson &&
+      typeof (meJson as { csrf_token?: unknown }).csrf_token === "string"
+        ? (meJson as { csrf_token: string }).csrf_token
         : null;
 
-    const patchResp = await fetch(`/api/v2/notes/${noteId}`, {
+    const patchResp = await fetch(`/api/v1/notes/${noteId}`, {
       method: "PATCH",
       credentials: "include",
       headers: {
@@ -151,12 +153,11 @@ test("search: query + tag across notes(v2) and todos(v1)", async ({ page }) => {
     const meResp = await fetch("/api/v1/me", { method: "GET", credentials: "include" });
     const meJson: unknown = await meResp.json().catch(() => null);
     const csrfToken: string | null =
-      typeof meJson === "object" && meJson !== null &&
-      "data" in meJson &&
-      typeof (meJson as { data?: unknown }).data === "object" &&
-      (meJson as { data?: { csrf_token?: unknown } }).data !== null &&
-      typeof (meJson as { data?: { csrf_token?: unknown } }).data?.csrf_token === "string"
-        ? (meJson as { data: { csrf_token: string } }).data.csrf_token
+      typeof meJson === "object" &&
+      meJson !== null &&
+      "csrf_token" in meJson &&
+      typeof (meJson as { csrf_token?: unknown }).csrf_token === "string"
+        ? (meJson as { csrf_token: string }).csrf_token
         : null;
 
     const resp = await fetch("/api/v1/todo/items", {
@@ -194,7 +195,7 @@ test("search: query + tag across notes(v2) and todos(v1)", async ({ page }) => {
   const notesQueryRespPromise = page.waitForResponse(
     (resp) =>
       resp.request().method() === "GET" &&
-      /\/api\/v2\/notes\?/.test(resp.url()) &&
+      /\/api\/v1\/notes\?/.test(resp.url()) &&
       resp.url().includes(`q=${encodeURIComponent(query)}`) &&
       resp.status() === 200,
   );
@@ -227,7 +228,7 @@ test("search: query + tag across notes(v2) and todos(v1)", async ({ page }) => {
   const notesTagRespPromise = page.waitForResponse(
     (resp) =>
       resp.request().method() === "GET" &&
-      /\/api\/v2\/notes\?/.test(resp.url()) &&
+      /\/api\/v1\/notes\?/.test(resp.url()) &&
       resp.url().includes(`tag=${encodeURIComponent(query)}`) &&
       resp.status() === 200,
   );

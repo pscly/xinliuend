@@ -22,11 +22,13 @@ from flow_backend.models import TodoItem, TodoItemOccurrence, TodoList, User, ut
 from flow_backend.schemas_todo import (
     TodoItemOccurrenceUpsertRequest,
     TodoItemPatchRequest,
+    TodoItemRestoreRequest,
     TodoItemUpsertRequest,
     TodoListPatchRequest,
     TodoListReorderItem,
     TodoListUpsertRequest,
 )
+from flow_backend.services import todo_items_service
 from flow_backend.sync_utils import clamp_client_updated_at_ms, now_ms, record_sync_event
 
 router = APIRouter(prefix="/todo", tags=["todo"])
@@ -91,7 +93,7 @@ async def list_todo_lists(
         }
         for r in rows
     ]
-    return {"code": 200, "data": {"items": data}}
+    return {"items": data}
 
 
 @router.post("/lists")
@@ -127,7 +129,7 @@ async def upsert_todo_list(
     )
     await session.commit()
     await session.refresh(row)
-    return {"code": 200, "data": {"id": row.id}}
+    return {"id": row.id}
 
 
 @router.patch("/lists/{list_id}")
@@ -169,7 +171,7 @@ async def patch_todo_list(
         session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="upsert"
     )
     await session.commit()
-    return {"code": 200, "data": {"ok": True}}
+    return {"ok": True}
 
 
 @router.post("/lists/reorder")
@@ -200,7 +202,7 @@ async def reorder_todo_lists(
             session, user_id=int(user.id), resource="todo_list", entity_id=row.id, action="upsert"
         )
     await session.commit()
-    return {"code": 200, "data": {"ok": True}}
+    return {"ok": True}
 
 
 @router.delete("/lists/{list_id}")
@@ -216,7 +218,7 @@ async def delete_todo_list(
         )
     ).first()
     if not row:
-        return {"code": 200, "data": {"ok": True}}
+        return {"ok": True}
 
     incoming_ms = clamp_client_updated_at_ms(client_updated_at_ms) or now_ms()
     if not _apply_lww(incoming_ms, row.client_updated_at_ms):
@@ -231,7 +233,7 @@ async def delete_todo_list(
         session, user_id=int(user.id), resource="todo_list", entity_id=list_id, action="delete"
     )
     await session.commit()
-    return {"code": 200, "data": {"ok": True}}
+    return {"ok": True}
 
 
 @router.get("/items")
@@ -278,7 +280,7 @@ async def list_todo_items(
         if active_list_ids:
             q = q.where(TodoItem.list_id.in_(active_list_ids))
         else:
-            return {"code": 200, "data": {"items": []}}
+            return {"items": []}
 
     rows = list(
         await session.exec(
@@ -311,7 +313,7 @@ async def list_todo_items(
         }
         for r in rows
     ]
-    return {"code": 200, "data": {"items": data}}
+    return {"items": data}
 
 
 async def _upsert_item_row(
@@ -355,7 +357,8 @@ async def _upsert_item_row(
     row.is_recurring = payload.is_recurring
     row.rrule = payload.rrule.strip() if payload.rrule else None
     row.dtstart_local = payload.dtstart_local
-    row.tzid = "Asia/Shanghai"
+    tzid_in = str(payload.tzid or "").strip()
+    row.tzid = tzid_in or settings.default_tzid
     row.reminders_json = payload.reminders
     row.client_updated_at_ms = incoming_ms
     row.updated_at = utc_now()
@@ -377,7 +380,7 @@ async def upsert_todo_item(
     item_id = payload.id or _new_id()
     await _upsert_item_row(session=session, user_id=int(user.id), payload=payload, item_id=item_id)
     await session.commit()
-    return {"code": 200, "data": {"id": item_id}}
+    return {"id": item_id}
 
 
 @router.post("/items/bulk")
@@ -394,7 +397,7 @@ async def bulk_upsert_todo_items(
         )
         ids.append(item_id)
     await session.commit()
-    return {"code": 200, "data": {"ids": ids}}
+    return {"ids": ids}
 
 
 @router.patch("/items/{item_id}")
@@ -448,7 +451,8 @@ async def patch_todo_item(
     if payload.dtstart_local is not None:
         row.dtstart_local = payload.dtstart_local
     if payload.tzid is not None:
-        row.tzid = "Asia/Shanghai"
+        tzid_in = payload.tzid.strip()
+        row.tzid = tzid_in or settings.default_tzid
     if payload.reminders is not None:
         row.reminders_json = payload.reminders
 
@@ -461,7 +465,7 @@ async def patch_todo_item(
         session, user_id=int(user.id), resource="todo_item", entity_id=item_id, action="upsert"
     )
     await session.commit()
-    return {"code": 200, "data": {"ok": True}}
+    return {"ok": True}
 
 
 @router.delete("/items/{item_id}")
@@ -477,7 +481,7 @@ async def delete_todo_item(
         )
     ).first()
     if not row:
-        return {"code": 200, "data": {"ok": True}}
+        return {"ok": True}
 
     incoming_ms = clamp_client_updated_at_ms(client_updated_at_ms) or now_ms()
     if not _apply_lww(incoming_ms, row.client_updated_at_ms):
@@ -491,7 +495,28 @@ async def delete_todo_item(
         session, user_id=int(user.id), resource="todo_item", entity_id=item_id, action="delete"
     )
     await session.commit()
-    return {"code": 200, "data": {"ok": True}}
+    return {"ok": True}
+
+
+@router.post("/items/{item_id}/restore")
+async def restore_todo_item(
+    item_id: str,
+    payload: TodoItemRestoreRequest,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    user_id = user.id
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="user missing id")
+
+    # 与 sync_planner 的 tombstone 语义保持一致：对被软删除的 todo_item，需要显式 restore。
+    _ = await todo_items_service.restore_item(
+        session=session,
+        user_id=int(user_id),
+        item_id=item_id,
+        client_updated_at_ms=int(payload.client_updated_at_ms or 0),
+    )
+    return {"ok": True}
 
 
 async def _upsert_occurrence_row(
@@ -512,6 +537,8 @@ async def _upsert_occurrence_row(
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo item not found")
 
+    tzid_in = str(payload.tzid or "").strip()
+    tzid = tzid_in or settings.default_tzid
     incoming_ms = clamp_client_updated_at_ms(payload.client_updated_at_ms) or now_ms()
 
     row = (
@@ -528,7 +555,7 @@ async def _upsert_occurrence_row(
                 select(TodoItemOccurrence)
                 .where(TodoItemOccurrence.user_id == user_id)
                 .where(TodoItemOccurrence.item_id == payload.item_id)
-                .where(TodoItemOccurrence.tzid == "Asia/Shanghai")
+                .where(TodoItemOccurrence.tzid == tzid)
                 .where(TodoItemOccurrence.recurrence_id_local == payload.recurrence_id_local)
             )
         ).first()
@@ -542,12 +569,12 @@ async def _upsert_occurrence_row(
             id=occurrence_id,
             user_id=user_id,
             item_id=payload.item_id,
-            tzid="Asia/Shanghai",
+            tzid=tzid,
             recurrence_id_local=payload.recurrence_id_local,
             client_updated_at_ms=0,
         )
 
-    row.tzid = "Asia/Shanghai"
+    row.tzid = tzid
     row.recurrence_id_local = payload.recurrence_id_local
     row.status_override = payload.status_override
     row.title_override = payload.title_override
@@ -600,7 +627,7 @@ async def list_occurrences(
         }
         for r in rows
     ]
-    return {"code": 200, "data": {"items": data}}
+    return {"items": data}
 
 
 @router.post("/occurrences")
@@ -614,7 +641,7 @@ async def upsert_occurrence(
         session=session, user_id=int(user.id), payload=payload, occurrence_id=occ_id
     )
     await session.commit()
-    return {"code": 200, "data": {"id": row.id}}
+    return {"id": row.id}
 
 
 @router.post("/occurrences/bulk")
@@ -631,7 +658,7 @@ async def bulk_upsert_occurrences(
         )
         ids.append(row.id)
     await session.commit()
-    return {"code": 200, "data": {"ids": ids}}
+    return {"ids": ids}
 
 
 @router.delete("/occurrences/{occurrence_id}")
@@ -663,4 +690,4 @@ async def delete_occurrence(
         session, user_id=int(user.id), resource="todo_occurrence", entity_id=row.id, action="delete"
     )
     await session.commit()
-    return {"code": 200, "data": {"ok": True}}
+    return {"ok": True}

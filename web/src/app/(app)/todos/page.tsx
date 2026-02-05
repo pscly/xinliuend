@@ -92,7 +92,7 @@ export default function TodosPage() {
       setListsError(null);
       try {
         const res = await getTodoLists();
-        const next = res.data.items;
+        const next = res.items;
         setLists(next);
 
         const desired = preferListId ?? selectedListId;
@@ -116,7 +116,7 @@ export default function TodosPage() {
     setItemsError(null);
     try {
       const res = await getTodoItems({ list_id: listId, include_deleted: false, limit: 200 });
-      setItems(res.data.items);
+      setItems(res.items);
     } catch (err: unknown) {
       setItemsError(normalizeErrorMessage(err));
     } finally {
@@ -216,7 +216,7 @@ export default function TodosPage() {
                 try {
                   const res = await upsertTodoList({ name, client_updated_at_ms: Date.now() });
                   setNewListName("");
-                  await refreshLists(res.data.id);
+                  await refreshLists(res.id);
                 } catch (err: unknown) {
                   setListsError(normalizeErrorMessage(err));
                 } finally {

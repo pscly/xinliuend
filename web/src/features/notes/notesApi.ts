@@ -118,7 +118,7 @@ export async function listNotes(params: {
   includeDeleted?: boolean;
 } = {}): Promise<NoteList> {
   return await requestJson<NoteList>(
-    withQuery("/api/v2/notes", {
+    withQuery("/api/v1/notes", {
       limit: params.limit,
       offset: params.offset,
       tag: params.tag,
@@ -130,7 +130,7 @@ export async function listNotes(params: {
 }
 
 export async function createNote(payload: NoteCreateRequest): Promise<Note> {
-  return await requestJson<Note>("/api/v2/notes", {
+  return await requestJson<Note>("/api/v1/notes", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -139,7 +139,7 @@ export async function createNote(payload: NoteCreateRequest): Promise<Note> {
 
 export async function getNote(noteId: string, params: { includeDeleted?: boolean } = {}): Promise<Note> {
   return await requestJson<Note>(
-    withQuery(`/api/v2/notes/${encodeURIComponent(noteId)}`, {
+    withQuery(`/api/v1/notes/${encodeURIComponent(noteId)}`, {
       "include_deleted": params.includeDeleted,
     }),
     {
@@ -161,7 +161,7 @@ export async function patchNote(noteId: string, payload: NotePatchRequest): Prom
     });
   }
 
-  return await requestJson<Note>(`/api/v2/notes/${encodeURIComponent(noteId)}`, {
+  return await requestJson<Note>(`/api/v1/notes/${encodeURIComponent(noteId)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -170,7 +170,7 @@ export async function patchNote(noteId: string, payload: NotePatchRequest): Prom
 
 export async function deleteNote(noteId: string, clientUpdatedAtMs: number): Promise<void> {
   const res = await apiFetch(
-    withQuery(`/api/v2/notes/${encodeURIComponent(noteId)}`, { "client_updated_at_ms": clientUpdatedAtMs }),
+    withQuery(`/api/v1/notes/${encodeURIComponent(noteId)}`, { "client_updated_at_ms": clientUpdatedAtMs }),
     { method: "DELETE" },
   );
   if (!res.ok) {
@@ -179,7 +179,7 @@ export async function deleteNote(noteId: string, clientUpdatedAtMs: number): Pro
 }
 
 export async function restoreNote(noteId: string, payload: NoteRestoreRequest): Promise<Note> {
-  return await requestJson<Note>(`/api/v2/notes/${encodeURIComponent(noteId)}/restore`, {
+  return await requestJson<Note>(`/api/v1/notes/${encodeURIComponent(noteId)}/restore`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

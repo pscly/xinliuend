@@ -66,7 +66,7 @@ async def test_public_share_comments_captcha_report_and_attachment_upload(tmp_pa
         async with _make_async_client() as client:
             # Create a share.
             r_share = await client.post(
-                "/api/v2/notes/note-1/shares",
+                "/api/v1/notes/note-1/shares",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={},
             )
@@ -79,14 +79,14 @@ async def test_public_share_comments_captcha_report_and_attachment_upload(tmp_pa
 
             # Anonymous comments disabled by default.
             r_forbidden = await client.post(
-                f"/api/v2/public/shares/{share_token}/comments",
+                f"/api/v1/public/shares/{share_token}/comments",
                 json={"body": "hi"},
             )
             assert r_forbidden.status_code in (401, 403)
 
             # Enable anonymous comments (captcha required).
             r_cfg = await client.patch(
-                f"/api/v2/shares/{share_id}/comment-config",
+                f"/api/v1/shares/{share_id}/comment-config",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={"allow_anonymous_comments": True, "anonymous_comments_require_captcha": True},
             )
@@ -94,14 +94,14 @@ async def test_public_share_comments_captcha_report_and_attachment_upload(tmp_pa
 
             # Missing captcha -> 400.
             r_missing = await client.post(
-                f"/api/v2/public/shares/{share_token}/comments",
+                f"/api/v1/public/shares/{share_token}/comments",
                 json={"body": "hello"},
             )
             assert r_missing.status_code == 400
 
             # Upload also requires captcha when configured.
             r_up_missing = await client.post(
-                f"/api/v2/public/shares/{share_token}/attachments",
+                f"/api/v1/public/shares/{share_token}/attachments",
                 files={"file": ("hello.txt", b"hello", "text/plain")},
             )
             assert r_up_missing.status_code == 400
@@ -110,7 +110,7 @@ async def test_public_share_comments_captcha_report_and_attachment_upload(tmp_pa
             assert missing_body.get("message") == "captcha required"
 
             r_up = await client.post(
-                f"/api/v2/public/shares/{share_token}/attachments",
+                f"/api/v1/public/shares/{share_token}/attachments",
                 headers={"X-Captcha-Token": "test-pass"},
                 files={"file": ("hello.txt", b"hello", "text/plain")},
             )
@@ -121,14 +121,14 @@ async def test_public_share_comments_captcha_report_and_attachment_upload(tmp_pa
 
             # Uploaded attachment can be downloaded via existing public route.
             r_dl = await client.get(
-                f"/api/v2/public/shares/{share_token}/attachments/{attachment_id}"
+                f"/api/v1/public/shares/{share_token}/attachments/{attachment_id}"
             )
             assert r_dl.status_code == 200
             assert r_dl.content == b"hello"
 
             # Captcha bypass token for tests.
             r_ok = await client.post(
-                f"/api/v2/public/shares/{share_token}/comments",
+                f"/api/v1/public/shares/{share_token}/comments",
                 headers={"X-Captcha-Token": "test-pass"},
                 json={"body": "hello", "attachment_ids": [attachment_id]},
             )
@@ -138,7 +138,7 @@ async def test_public_share_comments_captcha_report_and_attachment_upload(tmp_pa
             assert comment_id
 
             # List comments shows folded state.
-            r_list = await client.get(f"/api/v2/public/shares/{share_token}/comments")
+            r_list = await client.get(f"/api/v1/public/shares/{share_token}/comments")
             assert r_list.status_code == 200
             list_body = cast(dict[str, object], r_list.json())
             comments = cast(list[object], list_body.get("comments"))
@@ -150,13 +150,13 @@ async def test_public_share_comments_captcha_report_and_attachment_upload(tmp_pa
 
             # Report folds comment.
             r_rep = await client.post(
-                f"/api/v2/public/shares/{share_token}/comments/{comment_id}/report"
+                f"/api/v1/public/shares/{share_token}/comments/{comment_id}/report"
             )
             assert r_rep.status_code == 200
             rep_body = cast(dict[str, object], r_rep.json())
             assert rep_body.get("is_folded") is True
 
-            r_list2 = await client.get(f"/api/v2/public/shares/{share_token}/comments")
+            r_list2 = await client.get(f"/api/v1/public/shares/{share_token}/comments")
             assert r_list2.status_code == 200
             list2_body = cast(dict[str, object], r_list2.json())
             comments2 = cast(list[object], list2_body.get("comments"))

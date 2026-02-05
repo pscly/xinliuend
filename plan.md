@@ -1,6 +1,6 @@
 # 项目说明与路线图：心流云服务（Flow Cloud / Flow Backend）
 
-最后更新：2026-02-04
+最后更新：2026-02-05
 
 本文用于替代早期的 “Auth Only” 规划，面向项目维护者/客户端开发者，给出：
 
@@ -19,7 +19,7 @@ Flow Backend 不是单纯的“注册/登录换 token”，而是一个完整的
 
 - 统一用户体系与鉴权（移动端/脚本用 Bearer，Web 用 Cookie Session）
 - 支持笔记 / 待办 / 设置 / 附件 / 分享 / 通知 / 修订（冲突保留）
-- 支持多端离线同步（v1 + v2 两套协议/接口）
+- 支持多端离线同步（统一 `/api/v1/sync/*` 协议/接口）
 - 可选对接 Memos：
   - 注册阶段可自动在 Memos 创建用户并签发永久 token
   - Notes 可与 Memos 双向同步（Memos 作为权威源）
@@ -49,8 +49,8 @@ Flow Backend (FastAPI)
 ### 2.2 仓库结构（你应该从哪里看起）
 
 - 后端代码：`src/flow_backend/`
-  - v1：主应用（`/api/v1`）
-  - v2：子应用（`/api/v2`，独立 OpenAPI）
+  - 对外 API：统一为 `/api/v1`（唯一入口；`/api/v2` 已移除）
+  - 代码实现中仍保留 `flow_backend/v2/*` 目录（历史命名），但不再对外暴露 `/api/v2`
 - 前端代码：`web/`
   - 本地开发可用 Next rewrites 代理后端（同源体验更好）
   - 生产可静态导出到 `web/out` 并由后端同源托管（可选）
@@ -90,17 +90,16 @@ Authorization: Bearer <token>
 - 当前实现中，Bearer Token 使用的是用户的 `memos_token` 字段（因此“token”既可用于后端鉴权，也可能用于 Memos，取决于你是否启用 Memos 集成）。
 - `DEV_BYPASS_MEMOS=true` 时会生成 `dev-...` 假 token，仅用于开发测试（不可用于 Memos）。
 
-### 3.2 v1 / v2 API 组织方式
+### 3.2 API 组织方式（单一 /api/v1）
 
-- v1（主应用）：更偏“早期协议/兼容层”，响应 envelope 统一为 `{"code":200,"data":...}`
-- v2（子应用）：更偏“新能力与长期演进”，具有：
-  - 独立 OpenAPI
-  - 统一错误格式 `ErrorResponse`
-  - 更清晰的资源模型（Notes / Attachments / Shares / Public / Notifications / Revisions / TODO / Sync）
+- 对外仅暴露 `/api/v1/*`
+- 成功响应：直接业务 JSON（无 `{code,data}` envelope）
+- 错误响应：统一 `ErrorResponse { error, message, request_id?, details? }`
+- `/api/v2/*` 已移除：统一返回 JSON 404（`ErrorResponse`）
 
 ### 3.3 Notes（笔记）与搜索
 
-v2 Notes 以 Flow Backend 自己的数据库为主存：
+Notes 以 Flow Backend 自己的数据库为主存：
 
 - CRUD：创建/列表/详情/更新/删除/恢复
 - Tags：标签与笔记关联（服务端维护 Tag 表与 NoteTag 关系）
@@ -109,14 +108,13 @@ v2 Notes 以 Flow Backend 自己的数据库为主存：
 
 ### 3.4 TODO（待办）
 
-TODO 同时存在 v1 与 v2：
+TODO 对外统一使用 `/api/v1/todo/*`：
 
-- v1：历史兼容与同步协议的早期形态
-- v2：更规范的资源与错误结构，并支持 `tzid`（默认 `Asia/Shanghai`，可配置）
+- 支持 `tzid`（未传/空字符串时使用 `DEFAULT_TZID`，默认 `Asia/Shanghai`）
 
 复发任务约定：
 
-- v1 对 RRULE 的部分字段使用本地时间字符串（固定格式 `YYYY-MM-DDTHH:mm:ss`）
+- 对 RRULE 的部分字段使用本地时间字符串（固定格式 `YYYY-MM-DDTHH:mm:ss`）
 - 服务端不展开 RRULE（由客户端展开），服务端只提供 occurrences 记录“单次例外/完成/取消”等
 
 ### 3.5 Sync（离线同步）
@@ -125,7 +123,7 @@ TODO 同时存在 v1 与 v2：
 
 - **LWW（Last-Write-Wins）**：多数资源以 `client_updated_at_ms` 作为“新旧”判断
 - **钳制超前时间**：服务端会对明显超前的客户端时间做一定限制，降低“未来时间把所有数据覆盖”的风险
-- **冲突可恢复**：v2 中常见冲突会给出 `details.server_snapshot`，让客户端提示/合并
+- **冲突可恢复**：冲突会返回 `ErrorResponse(error="conflict")`；部分接口会在 `details.server_snapshot` 提供服务端快照，便于客户端提示/合并
 - **软删除与 tombstone**：某些资源被软删除后，sync upsert 会被拒绝为 conflict，需要显式 restore
 
 强烈建议：
@@ -134,10 +132,10 @@ TODO 同时存在 v1 与 v2：
 
 ### 3.6 Attachments（附件）
 
-v2 支持附件上传/下载：
+支持附件上传/下载：
 
-- 上传：`POST /api/v2/notes/{note_id}/attachments`（multipart/form-data）
-- 下载：`GET /api/v2/attachments/{attachment_id}`
+- 上传：`POST /api/v1/notes/{note_id}/attachments`（multipart/form-data）
+- 下载：`GET /api/v1/attachments/{attachment_id}`
 
 存储后端：
 
@@ -150,7 +148,7 @@ v2 支持附件上传/下载：
 
 ### 3.7 Shares / Public（分享与公开访问）
 
-v2 提供分享能力：
+提供分享能力：
 
 - 私有接口（需要鉴权）：创建/管理 share
 - 公开接口（匿名访问）：通过 share token 访问笔记、附件、评论等
@@ -163,7 +161,7 @@ v2 提供分享能力：
 
 ### 3.8 Notifications（通知）
 
-v2 提供通知能力（例如：公开评论中的 @mention 触发通知）。
+提供通知能力（例如：公开评论中的 @mention 触发通知）。
 
 ### 3.9 Admin 控制台（运维）
 
@@ -195,7 +193,7 @@ Admin 形态：
 
 - 默认 tzid：`DEFAULT_TZID`（默认 `Asia/Shanghai`）
 - v1 使用“本地时间字符串”字段时不带 offset（固定长度 19）
-- v2 更偏向显式 tzid 与更清晰的 schema
+- 当接口涉及 `tzid` 时：未传/空字符串 -> `DEFAULT_TZID`
 
 ### 4.3 环境变量与生产安全校验
 
@@ -248,7 +246,7 @@ Admin 形态：
 以下是按“价值/风险”排序的可选增强项：
 
 1. Public 匿名评论接入真实验证码提供商（目前仅为占位策略，生产只校验 presence）
-2. 进一步统一 v1 错误格式（目前 v1 多为 FastAPI 默认 `detail`，v2 为 `ErrorResponse`）
+2. OpenAPI / 文档持续同步（避免接口与文档漂移）
 3. 更完善的观测性：结构化日志、trace/span、指标（限流命中、同步耗时、附件吞吐等）
 4. Token 轮换与安全策略（例如强制登出、设备撤销、token 过期策略可配置）
 5. 更丰富的搜索能力（全文索引、标签/时间/状态组合过滤）

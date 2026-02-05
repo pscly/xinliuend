@@ -77,7 +77,7 @@ async def test_sharing_lifecycle_and_public_download(tmp_path: Path):
         async with _make_async_client() as client:
             # Upload an attachment so we can verify public attachment download.
             r_up = await client.post(
-                "/api/v2/notes/note-1/attachments",
+                "/api/v1/notes/note-1/attachments",
                 headers={"Authorization": "Bearer tok-u1"},
                 files={"file": ("hello.txt", b"hello", "text/plain")},
             )
@@ -87,7 +87,7 @@ async def test_sharing_lifecycle_and_public_download(tmp_path: Path):
 
             # Create a share.
             r = await client.post(
-                "/api/v2/notes/note-1/shares",
+                "/api/v1/notes/note-1/shares",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={},
             )
@@ -108,10 +108,10 @@ async def test_sharing_lifecycle_and_public_download(tmp_path: Path):
                 assert row is not None
                 assert row.token_prefix == share_token[:8]
                 assert row.token_hmac_hex == _hmac_hex(settings.share_token_secret, share_token)
-                assert row.token_hmac_hex != share_token
+            assert row.token_hmac_hex != share_token
 
             # Public share fetch.
-            r_pub = await client.get(f"/api/v2/public/shares/{share_token}")
+            r_pub = await client.get(f"/api/v1/public/shares/{share_token}")
             assert r_pub.status_code == 200
             pub_body = cast(dict[str, object], r_pub.json())
             note_obj = cast(dict[str, object], pub_body.get("note"))
@@ -123,19 +123,19 @@ async def test_sharing_lifecycle_and_public_download(tmp_path: Path):
 
             # Public attachment download.
             r_file = await client.get(
-                f"/api/v2/public/shares/{share_token}/attachments/{attachment_id}"
+                f"/api/v1/public/shares/{share_token}/attachments/{attachment_id}"
             )
             assert r_file.status_code == 200
             assert r_file.content == b"hello"
 
             # Revoke and verify public access becomes 404.
             r_del = await client.delete(
-                f"/api/v2/shares/{share_id}",
+                f"/api/v1/shares/{share_id}",
                 headers={"Authorization": "Bearer tok-u1"},
             )
             assert r_del.status_code == 204
 
-            r_pub2 = await client.get(f"/api/v2/public/shares/{share_token}")
+            r_pub2 = await client.get(f"/api/v1/public/shares/{share_token}")
             assert r_pub2.status_code == 404
 
         # Expired share returns 410 Gone.
@@ -156,7 +156,7 @@ async def test_sharing_lifecycle_and_public_download(tmp_path: Path):
             await session.commit()
 
         async with _make_async_client() as client:
-            r_exp = await client.get(f"/api/v2/public/shares/{expired_token}")
+            r_exp = await client.get(f"/api/v1/public/shares/{expired_token}")
             assert r_exp.status_code == 410
             exp_body = cast(dict[str, object], r_exp.json())
             assert exp_body.get("error") == "gone"
@@ -188,7 +188,7 @@ async def test_sharing_lifecycle_and_public_download(tmp_path: Path):
             await session.commit()
 
         async with _make_async_client() as client:
-            r_del_note = await client.get(f"/api/v2/public/shares/{token2}")
+            r_del_note = await client.get(f"/api/v1/public/shares/{token2}")
             assert r_del_note.status_code == 404
     finally:
         settings.database_url = old_db

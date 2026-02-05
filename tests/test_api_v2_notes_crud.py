@@ -47,7 +47,7 @@ async def test_v2_notes_crud_and_conflict(tmp_path: Path):
         async with _make_async_client() as client:
             # Create
             r = await client.post(
-                "/api/v2/notes",
+                "/api/v1/notes",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={
                     "body_md": "Hello\nworld",
@@ -64,7 +64,7 @@ async def test_v2_notes_crud_and_conflict(tmp_path: Path):
 
             # List by tag (case-insensitive exact match).
             r_list = await client.get(
-                "/api/v2/notes?tag=work&limit=10&offset=0",
+                "/api/v1/notes?tag=work&limit=10&offset=0",
                 headers={"Authorization": "Bearer tok-u1"},
             )
             assert r_list.status_code == 200
@@ -74,7 +74,7 @@ async def test_v2_notes_crud_and_conflict(tmp_path: Path):
 
             # Patch
             r_patch = await client.patch(
-                f"/api/v2/notes/{note_id}",
+                f"/api/v1/notes/{note_id}",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={
                     "body_md": "New body",
@@ -88,7 +88,7 @@ async def test_v2_notes_crud_and_conflict(tmp_path: Path):
 
             # Conflict on stale update.
             r_conf = await client.patch(
-                f"/api/v2/notes/{note_id}",
+                f"/api/v1/notes/{note_id}",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={
                     "title": "stale",
@@ -104,7 +104,7 @@ async def test_v2_notes_crud_and_conflict(tmp_path: Path):
 
             # Revisions should include an update snapshot.
             r_revs = await client.get(
-                f"/api/v2/notes/{note_id}/revisions",
+                f"/api/v1/notes/{note_id}/revisions",
                 headers={"Authorization": "Bearer tok-u1"},
             )
             assert r_revs.status_code == 200
@@ -114,21 +114,21 @@ async def test_v2_notes_crud_and_conflict(tmp_path: Path):
 
             # Delete
             r_del = await client.delete(
-                f"/api/v2/notes/{note_id}?client_updated_at_ms=3000",
+                f"/api/v1/notes/{note_id}?client_updated_at_ms=3000",
                 headers={"Authorization": "Bearer tok-u1"},
             )
             assert r_del.status_code == 204
 
             # Get without include_deleted should 404.
             r_get = await client.get(
-                f"/api/v2/notes/{note_id}",
+                f"/api/v1/notes/{note_id}",
                 headers={"Authorization": "Bearer tok-u1"},
             )
             assert r_get.status_code == 404
 
             # Restore
             r_restore = await client.post(
-                f"/api/v2/notes/{note_id}/restore",
+                f"/api/v1/notes/{note_id}/restore",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={"client_updated_at_ms": 4000},
             )

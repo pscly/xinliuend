@@ -18,7 +18,7 @@ def _make_async_client() -> httpx.AsyncClient:
 
 
 @pytest.mark.anyio
-async def test_v1_todo_item_tzid_remains_hard_coded(tmp_path: Path):
+async def test_v1_todo_item_tzid_respects_payload_and_default(tmp_path: Path):
     old_db = settings.database_url
     old_tzid = settings.default_tzid
     try:
@@ -53,13 +53,13 @@ async def test_v1_todo_item_tzid_remains_hard_coded(tmp_path: Path):
                 headers=headers,
             )
             assert r.status_code == 200
-            list_id = r.json()["data"]["id"]
+            list_id = r.json()["id"]
 
             r = await client.post(
                 "/api/v1/todo/items",
                 json={
                     "list_id": list_id,
-                    "title": "tzid check",
+                    "title": "tzid custom",
                     "note": "",
                     "status": "open",
                     "priority": 0,
@@ -70,7 +70,7 @@ async def test_v1_todo_item_tzid_remains_hard_coded(tmp_path: Path):
                     "is_recurring": False,
                     "rrule": None,
                     "dtstart_local": None,
-                    "tzid": "UTC",
+                    "tzid": "Asia/Tokyo",
                     "reminders": [],
                     "client_updated_at_ms": 1100,
                 },
@@ -78,14 +78,29 @@ async def test_v1_todo_item_tzid_remains_hard_coded(tmp_path: Path):
             )
             assert r.status_code == 200
 
+            r2 = await client.post(
+                "/api/v1/todo/items",
+                json={
+                    "list_id": list_id,
+                    "title": "tzid default",
+                    "client_updated_at_ms": 1200,
+                },
+                headers=headers,
+            )
+            assert r2.status_code == 200
+
             r_list = await client.get(
                 f"/api/v1/todo/items?list_id={list_id}",
                 headers=headers,
             )
             assert r_list.status_code == 200
-            items = r_list.json()["data"]["items"]
+            items = r_list.json()["items"]
             assert any(
-                it.get("title") == "tzid check" and it.get("tzid") == "Asia/Shanghai"
+                it.get("title") == "tzid custom" and it.get("tzid") == "Asia/Tokyo"
+                for it in items
+            )
+            assert any(
+                it.get("title") == "tzid default" and it.get("tzid") == "UTC"
                 for it in items
             )
     finally:

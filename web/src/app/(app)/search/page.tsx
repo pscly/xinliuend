@@ -174,7 +174,7 @@ export default function SearchPage() {
             : { include_deleted: false, limit: 200 }
         );
         if (runIdRef.current !== runId) return;
-        const items = res.data.items;
+        const items = res.items;
         if (activeTag) {
           setTodos(items);
           return;

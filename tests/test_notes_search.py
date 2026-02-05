@@ -96,7 +96,7 @@ async def test_notes_search_sqlite_fts5_end_to_end(tmp_path: Path):
 
     async with _make_async_client() as client:
         r = await client.get(
-            "/api/v2/notes?q=hello",
+            "/api/v1/notes?q=hello",
             headers={"Authorization": "Bearer tok-u1"},
         )
         assert r.status_code == 200
@@ -108,7 +108,7 @@ async def test_notes_search_sqlite_fts5_end_to_end(tmp_path: Path):
         assert ids == {"note-1", "note-2"}
 
         r2 = await client.get(
-            "/api/v2/notes?q=hello&tag=work",
+            "/api/v1/notes?q=hello&tag=work",
             headers={"Authorization": "Bearer tok-u1"},
         )
         assert r2.status_code == 200

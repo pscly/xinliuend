@@ -1,12 +1,12 @@
 # 心流云服务后端（Flow Backend）
 
-> 当前版本：以 `pyproject.toml` 为准（示例：`0.5.0`）
+> 当前版本：以 `pyproject.toml` 为准（示例：`0.6.0`）
 
 Flow Backend 是「心流」客户端的云端后端服务，提供：
 
 1. 用户体系与鉴权：Bearer Token（移动端/脚本）+ Cookie Session（Web SPA）。
 2. 云端数据能力：笔记 / 待办 / 设置 / 附件 / 分享 / 通知 / 修订（冲突保留）等。
-3. 多端离线同步：v1 + v2 同步接口与冲突处理约定。
+3. 多端离线同步：`/api/v1/sync/*`（统一协议与冲突处理约定）。
 4. 可选对接 Memos：注册时创建 Memos 用户并签发 Token；并提供“本地 Notes ↔ Memos”双向同步能力。
 5. 管理后台（Admin）：用户管理、设备活跃度追踪等运维能力。
 
@@ -30,25 +30,30 @@ Flow Backend 是「心流」客户端的云端后端服务，提供：
 - Request ID：支持客户端传入 `X-Request-Id`，服务端在响应头回显（排障必备）。
 - 设备追踪：支持通过 header 上报设备 ID/名称，用于管理后台展示最近活跃设备与 IP。
 
-### 1.2 API 版本（v1 / v2）
+### 1.2 API 路径（仅 /api/v1）
 
-本服务提供两套 API：
+对外仅保留一套 API：
 
-- v1：`/api/v1/*`（主应用，响应 envelope：`{"code":200,"data":...}`）
-- v2：`/api/v2/*`（子应用，独立 OpenAPI，并统一错误格式 `ErrorResponse`）
+- `/api/v1/*`：主 API（Auth / Settings / TODO / Notes / Attachments / Shares / Public / Sync ...）
+- `/api/v2/*`：已移除（返回 JSON 404：`ErrorResponse`）
+
+通用约定：
+
+- 成功响应：直接业务 JSON（不再有 `{code,data}` envelope）
+- 失败响应：统一 `ErrorResponse { error, message, request_id?, details? }`
 
 能力覆盖（细节以 `apidocs/api.zh-CN.md` 为准）：
 
-- Auth：注册/登录/登出（v1）
-- Me：当前用户信息 + CSRF token 重取（v1）
-- Settings：用户键值配置（v1）
-- TODO：清单/任务/复发（v1 + v2）
-- Notes：笔记、标签、搜索、软删除/恢复（主要在 v2）
-- Revisions：笔记修订与冲突快照（v2）
-- Attachments：附件元数据 + 存储（本地目录或 S3/COS）（v2）
-- Shares & Public：分享链接、公开访问、匿名评论（可选验证码 token）（v2）
-- Notifications：例如评论 @mention 触发通知（v2）
-- Sync：多端离线同步（v1 + v2）
+- Auth：注册/登录/登出
+- Me：当前用户信息 + CSRF token 重取
+- Settings：用户键值配置
+- TODO：清单/任务/复发（RRULE + Occurrence overrides）
+- Notes：笔记、标签、搜索、软删除/恢复
+- Revisions：笔记修订与冲突快照
+- Attachments：附件元数据 + 存储（本地目录或 S3/COS）
+- Shares & Public：分享链接、公开访问、匿名评论（可选验证码 token）
+- Notifications：例如评论 @mention 触发通知
+- Sync：多端离线同步（Notes + Settings + TODO）
 
 ### 1.3 Memos 集成（可选）
 
@@ -71,13 +76,8 @@ Flow Backend 是「心流」客户端的云端后端服务，提供：
   - `GET /openapi.json`
   - `GET /docs`
   - `GET /redoc`
-- v2 OpenAPI（子应用）：
-  - `GET /api/v2/openapi.json`
-  - `GET /api/v2/docs`
-  - `GET /api/v2/redoc`
-  - `GET /api/v2/health`
 
-更完整的客户端对接文档（v1 + v2，含同步协议/冲突处理/分享/附件等）：
+更完整的客户端对接文档（含同步协议/冲突处理/分享/附件等）：
 
 - `apidocs/api.zh-CN.md`
 - 架构说明与路线图：`plan.md`
@@ -146,7 +146,7 @@ uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031 --reload
 
 ### 4.1 推荐：Next rewrites 同源（最省心，无需处理 CORS）
 
-目标：浏览器访问 `http://localhost:3000`，同时 `/api/v1/*` 与 `/api/v2/*` 通过 Next rewrites 代理到后端 `31031`。
+目标：浏览器访问 `http://localhost:3000`，同时 `/api/v1/*` 通过 Next rewrites 代理到后端 `31031`。
 
 终端 A（后端）：
 
@@ -177,8 +177,8 @@ npm run dev
 
 CSRF token 的获取方式：
 
-- 登录/注册响应：`data.csrf_token`
-- SPA 刷新后：调用 `GET /api/v1/me` 获取 `data.csrf_token`
+- 登录/注册响应：`csrf_token`
+- SPA 刷新后：调用 `GET /api/v1/me` 获取 `csrf_token`
 
 前端已在 `web/src/lib/api/client.ts` 内自动注入写请求的 `X-CSRF-Token`（前提是客户端保存/恢复了 token）。
 
@@ -206,7 +206,7 @@ cp .env.example .env
 
 生产建议（关键项）：
 
-- `ENVIRONMENT=production`（开启生产安全校验，并禁用 v2 debug 路由）
+- `ENVIRONMENT=production`（开启生产安全校验，并禁用 debug 路由）
 - `DATABASE_URL=postgresql+psycopg://...`（生产禁止 sqlite）
 - `CORS_ALLOW_ORIGINS` 必须是明确列表（生产禁止 `*`）
 - 必须设置强随机值（生产安全校验会拦截默认占位符）：
@@ -261,7 +261,7 @@ docker compose down
 若你计划使用 Cookie Session（Web），强烈建议用 Nginx/Caddy/Traefik 在最外层提供**单一公网 origin**：
 
 - `/` -> Web（静态站或 Next server）
-- `/api/v1/*`、`/api/v2/*`、`/admin` -> 后端
+- `/api/v1/*`、`/admin` -> 后端
 
 并在后端开启：
 
@@ -290,7 +290,7 @@ npm run build
 然后启动后端访问：
 
 - Web：`http://localhost:31031/`
-- API：`http://localhost:31031/api/v1/...`、`/api/v2/...`
+- API：`http://localhost:31031/api/v1/...`
 
 注意：仓库自带的 `Dockerfile` 已默认把 `web/out` 打进镜像；若你希望自定义 UI 产物（例如替换为宿主机/CI 构建出来的 `web/out`），可参考：
 

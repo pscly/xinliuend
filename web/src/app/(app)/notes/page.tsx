@@ -291,7 +291,7 @@ export default function NotesPage() {
     setShareCopied(false);
 
     try {
-      const res = await apiFetch(`/api/v2/notes/${encodeURIComponent(selectedId)}/shares`, {
+      const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(selectedId)}/shares`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

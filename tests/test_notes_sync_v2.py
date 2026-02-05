@@ -47,7 +47,7 @@ async def test_v2_sync_notes_push_pull_and_conflict(tmp_path: Path):
         async with _make_async_client() as client:
             # Create note via sync push.
             r = await client.post(
-                "/api/v2/sync/push",
+                "/api/v1/sync/push",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={
                     "mutations": [
@@ -70,7 +70,7 @@ async def test_v2_sync_notes_push_pull_and_conflict(tmp_path: Path):
 
             # Pull should include the note.
             r2 = await client.get(
-                "/api/v2/sync/pull?cursor=0&limit=200",
+                "/api/v1/sync/pull?cursor=0&limit=200",
                 headers={"Authorization": "Bearer tok-u1"},
             )
             assert r2.status_code == 200
@@ -81,7 +81,7 @@ async def test_v2_sync_notes_push_pull_and_conflict(tmp_path: Path):
 
             # Stale update rejected with conflict.
             r3 = await client.post(
-                "/api/v2/sync/push",
+                "/api/v1/sync/push",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={
                     "mutations": [
@@ -106,7 +106,7 @@ async def test_v2_sync_notes_push_pull_and_conflict(tmp_path: Path):
 
             # Delete non-existent note is idempotent.
             r4 = await client.post(
-                "/api/v2/sync/push",
+                "/api/v1/sync/push",
                 headers={"Authorization": "Bearer tok-u1"},
                 json={
                     "mutations": [

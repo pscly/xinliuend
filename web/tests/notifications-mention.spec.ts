@@ -29,7 +29,7 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
       body: JSON.stringify({ username, password }),
     });
 
-    type RegisterJson = null | { code?: unknown; [key: string]: unknown };
+    type RegisterJson = null | { token?: unknown; [key: string]: unknown };
     let json: RegisterJson = null;
     try {
       json = (await resp.json()) as RegisterJson;
@@ -40,7 +40,10 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
   }, { username, password });
 
   expect(registerResult.status, `register status=${registerResult.status}`).toBe(200);
-  expect(registerResult.json?.code, `register response=${JSON.stringify(registerResult.json)}`).toBe(200);
+  expect(
+    typeof registerResult.json?.token,
+    `register response=${JSON.stringify(registerResult.json)}`,
+  ).toBe("string");
 
   // Register endpoint sets an authenticated cookie-session; clear it so we can validate UI login.
   await page.context().clearCookies();
@@ -88,7 +91,7 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
   const shareCreateRespPromise = page.waitForResponse(
     (resp) =>
       resp.request().method() === "POST" &&
-      resp.url().includes(`/api/v2/notes/${noteId}/shares`) &&
+      resp.url().includes(`/api/v1/notes/${noteId}/shares`) &&
       (resp.status() === 201 || resp.status() === 200),
   );
   await page.getByTestId("create-share").click();
@@ -113,14 +116,12 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
     const csrfToken: string | null =
       typeof meJson === "object" &&
       meJson !== null &&
-      "data" in meJson &&
-      typeof (meJson as { data?: unknown }).data === "object" &&
-      (meJson as { data?: { csrf_token?: unknown } }).data !== null &&
-      typeof (meJson as { data?: { csrf_token?: unknown } }).data?.csrf_token === "string"
-        ? (meJson as { data: { csrf_token: string } }).data.csrf_token
+      "csrf_token" in meJson &&
+      typeof (meJson as { csrf_token?: unknown }).csrf_token === "string"
+        ? (meJson as { csrf_token: string }).csrf_token
         : null;
 
-    const resp = await fetch(`/api/v2/shares/${shareId}/comment-config`, {
+    const resp = await fetch(`/api/v1/shares/${shareId}/comment-config`, {
       method: "PATCH",
       credentials: "include",
       headers: {
@@ -156,7 +157,7 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
   const comment = `hello @${username} ${mentionKey}`;
 
   const postCommentRespPromise = anonPage.waitForResponse(
-    (resp) => resp.request().method() === "POST" && /\/api\/v2\/public\/shares\/.+\/comments$/.test(resp.url()),
+    (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments$/.test(resp.url()),
   );
   await commentBox.fill(comment);
   await anonPage.getByRole("button", { name: /^Post comment$/ }).click();
@@ -167,7 +168,7 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
 
   // 6) Back as user A, open /notifications and find an unread mention notification containing the snippet.
   const notifListRespPromise = page.waitForResponse(
-    (resp) => resp.request().method() === "GET" && /\/api\/v2\/notifications(\?|$)/.test(resp.url()) && resp.status() === 200,
+    (resp) => resp.request().method() === "GET" && /\/api\/v1\/notifications(\?|$)/.test(resp.url()) && resp.status() === 200,
   );
   await page.getByTestId("nav-notifications").click();
   await expect(page).toHaveURL(/\/notifications/);
@@ -179,7 +180,7 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
     if ((await notifItem.count()) > 0) break;
 
     const refreshRespPromise = page.waitForResponse(
-      (resp) => resp.request().method() === "GET" && /\/api\/v2\/notifications(\?|$)/.test(resp.url()) && resp.status() === 200,
+      (resp) => resp.request().method() === "GET" && /\/api\/v1\/notifications(\?|$)/.test(resp.url()) && resp.status() === 200,
     );
     await page.getByRole("button", { name: /刷新|Refresh/ }).click();
     await refreshRespPromise;
@@ -204,7 +205,7 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
   await expect(notifItem).toBeVisible();
 
   const markReadRespPromise = page.waitForResponse(
-    (resp) => resp.request().method() === "POST" && /\/api\/v2\/notifications\/.+\/read$/.test(resp.url()) && resp.status() === 200,
+    (resp) => resp.request().method() === "POST" && /\/api\/v1\/notifications\/.+\/read$/.test(resp.url()) && resp.status() === 200,
   );
   const markReadButton = notifItem.getByRole("button", { name: /标记已读|Mark read/ });
   await expect(markReadButton).toBeEnabled();

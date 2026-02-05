@@ -5,7 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
-SyncResource = Literal["user_setting", "todo_list", "todo_item", "todo_occurrence"]
+SyncResource = Literal["note", "user_setting", "todo_list", "todo_item", "todo_occurrence"]
 SyncOp = Literal["upsert", "delete"]
 
 

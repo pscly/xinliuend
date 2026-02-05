@@ -176,7 +176,7 @@ function formatDateTime(iso: string): string {
 }
 
 function buildPublicShareBase(token: string): string {
-  return `/api/v2/public/shares/${encodeURIComponent(token)}`;
+  return `/api/v1/public/shares/${encodeURIComponent(token)}`;
 }
 
 function maybeCaptchaHeader(captchaToken: string): Record<string, string> {

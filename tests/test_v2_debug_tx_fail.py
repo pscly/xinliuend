@@ -44,7 +44,7 @@ async def test_v2_debug_tx_fail_rolls_back(tmp_path: Path) -> None:
     key = f"tx-fail-{uuid4()}"
     async with _make_async_client() as client:
         r = await client.post(
-            "/api/v2/debug/tx-fail",
+            "/api/v1/debug/tx-fail",
             json={"key": key},
             headers={"Authorization": "Bearer tok-tx-fail"},
         )

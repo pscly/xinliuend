@@ -64,7 +64,7 @@ async def test_attachments_upload_and_download_local_storage(tmp_path: Path):
 
         async with _make_async_client() as client:
             r = await client.post(
-                "/api/v2/notes/note-1/attachments",
+                "/api/v1/notes/note-1/attachments",
                 headers={"Authorization": "Bearer tok-u1"},
                 files={"file": ("hello.txt", b"hello", "text/plain")},
             )
@@ -79,7 +79,7 @@ async def test_attachments_upload_and_download_local_storage(tmp_path: Path):
             assert expected_path.exists()
 
             r2 = await client.get(
-                f"/api/v2/attachments/{attachment_id}",
+                f"/api/v1/attachments/{attachment_id}",
                 headers={"Authorization": "Bearer tok-u1"},
             )
             assert r2.status_code == 200
@@ -99,7 +99,7 @@ async def test_attachments_upload_and_download_local_storage(tmp_path: Path):
                 await session.commit()
 
             r3 = await client.get(
-                f"/api/v2/attachments/{attachment_id}",
+                f"/api/v1/attachments/{attachment_id}",
                 headers={"Authorization": "Bearer tok-u2"},
             )
             assert r3.status_code == 404
@@ -147,7 +147,7 @@ async def test_attachments_upload_rejects_too_large(tmp_path: Path):
 
         async with _make_async_client() as client:
             r = await client.post(
-                "/api/v2/notes/note-1/attachments",
+                "/api/v1/notes/note-1/attachments",
                 headers={"Authorization": "Bearer tok-u1"},
                 files={"file": ("big.txt", b"hello", "text/plain")},
             )

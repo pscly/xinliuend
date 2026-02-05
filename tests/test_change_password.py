@@ -66,7 +66,9 @@ async def test_change_password_cookie_session_rotates_csrf_and_persists_encrypte
                 },
             )
             assert r.status_code == 403
-            assert r.json()["detail"] == "csrf failed"
+            body = r.json()
+            assert body.get("error") == "forbidden"
+            assert body.get("message") == "csrf failed"
 
             # Wrong current password.
             r = await client.post(
@@ -91,7 +93,9 @@ async def test_change_password_cookie_session_rotates_csrf_and_persists_encrypte
                 headers={settings.user_csrf_header_name: csrf_token},
             )
             assert r.status_code == 400
-            assert r.json()["detail"] == "password mismatch"
+            body = r.json()
+            assert body.get("error") == "bad_request"
+            assert body.get("message") == "password mismatch"
 
             # Success should rotate CSRF and update cookie.
             r = await client.post(
@@ -105,15 +109,15 @@ async def test_change_password_cookie_session_rotates_csrf_and_persists_encrypte
             )
             assert r.status_code == 200
             payload = r.json()
-            assert payload["code"] == 200
-            new_csrf = payload["data"]["csrf_token"]
+            assert payload.get("ok") is True
+            new_csrf = payload["csrf_token"]
             assert isinstance(new_csrf, str)
             assert new_csrf != csrf_token
 
             # /me should return the rotated CSRF from the new cookie session.
             r2 = await client.get("/api/v1/me")
             assert r2.status_code == 200
-            assert r2.json()["data"]["csrf_token"] == new_csrf
+            assert r2.json()["csrf_token"] == new_csrf
 
         async with session_scope() as session:
             row = (await session.exec(select(User).where(User.id == user_id))).first()
@@ -126,4 +130,3 @@ async def test_change_password_cookie_session_rotates_csrf_and_persists_encrypte
         settings.user_session_secret = old_secret
         settings.dev_bypass_memos = old_bypass
         settings.user_password_encryption_key = old_key
-

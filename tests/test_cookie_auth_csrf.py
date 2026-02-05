@@ -54,7 +54,9 @@ async def test_cookie_auth_csrf_enforced_on_state_changing_endpoints(tmp_path: P
                 json={"value_json": {"dark": True}, "client_updated_at_ms": 1000},
             )
             assert r.status_code == 403
-            assert r.json()["detail"] == "csrf failed"
+            body = r.json()
+            assert body.get("error") == "forbidden"
+            assert body.get("message") == "csrf failed"
 
             # Same request with CSRF header should succeed.
             r = await client.put(
@@ -100,9 +102,8 @@ async def test_me_returns_csrf_token_for_cookie_session(tmp_path: Path) -> None:
             r = await client.get("/api/v1/me")
             assert r.status_code == 200
             payload = r.json()
-            assert payload["code"] == 200
-            assert payload["data"]["username"] == "u_cookie_me"
-            assert payload["data"]["csrf_token"] == csrf_token
+            assert payload["username"] == "u_cookie_me"
+            assert payload["csrf_token"] == csrf_token
     finally:
         settings.database_url = old_db
         settings.user_session_secret = old_secret
@@ -137,12 +138,14 @@ async def test_logout_requires_csrf_for_valid_cookie_session_but_not_for_bearer(
                 json={"username": "ucookielogout", "password": "pass1234"},
             )
             assert login.status_code == 200
-            csrf_token = login.json()["data"]["csrf_token"]
+            csrf_token = login.json()["csrf_token"]
 
             # Cookie-session logout must require CSRF to prevent cross-site logout.
             r = await client.post("/api/v1/auth/logout")
             assert r.status_code == 403
-            assert r.json()["detail"] == "csrf failed"
+            body = r.json()
+            assert body.get("error") == "forbidden"
+            assert body.get("message") == "csrf failed"
 
             r = await client.post(
                 "/api/v1/auth/logout",

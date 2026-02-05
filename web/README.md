@@ -42,7 +42,6 @@ Open http://localhost:3000
 By default, Next rewrites these paths to the backend on port 31031:
 
 - `/api/v1/*` -> `http://localhost:31031/api/v1/*`
-- `/api/v2/*` -> `http://localhost:31031/api/v2/*`
 
 Disable the proxy if you want to handle routing/CORS yourself:
 
@@ -94,7 +93,7 @@ npm run build
 2) Start the backend and open the UI on the backend origin:
 
 - UI: http://localhost:31031/
-- API: http://localhost:31031/api/v1/... and /api/v2/...
+- API: http://localhost:31031/api/v1/...
 
 Backend env vars:
 

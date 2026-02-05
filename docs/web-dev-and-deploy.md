@@ -9,7 +9,7 @@ Repo defaults (today):
 
 ## 1) Recommended local dev: same-origin via Next rewrites (no CORS)
 
-Goal: browser stays on `http://localhost:3000`, while `/api/v1/*` and `/api/v2/*` are proxied to the backend.
+Goal: browser stays on `http://localhost:3000`, while `/api/v1/*` is proxied to the backend.
 
 ### 1.1 Start backend (SQLite + dev bypass)
 
@@ -55,7 +55,6 @@ Open:
 `web/next.config.ts` rewrites:
 
 - `/api/v1/*` -> `http://localhost:31031/api/v1/*`
-- `/api/v2/*` -> `http://localhost:31031/api/v2/*`
 
 From the browser's perspective, the API is same-origin (`localhost:3000`). That means:
 
@@ -175,7 +174,7 @@ Put Nginx/Caddy/Traefik in front of both services and make the browser see ONE o
 Routing idea:
 
 - `/` -> Next (either `next start` or static files)
-- `/api/v1/*` and `/api/v2/*` -> backend (`flow_backend`)
+- `/api/v1/*` -> backend (`flow_backend`)
 - `/admin` -> backend (`flow_backend`)  (do NOT let Next shadow it)
 
 Benefits:
@@ -232,7 +231,7 @@ uv run uvicorn flow_backend.main:app --host 0.0.0.0 --port 31031
 3) Open:
 
 - Web UI: `http://localhost:31031/`
-- API: `http://localhost:31031/api/v1/...` and `http://localhost:31031/api/v2/...`
+- API: `http://localhost:31031/api/v1/...`
 - Admin (backend-rendered): `http://localhost:31031/admin`
 
 Notes:

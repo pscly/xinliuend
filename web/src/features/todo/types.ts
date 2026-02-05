@@ -4,11 +4,6 @@ export type IsoDateTimeString = string;
 // Example: "2026-02-03T13:45:00" (YYYY-MM-DDTHH:mm:ss)
 export type LocalDateTimeString = string;
 
-export type ApiV1Response<TData> = {
-  code: number;
-  data: TData;
-};
-
 // Mirrors backend v1 todo routes:
 // - src/flow_backend/routers/todo.py
 // - src/flow_backend/schemas_todo.py
@@ -59,13 +54,13 @@ export type TodoOccurrence = {
   updated_at: IsoDateTimeString;
 };
 
-export type TodoListsResponse = ApiV1Response<{ items: TodoList[] }>;
-export type TodoItemsResponse = ApiV1Response<{ items: TodoItem[] }>;
-export type TodoOccurrencesResponse = ApiV1Response<{ items: TodoOccurrence[] }>;
+export type TodoListsResponse = { items: TodoList[] };
+export type TodoItemsResponse = { items: TodoItem[] };
+export type TodoOccurrencesResponse = { items: TodoOccurrence[] };
 
-export type OkResponse = ApiV1Response<{ ok: boolean }>;
-export type IdResponse = ApiV1Response<{ id: string }>;
-export type IdsResponse = ApiV1Response<{ ids: string[] }>;
+export type OkResponse = { ok: boolean };
+export type IdResponse = { id: string };
+export type IdsResponse = { ids: string[] };
 
 // Request payloads (Pydantic defaults => optional fields in TS).
 

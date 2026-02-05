@@ -35,7 +35,7 @@ async function registerViaContextRequest(
 
   expect(resp.status(), `register status=${resp.status()}`).toBe(200);
   const json = await resp.json().catch(() => null);
-  expect(json?.code, `register response=${JSON.stringify(json)}`).toBe(200);
+  expect(typeof json?.token, `register response=${JSON.stringify(json)}`).toBe("string");
 }
 
 async function loginViaUi(page: import("@playwright/test").Page, username: string, password: string) {

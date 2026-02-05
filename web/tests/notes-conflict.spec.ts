@@ -23,7 +23,7 @@ test("notes: 409 conflict -> use server version", async ({ page }) => {
       body: JSON.stringify({ username, password }),
     });
 
-    type RegisterJson = null | { code?: unknown; [key: string]: unknown };
+    type RegisterJson = null | { token?: unknown; [key: string]: unknown };
     let json: RegisterJson = null;
     try {
       json = (await resp.json()) as RegisterJson;
@@ -34,7 +34,10 @@ test("notes: 409 conflict -> use server version", async ({ page }) => {
   }, { username, password });
 
   expect(registerResult.status, `register status=${registerResult.status}`).toBe(200);
-  expect(registerResult.json?.code, `register response=${JSON.stringify(registerResult.json)}`).toBe(200);
+  expect(
+    typeof registerResult.json?.token,
+    `register response=${JSON.stringify(registerResult.json)}`,
+  ).toBe("string");
 
   // Register endpoint sets an authenticated cookie-session; clear it so we can validate UI login.
   await page.context().clearCookies();
@@ -108,9 +111,9 @@ test("notes: 409 conflict -> use server version", async ({ page }) => {
     // Do not use Playwright request context: we want browser cookies included.
     const meResp = await fetch("/api/v1/me", { method: "GET", credentials: "include" });
     const meJson = await meResp.json().catch(() => null);
-    const csrfToken: string | null = meJson?.data?.csrf_token ?? null;
+    const csrfToken: string | null = typeof meJson?.csrf_token === "string" ? meJson.csrf_token : null;
 
-    const patchResp = await fetch(`/api/v2/notes/${noteId}`, {
+    const patchResp = await fetch(`/api/v1/notes/${noteId}`, {
       method: "PATCH",
       credentials: "include",
       headers: {
@@ -137,7 +140,7 @@ test("notes: 409 conflict -> use server version", async ({ page }) => {
   await expect(saveButton).toBeEnabled();
 
   const conflictRespPromise = page.waitForResponse(
-    (resp) => resp.request().method() === "PATCH" && resp.url().endsWith(`/api/v2/notes/${noteId}`),
+    (resp) => resp.request().method() === "PATCH" && resp.url().endsWith(`/api/v1/notes/${noteId}`),
   );
   await saveButton.click();
   const conflictResp = await conflictRespPromise;

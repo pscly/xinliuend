@@ -1,30 +1,24 @@
-# Flow Backend API 文档（v1 + v2）
+# Flow Backend API 文档（/api/v1）
 
-最后更新：2026-02-04
+最后更新：2026-02-05
 
-本文件面向 APK / Web 客户端开发团队，覆盖：鉴权、请求头约定、错误格式、同步协议、以及所有已实现的 v1/v2 接口。
+本文件面向 APK / Web 客户端开发团队，覆盖：鉴权、请求头约定、错误格式、同步协议、以及所有已实现的接口（对外仅保留 `/api/v1`）。
 
 ## 1. 基本信息
 
 - 服务默认监听：`http://localhost:31031`
 - v1 Base Path：`/api/v1`（由 `API_PREFIX` 控制；默认值见 `src/flow_backend/config.py`）
-- v2 Base Path：`/api/v2`（作为子应用 mount 到主应用，拥有独立 OpenAPI）
+- 说明：`/api/v2` 已移除（不做兼容层）；访问 `/api/v2/*` 会返回 JSON 404（`ErrorResponse`）
 
 OpenAPI / Swagger UI：
 
-- v1（主应用）：
-  - `GET /openapi.json`
-  - `GET /docs`
-  - `GET /redoc`
-- v2（子应用）：
-  - `GET /api/v2/openapi.json`
-  - `GET /api/v2/docs`
-  - `GET /api/v2/redoc`
+- `GET /openapi.json`
+- `GET /docs`
+- `GET /redoc`
 
 健康检查：
 
 - `GET /health`（主应用）
-- `GET /api/v2/health`（v2 子应用）
 
 管理后台（内部）：
 
@@ -63,8 +57,8 @@ Token 来自：
 
 CSRF token 获取：
 
-- 登录/注册响应体会返回 `data.csrf_token`（并通过 `Set-Cookie` 写入会话 cookie）
-- SPA 刷新后可调用 `GET /api/v1/me` 重新获取 `data.csrf_token`（无需读取 httpOnly cookie）
+- 登录/注册响应体会返回 `csrf_token`（并通过 `Set-Cookie` 写入会话 cookie）
+- SPA 刷新后可调用 `GET /api/v1/me` 重新获取 `csrf_token`（无需读取 httpOnly cookie）
 
 移动端一般推荐直接使用 Bearer Token（不需要 CSRF）。
 
@@ -76,7 +70,7 @@ CSRF token 获取：
 - 若未传入，服务端会生成 UUID
 - 服务端总会在响应头返回：`X-Request-Id: ...`
 
-v2 的错误响应会尽量带上 `request_id` 字段（来自 `request.state.request_id`）。
+所有错误响应 JSON 会 best-effort 带上 `request_id` 字段（来自 `request.state.request_id`），同时建议客户端记录响应头 `X-Request-Id`。
 
 ### 2.4 设备信息（可选，但建议客户端都带上）
 
@@ -95,7 +89,7 @@ v2 的错误响应会尽量带上 `request_id` 字段（来自 `request.state.re
 ### 2.5 Content-Type
 
 - JSON 请求体：`Content-Type: application/json`
-- 文件上传：`multipart/form-data`（见 v2 attachments）
+- 文件上传：`multipart/form-data`（见：`POST /api/v1/notes/{note_id}/attachments`）
 
 ## 3. 时间与并发冲突（非常重要）
 
@@ -117,47 +111,32 @@ v1 TODO 相关字段使用“本地时间字符串”格式：
 
 ### 3.3 tzid 约定
 
-- v1 TODO：服务端强制 `tzid = "Asia/Shanghai"`（无论请求传什么）
-- v2 TODO：支持传 `tzid`，若为空则使用 `DEFAULT_TZID`（默认 `Asia/Shanghai`）
+- TODO：支持传 `tzid`；若未传或为空字符串，则使用 `DEFAULT_TZID`（默认 `Asia/Shanghai`）
 
 ### 3.4 冲突的表现形式
 
-v1：
+服务端统一错误格式（见 4.2）：
 
-- 大多数错误遵循 FastAPI 默认：
-  - `{"detail": "..."}` 或 `{"detail": {...}}`
-- 部分冲突会返回 `detail` 为对象，并包含 `server_snapshot`（例如 v2 的同款结构在 v1 services 中也会出现）
-
-v2：
-
-- 统一错误格式（见 4.2）：
-  - `ErrorResponse { error, message, request_id?, details? }`
 - 冲突（HTTP 409）通常表现为：
   - `error = "conflict"`
-  - `details.server_snapshot` 带服务端快照
+  - `details` 可能带服务端快照（`server_snapshot`），用于客户端做冲突解决
 
-v2 同步（/api/v2/sync/push）额外注意：
+同步（`/api/v1/sync/push`）额外注意：
 
-- 若服务端记录已被软删除（tombstone），sync upsert 会被拒绝为 conflict
-- 需要显式调用 restore 接口恢复：
-  - `POST /api/v2/notes/{note_id}/restore`
-  - `POST /api/v2/todo/items/{item_id}/restore`
+- 若服务端记录已被软删除（tombstone），sync upsert 会被拒绝为 conflict（需要 restore）
+- restore 接口：
+  - `POST /api/v1/notes/{note_id}/restore`
+  - `POST /api/v1/todo/items/{item_id}/restore`
 
 ## 4. 响应格式
 
-### 4.1 v1 成功响应（统一 envelope）
+### 4.1 成功响应
 
-v1 成功返回：
+对外仅保留 `/api/v1`，成功响应不再使用 `{code,data}` envelope，直接返回业务 JSON。
 
-```json
-{"code":200,"data":{}}
-```
+### 4.2 错误响应（Pinned Contract：ErrorResponse）
 
-v1 的 data 具体结构随接口而变。
-
-### 4.2 v2 错误响应（Pinned Contract）
-
-v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构：
+对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构：
 
 ```json
 {
@@ -172,7 +151,9 @@ v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构�
 }
 ```
 
-- `error`：基于 HTTP status 映射（400/401/403/404/409/410/413/429/502 等；其它为 `http_<code>`；详见 4.2.1）
+`ErrorResponse` 字段说明：
+
+- `error`：基于 HTTP status 映射（400/401/403/404/409/410/413/422/429/502 等；其它为 `http_<code>`；详见 4.2.1）
   - 其中：413 会映射为 `payload_too_large`
   - 500 的细节：
     - 未处理异常（500）固定为 `internal_error`
@@ -182,10 +163,10 @@ v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构�
 
 422 特别说明：
 
-- 若是框架层请求校验失败（FastAPI `RequestValidationError`），则返回 `error = "validation_error"`
-- 若业务代码主动抛出 `HTTPException(status_code=422, ...)`，则 `error` 可能为 `http_422`
+- 框架层请求校验失败（FastAPI `RequestValidationError`）返回 `error = "validation_error"` 且 `details` 为校验错误列表
+- 业务代码主动抛出 `HTTPException(422, ...)` 时，仍会映射为 `error = "validation_error"`（`details` 取决于 detail 内容）
 
-定义见：`src/flow_backend/v2/schemas/errors.py`
+定义见：`src/flow_backend/v2/schemas/errors.py`（对外 v1 统一使用该结构）
 
 #### 4.2.1 错误码与 error 字段对照
 
@@ -200,7 +181,7 @@ v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构�
 | 409 | `conflict` | 并发冲突（stale update / tombstone 等），常带 `details.server_snapshot` |
 | 410 | `gone` | `share expired` |
 | 413 | `payload_too_large` | `attachment too large` |
-| 422 | `validation_error` / `http_422` | 框架校验失败 vs 业务主动抛出 422 |
+| 422 | `validation_error` | 请求校验失败（框架校验或业务主动抛出 422） |
 | 429 | `rate_limited` | 频控命中；响应头常带 `Retry-After` |
 | 500 | `internal_error` / `http_500` | 未处理异常 vs 业务主动抛出 `HTTPException(500, ...)` |
 | 502 | `upstream_error` | 上游（例如对接 Memos）异常 |
@@ -211,8 +192,8 @@ v2 对 `HTTPException` / 参数校验 / 未处理异常使用统一错误结构�
 
 说明：
 
-- v2 **总会**在响应头返回 `X-Request-Id`。
-- v2 错误 JSON **通常**会带 `request_id`（best-effort）；客户端建议同时记录两者。
+- 服务端**总会**在响应头返回 `X-Request-Id`。
+- 错误 JSON 会 best-effort 带 `request_id`；客户端建议同时记录两者。
 
 401（缺少 token）：`error = unauthorized`
 
@@ -464,15 +445,15 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 成功：
 
 ```json
-{"code":200,"data":{"token":"...","server_url":"https://memos.example.com","csrf_token":"..."}}
+{"token":"...","server_url":"https://memos.example.com","csrf_token":"..."}
 ```
 
-常见错误：
+常见错误（均为 `ErrorResponse`）：
 
-- 409 `{"detail":"username already exists"}`
-- 400 `{"detail":"..."}`（密码过长等）
-- 502 `{"detail":"..."}`（对接 Memos 失败）
-- 429 `{"detail":"too many requests"}`（请求过于频繁；响应头带 `Retry-After` 秒数）
+- 409 `error=conflict, message="username already exists"`
+- 400 `error=bad_request, message="..."`（密码过长等）
+- 502 `error=upstream_error, message="..."`（对接 Memos 失败）
+- 429 `error=rate_limited`（请求过于频繁；响应头带 `Retry-After` 秒数）
 
 说明：注册/登录阶段也会 best-effort 记录设备/IP（不会影响返回）。
 
@@ -486,12 +467,12 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 
 成功：同 register。
 
-常见错误：
+常见错误（均为 `ErrorResponse`）：
 
-- 401 `{"detail":"invalid credentials"}`
-- 403 `{"detail":"user disabled"}`
-- 409 `{"detail":"memos token not set; contact admin"}`
-- 429 `{"detail":"too many requests"}`（请求过于频繁；响应头带 `Retry-After` 秒数）
+- 401 `error=unauthorized, message="invalid credentials"`
+- 403 `error=forbidden, message="user disabled"`
+- 409 `error=conflict, message="memos token not set; contact admin"`
+- 429 `error=rate_limited`（请求过于频繁；响应头带 `Retry-After` 秒数）
 
 #### POST /api/v1/auth/logout
 
@@ -505,12 +486,12 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 成功：
 
 ```json
-{"code":200,"data":{"ok":true}}
+{"ok":true}
 ```
 
 常见错误：
 
-- 403 `{"detail":"csrf failed"}`
+- 403 `ErrorResponse(message="csrf failed")`
 
 #### GET /api/v1/me
 
@@ -524,7 +505,7 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 成功：
 
 ```json
-{"code":200,"data":{"username":"alice","is_admin":false,"csrf_token":"..."}}
+{"username":"alice","is_admin":false,"csrf_token":"..."}
 ```
 
 #### POST /api/v1/me/password
@@ -545,7 +526,7 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 成功：
 
 ```json
-{"code":200,"data":{"ok":true,"csrf_token":"..."}}
+{"ok":true,"csrf_token":"..."}
 ```
 
 说明：
@@ -555,12 +536,12 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 
 常见错误：
 
-- 401 `{"detail":"invalid credentials"}`（当前密码不正确）
-- 400 `{"detail":"password mismatch"}`（两次输入的新密码不一致）
-- 403 `{"detail":"csrf failed"}`（Cookie Session 写请求未带/带错 CSRF）
-- 409 `{"detail":"memos token not set; contact admin"}`（用户未配置 memos token）
-- 409 `{"detail":"memos user id not set; contact admin"}`（用户未配置 memos user id）
-- 502 `{"detail":"..."}`（对接 Memos 更新密码失败；本次改密会整体失败回滚）
+- 401 `ErrorResponse(message="invalid credentials")`（当前密码不正确）
+- 400 `ErrorResponse(message="password mismatch")`（两次输入的新密码不一致）
+- 403 `ErrorResponse(message="csrf failed")`（Cookie Session 写请求未带/带错 CSRF）
+- 409 `ErrorResponse(message="memos token not set; contact admin")`（用户未配置 memos token）
+- 409 `ErrorResponse(message="memos user id not set; contact admin")`（用户未配置 memos user id）
+- 502 `ErrorResponse(message="...")`（对接 Memos 更新密码失败；本次改密会整体失败回滚）
 
 ### 5.2 Settings
 
@@ -572,17 +553,14 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 
 ```json
 {
-  "code": 200,
-  "data": {
-    "items": [
-      {
-        "key": "ui.theme",
-        "value_json": {"mode": "dark"},
-        "client_updated_at_ms": 1700000000000,
-        "updated_at": "2026-02-01T00:00:00Z"
-      }
-    ]
-  }
+  "items": [
+    {
+      "key": "ui.theme",
+      "value_json": {"mode": "dark"},
+      "client_updated_at_ms": 1700000000000,
+      "updated_at": "2026-02-01T00:00:00Z"
+    }
+  ]
 }
 ```
 
@@ -594,7 +572,7 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 {"value_json": {"mode": "dark"}, "client_updated_at_ms": 1700000000000}
 ```
 
-冲突：409 `{"detail":"conflict (stale update)"}`
+冲突：409 `ErrorResponse(error="conflict", message="conflict (stale update)")`
 
 #### DELETE /api/v1/settings/{key}
 
@@ -604,7 +582,7 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 {"client_updated_at_ms": 1700000000000}
 ```
 
-冲突：409 `{"detail":"conflict (stale delete)"}`
+冲突：409 `ErrorResponse(error="conflict", message="conflict (stale delete)")`
 
 ### 5.3 TODO Lists
 
@@ -623,19 +601,19 @@ Query：
 请求体：`TodoListUpsertRequest`（`src/flow_backend/schemas_todo.py`）
 
 - `id` 为空则服务端生成
-- 冲突：409 `{"detail":"conflict (stale update)"}`
+- 冲突：409 `ErrorResponse(error="conflict")`
 
 成功：
 
 ```json
-{"code":200,"data":{"id":"..."}}
+{"id":"..."}
 ```
 
 #### PATCH /api/v1/todo/lists/{list_id}
 
 请求体：`TodoListPatchRequest`
 
-成功：`{"code":200,"data":{"ok":true}}`
+成功：`{"ok":true}`
 
 #### DELETE /api/v1/todo/lists/{list_id}
 
@@ -686,27 +664,43 @@ Query：
 
 请求体：`TodoItemUpsertRequest`
 
-重要：v1 服务端会强制 `tzid = "Asia/Shanghai"`。
+重要：若未传 `tzid` 或传空字符串，则使用 `DEFAULT_TZID`（默认 `Asia/Shanghai`）。
 
-成功：`{"code":200,"data":{"id":"..."}}`
+成功：`{"id":"..."}`
 
 #### POST /api/v1/todo/items/bulk
 
 请求体：`TodoItemUpsertRequest[]`
 
-成功：`{"code":200,"data":{"ids":["...","..."]}}`
+成功：`{"ids":["...","..."]}`
 
 #### PATCH /api/v1/todo/items/{item_id}
 
 请求体：`TodoItemPatchRequest`
 
-重要：即使传 `tzid`，服务端也会强制 `Asia/Shanghai`。
+重要：若传 `tzid` 且非空字符串，则按传入值保存；若为空字符串则回退到 `DEFAULT_TZID`。
 
 #### DELETE /api/v1/todo/items/{item_id}
 
 Query：`client_updated_at_ms`（默认 0）
 
 说明：若 item 不存在，仍返回 ok。
+
+#### POST /api/v1/todo/items/{item_id}/restore
+
+用途：恢复（取消软删除）某个 todo item。
+
+请求体：`TodoItemRestoreRequest`
+
+```json
+{"client_updated_at_ms":1700000000000}
+```
+
+成功：
+
+```json
+{"ok":true}
+```
 
 ### 5.5 RRULE Occurrences
 
@@ -751,17 +745,15 @@ Query：
 
 ```json
 {
-  "code": 200,
-  "data": {
-    "cursor": 0,
-    "next_cursor": 123,
-    "has_more": false,
-    "changes": {
-      "user_settings": [],
-      "todo_lists": [],
-      "todo_items": [],
-      "todo_occurrences": []
-    }
+  "cursor": 0,
+  "next_cursor": 123,
+  "has_more": false,
+  "changes": {
+    "notes": [],
+    "user_settings": [],
+    "todo_lists": [],
+    "todo_items": [],
+    "todo_occurrences": []
   }
 }
 ```
@@ -788,6 +780,7 @@ Query：
 
 资源类型（固定）：
 
+- `note`
 - `user_setting`
 - `todo_list`
 - `todo_item`
@@ -802,29 +795,30 @@ op（固定）：
 
 ```json
 {
-  "code": 200,
-  "data": {
-    "cursor": 123,
-    "applied": [{"resource":"todo_item","entity_id":"..."}],
-    "rejected": [
-      {
-        "resource": "todo_item",
-        "entity_id": "...",
-        "reason": "conflict",
-        "server": {"id":"...","client_updated_at_ms":1700000000001}
-      }
-    ]
-  }
+  "cursor": 123,
+  "applied": [{"resource":"todo_item","entity_id":"..."}],
+  "rejected": [
+    {
+      "resource": "todo_item",
+      "entity_id": "...",
+      "reason": "conflict",
+      "server": {"id":"...","client_updated_at_ms":1700000000001}
+    }
+  ]
 }
 ```
 
 注意：
 
-- v1 sync 里的 todo_item / todo_occurrence 同样会强制 `tzid = "Asia/Shanghai"`
+- `tzid` 规则同 3.3：未传或空字符串 -> `DEFAULT_TZID`
 - delete 在服务端不存在时是幂等成功（会出现在 applied 中）
 
 v1 sync `data` 字段约定（按服务端实际读取的 key）：
 
+- `resource=note, op=upsert`
+  - 创建（服务端不存在）必须：`data.body_md`
+  - 可选：`data.title`, `data.tags`
+  - 更新支持“部分字段更新”：未提供的字段保持不变
 - `resource=user_setting, op=upsert`
   - `data.value_json`：对象（缺省视为 `{}`）
 - `resource=todo_list, op=upsert`
@@ -834,7 +828,11 @@ v1 sync `data` 字段约定（按服务端实际读取的 key）：
   - `data.archived`：布尔（缺省视为 false）
 - `resource=todo_item, op=upsert`
   - 必须：`data.list_id`
-  - 建议总是带齐（服务端会覆盖）：
+  - 更新支持“按 key 的部分字段更新”：未提供的字段保持不变
+  - `tzid`：
+    - 创建时：未传或空字符串 -> `DEFAULT_TZID`
+    - 更新时：仅当 `data.tzid` 出现在 payload 中才会覆盖
+  - 常见字段：
     - `parent_id`, `title`, `note`, `status`, `priority`
     - `due_at_local`, `completed_at_local`, `sort_order`
     - `tags`（数组）
@@ -872,21 +870,15 @@ v1 sync `data` 字段约定（按服务端实际读取的 key）：
 - 登录接口有 rate limit（过于频繁会提示稍后再试）。
 - 若在反代/TLS 终止后面部署，想让 Cookie 正确带 `Secure` 标记，需要在后端启用：`TRUST_X_FORWARDED_PROTO=true`，并确保反代设置 `X-Forwarded-Proto: https`。
 
-## 6. v2 接口（/api/v2）
+## 6. Notes / Attachments / 分享（/api/v1）
 
-### 6.1 Health
+这些接口统一对外挂载在 `/api/v1`（原先的 `/api/v2` 已移除）。
 
-#### GET /api/v2/health
-
-```json
-{"ok":true}
-```
-
-### 6.2 Notes
+### 6.1 Notes
 
 鉴权：需要 Bearer Token。
 
-#### POST /api/v2/notes
+#### POST /api/v1/notes
 
 请求体：`NoteCreateRequest`（`src/flow_backend/v2/schemas/notes.py`）
 
@@ -896,7 +888,7 @@ v1 sync `data` 字段约定（按服务端实际读取的 key）：
 
 成功：201，返回 `Note`。
 
-#### GET /api/v2/notes
+#### GET /api/v1/notes
 
 Query：
 
@@ -911,22 +903,21 @@ Query：
 - SQLite：使用 FTS5（`notes_fts MATCH :q`），并且**索引层面排除 deleted notes**（即使 `include_deleted=true`，带 q 的搜索也只会返回未删除笔记）
 - 非 SQLite：退化为 title/body 的 ILIKE 子串匹配
 
-#### GET /api/v2/notes/{note_id}
+#### GET /api/v1/notes/{note_id}
 
 Query：
 
 - `include_deleted`（bool，默认 false）
 
-#### PATCH /api/v2/notes/{note_id}
+#### PATCH /api/v1/notes/{note_id}
 
 请求体：`NotePatchRequest`
 
 - 必须提供 `client_updated_at_ms`
 - `title/body_md/tags` 至少提供一个
+- 冲突：409（`ErrorResponse.details.server_snapshot` 包含服务端快照）
 
-冲突：409（`details.server_snapshot` 包含服务端快照）
-
-#### DELETE /api/v2/notes/{note_id}
+#### DELETE /api/v1/notes/{note_id}
 
 Query：
 
@@ -934,7 +925,7 @@ Query：
 
 成功：204（无 body）
 
-#### POST /api/v2/notes/{note_id}/restore
+#### POST /api/v1/notes/{note_id}/restore
 
 请求体：`NoteRestoreRequest`：
 
@@ -942,11 +933,11 @@ Query：
 {"client_updated_at_ms":1700000000000}
 ```
 
-### 6.3 Note Revisions
+### 6.2 Note Revisions
 
 鉴权：需要 Bearer Token。
 
-#### GET /api/v2/notes/{note_id}/revisions
+#### GET /api/v1/notes/{note_id}/revisions
 
 Query：
 
@@ -954,7 +945,7 @@ Query：
 
 返回：`NoteRevisionList`（每项包含 `kind`/`reason`/`snapshot`）
 
-#### POST /api/v2/notes/{note_id}/revisions/{revision_id}/restore
+#### POST /api/v1/notes/{note_id}/revisions/{revision_id}/restore
 
 请求体：`NoteRevisionRestoreRequest`：
 
@@ -962,11 +953,11 @@ Query：
 {"client_updated_at_ms":1700000000000}
 ```
 
-### 6.4 Attachments
+### 6.3 Attachments
 
 鉴权：需要 Bearer Token。
 
-#### POST /api/v2/notes/{note_id}/attachments
+#### POST /api/v1/notes/{note_id}/attachments
 
 请求体：`multipart/form-data`
 
@@ -991,18 +982,18 @@ Query：
 - `storage_key` 是服务端存储层使用的对象 key（内部字段，非 URL；客户端不应将其当作可访问链接）
 - 服务端存储可能是本地磁盘或 S3（对客户端透明；下载统一通过附件下载接口）
 
-#### GET /api/v2/attachments/{attachment_id}
+#### GET /api/v1/attachments/{attachment_id}
 
 返回文件 bytes（Content-Disposition 为 attachment；LocalStorage 会直接走文件响应）。
 
 常见错误：
 
-- 413（文件过大）：`{"error":"payload_too_large","message":"attachment too large"...}`
+- 413（文件过大）：`ErrorResponse(error="payload_too_large", message="attachment too large")`
   - 上限由 `ATTACHMENTS_MAX_SIZE_BYTES` 控制（默认 25MB）。
 
-### 6.5 Shares（鉴权）
+### 6.4 Shares（鉴权）
 
-#### POST /api/v2/notes/{note_id}/shares
+#### POST /api/v1/notes/{note_id}/shares
 
 请求体：`ShareCreateRequest`
 
@@ -1018,18 +1009,32 @@ Query：
 成功：201，返回：
 
 ```json
-{"share_id":"...","share_url":"http://.../api/v2/public/shares/<token>","share_token":"<token>"}
+{"share_id":"...","share_url":"http://<public_base_url>/share?token=<token>","share_token":"<token>"}
 ```
 
-#### DELETE /api/v2/shares/{share_id}
+- `share_url` 是前端页面路由（Next 导出的 `/share`）；页面会使用 `share_token` 调用匿名接口（见 6.5）
+
+#### DELETE /api/v1/shares/{share_id}
 
 成功：204。
 
-### 6.6 Public Shares（匿名）
+#### PATCH /api/v1/shares/{share_id}/comment-config
+
+用途：配置是否允许匿名评论、是否需要验证码。
+
+请求体：`ShareCommentConfigUpdateRequest`
+
+```json
+{"allow_anonymous_comments": true, "anonymous_comments_require_captcha": false}
+```
+
+成功：返回 `ShareCommentConfig`。
+
+### 6.5 Public Shares（匿名）
 
 这些接口无需 Bearer Token。
 
-#### GET /api/v2/public/shares/{share_token}
+#### GET /api/v1/public/shares/{share_token}
 
 返回：
 
@@ -1045,139 +1050,51 @@ Query：
 - share 被撤销时会返回 404（不泄露存在性）
 - share 过期返回 410
 
-#### GET /api/v2/public/shares/{share_token}/attachments/{attachment_id}
+#### GET /api/v1/public/shares/{share_token}/comments
+
+返回：`PublicShareCommentListResponse { comments: [...] }`
+
+#### POST /api/v1/public/shares/{share_token}/comments
+
+用途：匿名发表评论（受 share comment-config 控制）。
+
+请求体：`PublicShareCommentCreateRequest`
+
+```json
+{"body":"hello","author_name":"anonymous","attachment_ids":["..."],"captcha_token":"optional"}
+```
+
+说明：
+
+- 若该 share 不允许匿名评论：403 `ErrorResponse(message="anonymous comments disabled")`
+- 若需要验证码：可通过 header 传 `X-Captcha-Token`（JSON body 的 `captcha_token` 仅作为兼容字段）
+
+成功：201，返回 `PublicShareComment`。
+
+#### POST /api/v1/public/shares/{share_token}/comments/{comment_id}/report
+
+用途：举报评论（服务端会折叠/标记该评论）。
+
+成功：返回更新后的 `PublicShareComment`。
+
+#### POST /api/v1/public/shares/{share_token}/attachments
+
+用途：为匿名评论上传附件（受 share comment-config 控制；需要 multipart）。
+
+请求体：`multipart/form-data`
+
+- form field: `file`（必须）
+- 若需要验证码：必须通过 header `X-Captcha-Token` 传入（multipart 不读取 JSON body）
+
+成功：201，返回 `SharedAttachment { id, filename, content_type, size_bytes }`
+
+#### GET /api/v1/public/shares/{share_token}/attachments/{attachment_id}
 
 返回附件 bytes。
 
-### 6.7 TODO Items（v2，lite）
+### 6.6 Debug（仅非生产环境）
 
-鉴权：需要 Bearer Token。
-
-重要说明：v2 **不提供** todo list 的 CRUD（list 仍沿用 v1 的数据模型）。
-
-- `list_id` 需要来自 v1：`GET/POST/PATCH/DELETE /api/v1/todo/lists` 或 v1 sync 拉取的 `todo_lists`。
-- 如果客户端只接 v2，请务必先用 v1 创建/同步 list，否则 v2 创建/更新 todo item 会返回 `404 todo list not found`。
-
-#### GET /api/v2/todo/items
-
-Query：
-
-- `limit`（1..500，默认 200）
-- `offset`（>=0，默认 0）
-- `list_id`（可选）
-- `status`（可选）
-- `tag`（可选；SQLite 使用 json_each 过滤；Postgres JSONB contains best-effort）
-- `include_archived_lists`（bool，默认 false）
-- `include_deleted`（bool，默认 false）
-
-返回：`TodoItemList { items, total, limit, offset }`
-
-备注：v2 的 TodoItem 响应模型是 lite 版本（不返回 `status/priority/due_at_local/...` 等 v1 字段），
-但 list 接口仍保留了 `status` 过滤参数（服务端会按 DB 字段过滤）。
-
-#### POST /api/v2/todo/items
-
-请求体：`TodoItemCreateRequest`
-
-```json
-{"id":null,"list_id":"...","title":"Buy milk","tags":["errand"],"tzid":"Asia/Shanghai","client_updated_at_ms":1700000000000}
-```
-
-成功：201，返回 `TodoItem`。
-
-#### PATCH /api/v2/todo/items/{item_id}
-
-请求体：`TodoItemPatchRequest`
-
-- 至少提供一个字段（list_id/title/tags/tzid）
-- 冲突：409（`details.server_snapshot`）
-
-#### DELETE /api/v2/todo/items/{item_id}
-
-Query：
-
-- `client_updated_at_ms`（>=0）
-
-成功：204。
-
-#### POST /api/v2/todo/items/{item_id}/restore
-
-请求体：`TodoItemRestoreRequest`
-
-```json
-{"client_updated_at_ms":1700000000000}
-```
-
-### 6.8 Sync（v2）
-
-鉴权：需要 Bearer Token。
-
-#### GET /api/v2/sync/pull
-
-Query：
-
-- `cursor`（>=0，默认 0）
-- `limit`（1..500，默认 200）
-
-返回：`SyncPullResponse { cursor, next_cursor, has_more, changes: { notes, todo_items } }`
-
-#### POST /api/v2/sync/push
-
-请求体：`SyncPushRequest`（`src/flow_backend/v2/schemas/sync.py`）
-
-```json
-{
-  "mutations": [
-    {
-      "resource": "note",
-      "entity_id": "...",
-      "op": "upsert",
-      "client_updated_at_ms": 1700000000000,
-      "data": {"body_md":"...","title":"...","tags":["a","b"]}
-    }
-  ]
-}
-```
-
-支持的 resource/op：
-
-- resource：`note` | `todo_item`
-- op：`upsert` | `delete`
-
-重要约定（按当前实现）：
-
-- `client_updated_at_ms` 必须 > 0，否则 rejected: `invalid client_updated_at_ms`
-- `note` 创建必须带 `body_md`
-- `todo_item` 创建必须带 `list_id`
-- 若服务端实体已被软删除，sync upsert 会 conflict（需要显式 restore）
-- note sync upsert 时，服务端会调用 `set_note_tags(...)`，因此建议客户端每次 upsert 都传完整 tags 列表
-
-v2 sync `data` 字段约定（按服务端实际行为）：
-
-- `resource=note, op=upsert`
-  - 创建必须：`data.body_md`
-  - 更新可选：`data.title`, `data.body_md`
-  - tags：建议总是传 `data.tags`（数组）。在当前实现中，如果 data 未包含 tags，服务端会将 tags 视为 `[]` 并覆盖。
-- `resource=todo_item, op=upsert`
-  - 创建必须：`data.list_id`
-  - 可选：`data.title`, `data.tags`（数组）, `data.tzid`
-  - `tzid` 为空/缺省时，服务端会使用 `DEFAULT_TZID`
-
-删除（op=delete）时，服务端不会读取 data。
-
-返回：
-
-```json
-{
-  "cursor": 123,
-  "applied": [{"resource":"note","entity_id":"..."}],
-  "rejected": [{"resource":"note","entity_id":"...","reason":"conflict","server":{...}}]
-}
-```
-
-### 6.9 Debug（仅非生产环境）
-
-#### POST /api/v2/debug/tx-fail
+#### POST /api/v1/debug/tx-fail
 
 请求体（JSON）：
 
@@ -1202,7 +1119,7 @@ v2 sync `data` 字段约定（按服务端实际行为）：
 - 建议每个请求都加 `X-Request-Id`（客户端生成 UUID），便于排障
 - 建议每个请求都加设备头：`X-Flow-Device-Id` + `X-Flow-Device-Name`
 
-### 7.2 v1 Sync（适用于 Settings + 完整 TODO）
+### 7.2 v1 Sync（适用于 Notes + Settings + TODO）
 
 推荐的增量同步循环：
 
@@ -1220,39 +1137,28 @@ v2 sync `data` 字段约定（按服务端实际行为）：
 
 4) 继续拉取：用上次的 `next_cursor` 作为新 cursor。
 
-### 7.3 v2 Sync（适用于 Notes + v2 lite TODO）
+### 7.3 分享与附件
 
-v2 sync 的差异点：
-
-- 资源只有 `note` 与 `todo_item`
-- tombstone 恢复必须走 restore 接口（sync upsert 会 conflict）
-- note sync upsert 建议总是带完整 tags
-
-### 7.4 分享与附件
-
-- 创建分享：`POST /api/v2/notes/{note_id}/shares` -> 保存 `share_url`（可直接对外）
-- 匿名读取：客户端打开 `share_url` 调 `GET /api/v2/public/shares/{share_token}` 获取 note + attachments 列表
-- 匿名下载附件：`GET /api/v2/public/shares/{share_token}/attachments/{attachment_id}`
-- 私有下载附件：`GET /api/v2/attachments/{attachment_id}`（需要 Bearer Token）
+- 创建分享：`POST /api/v1/notes/{note_id}/shares` -> 保存 `share_url`（可直接对外）
+- 匿名读取：客户端打开 `share_url` 调 `GET /api/v1/public/shares/{share_token}` 获取 note + attachments 列表
+- 匿名下载附件：`GET /api/v1/public/shares/{share_token}/attachments/{attachment_id}`
+- 私有下载附件：`GET /api/v1/attachments/{attachment_id}`（需要 Bearer Token）
 
 ## 8. 导入到 Apifox / Postman / Swagger
 
 - 推荐直接导入 OpenAPI JSON：
-  - v1：`GET /openapi.json`
-  - v2：`GET /api/v2/openapi.json`
+  - `GET /openapi.json`
 
-仓库内也提供“离线快照”（已包含 v2 的 `/api/v2` servers 配置，适合直接导入）：
+仓库内也提供“离线快照”（适合直接导入）：
 
 - `apidocs/openapi-v1.json`
-- `apidocs/openapi-v2.json`
 
 内部/调试接口说明：
 
-- `/admin/*` 与 v2 debug 接口是内部用途，默认不包含在 OpenAPI schema 中
+- `/admin/*` 与 `/api/v1/debug/*` 是内部用途，默认不包含在 OpenAPI schema 中
 
 如果你需要把文档交付给外部团队（离线），可让运维在目标环境执行：
 
 ```bash
 curl -sS http://<host>:31031/openapi.json > openapi-v1.json
-curl -sS http://<host>:31031/api/v2/openapi.json > openapi-v2.json
 ```

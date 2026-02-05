@@ -24,7 +24,7 @@ async function registerViaBrowserFetch(page: import("@playwright/test").Page, us
       body: JSON.stringify({ username, password }),
     });
 
-    type RegisterJson = null | { code?: unknown; [key: string]: unknown };
+    type RegisterJson = null | { token?: unknown; [key: string]: unknown };
     let json: RegisterJson = null;
     try {
       json = (await resp.json()) as RegisterJson;
@@ -35,7 +35,10 @@ async function registerViaBrowserFetch(page: import("@playwright/test").Page, us
   }, { username, password });
 
   expect(registerResult.status, `register status=${registerResult.status}`).toBe(200);
-  expect(registerResult.json?.code, `register response=${JSON.stringify(registerResult.json)}`).toBe(200);
+  expect(
+    typeof registerResult.json?.token,
+    `register response=${JSON.stringify(registerResult.json)}`,
+  ).toBe("string");
 }
 
 async function loginViaUi(page: import("@playwright/test").Page, username: string, password: string) {
@@ -93,7 +96,7 @@ async function createShareViaUi(page: import("@playwright/test").Page, noteId: s
   const shareCreateRespPromise = page.waitForResponse(
     (resp) =>
       resp.request().method() === "POST" &&
-      resp.url().includes(`/api/v2/notes/${noteId}/shares`) &&
+      resp.url().includes(`/api/v1/notes/${noteId}/shares`) &&
       (resp.status() === 201 || resp.status() === 200),
   );
 
@@ -124,14 +127,12 @@ async function enableAnonymousCommentsNoCaptcha(page: import("@playwright/test")
     const csrfToken: string | null =
       typeof meJson === "object" &&
       meJson !== null &&
-      "data" in meJson &&
-      typeof (meJson as { data?: unknown }).data === "object" &&
-      (meJson as { data?: { csrf_token?: unknown } }).data !== null &&
-      typeof (meJson as { data?: { csrf_token?: unknown } }).data?.csrf_token === "string"
-        ? (meJson as { data: { csrf_token: string } }).data.csrf_token
+      "csrf_token" in meJson &&
+      typeof (meJson as { csrf_token?: unknown }).csrf_token === "string"
+        ? (meJson as { csrf_token: string }).csrf_token
         : null;
 
-    const resp = await fetch(`/api/v2/shares/${shareId}/comment-config`, {
+    const resp = await fetch(`/api/v1/shares/${shareId}/comment-config`, {
       method: "PATCH",
       credentials: "include",
       headers: {
@@ -173,7 +174,7 @@ test.describe("security regression", () => {
     await expect(commentBox).toBeVisible();
 
     const postCommentRespPromise = anonPage.waitForResponse(
-      (resp) => resp.request().method() === "POST" && /\/api\/v2\/public\/shares\/.+\/comments$/.test(resp.url()),
+      (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments$/.test(resp.url()),
     );
     await commentBox.fill(xss);
     await anonPage.getByRole("button", { name: /^Post comment$/ }).click();
@@ -242,7 +243,7 @@ test.describe("security regression", () => {
     const noteId = await createNote(page, `# CSRF regression\nuser: ${username}\n${Date.now()}`);
 
     const result = await page.evaluate(async ({ noteId }) => {
-      const resp = await fetch(`/api/v2/notes/${encodeURIComponent(noteId)}/shares`, {
+      const resp = await fetch(`/api/v1/notes/${encodeURIComponent(noteId)}/shares`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

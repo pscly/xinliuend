@@ -115,12 +115,9 @@ async def register(
     await _persist_device_tracking_best_effort(user_id=int(user_id), request=request)
 
     return {
-        "code": 200,
-        "data": {
-            "token": user.memos_token,
-            "server_url": settings.memos_base_url,
-            "csrf_token": csrf_token,
-        },
+        "token": user.memos_token,
+        "server_url": settings.memos_base_url,
+        "csrf_token": csrf_token,
     }
 
 
@@ -169,12 +166,9 @@ async def login(
     await _persist_device_tracking_best_effort(user_id=int(user_id), request=request)
 
     return {
-        "code": 200,
-        "data": {
-            "token": user.memos_token,
-            "server_url": settings.memos_base_url,
-            "csrf_token": csrf_token,
-        },
+        "token": user.memos_token,
+        "server_url": settings.memos_base_url,
+        "csrf_token": csrf_token,
     }
 
 
@@ -194,6 +188,6 @@ async def logout(request: Request):
         if not csrf_header or csrf_header != session_payload.get("csrf_token"):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="csrf failed")
 
-    resp = JSONResponse({"code": 200, "data": {"ok": True}})
+    resp = JSONResponse({"ok": True})
     flow_backend.user_session.clear_user_session_cookie(resp)
     return resp

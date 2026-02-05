@@ -113,7 +113,7 @@ export default function HomePage() {
       const itemsResp = await getTodoItems({ include_deleted: false, limit: 200 });
       if (todayRunIdRef.current !== runId) return;
 
-      const recurring = itemsResp.data.items.filter(isRecurringReadyItem);
+      const recurring = itemsResp.items.filter(isRecurringReadyItem);
 
       const seeds: Array<{ item: RecurringReadyItem; recurrenceIds: LocalDateTimeString[] }> = [];
       for (const it of recurring) {
@@ -140,7 +140,7 @@ export default function HomePage() {
           overrideFailures += 1;
           continue;
         }
-        for (const occ of r.value.data.items) {
+        for (const occ of r.value.items) {
           overrideByKey.set(`${occ.item_id}::${occ.recurrence_id_local}`, occ);
         }
       }

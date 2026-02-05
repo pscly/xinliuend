@@ -14,7 +14,7 @@ def _write_json(path: Path, data: object) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Export FastAPI OpenAPI specs to apidocs/ as JSON snapshots."
+        description="Export FastAPI OpenAPI spec to apidocs/ as a JSON snapshot."
     )
     parser.add_argument(
         "--out-dir",
@@ -27,15 +27,9 @@ def main() -> int:
 
     # Import apps lazily so argparse --help stays fast.
     from flow_backend.main import app as main_app
-    from flow_backend.v2.app import v2_app
 
     openapi_v1 = main_app.openapi()
     _write_json(out_dir / "openapi-v1.json", openapi_v1)
-
-    openapi_v2 = v2_app.openapi()
-    # v2 is mounted at /api/v2. Pin a server entry so clients import correctly.
-    openapi_v2["servers"] = [{"url": "/api/v2"}]
-    _write_json(out_dir / "openapi-v2.json", openapi_v2)
 
     return 0
 

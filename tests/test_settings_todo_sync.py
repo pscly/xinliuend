@@ -45,7 +45,7 @@ async def test_settings_upsert_list_delete(tmp_path: Path):
 
         r = await client.get("/api/v1/settings", headers=headers)
         assert r.status_code == 200
-        items = r.json()["data"]["items"]
+        items = r.json()["items"]
         assert any(x["key"] == "theme" and x["value_json"]["dark"] is True for x in items)
 
         r = await client.request(
@@ -58,7 +58,7 @@ async def test_settings_upsert_list_delete(tmp_path: Path):
 
         r = await client.get("/api/v1/settings", headers=headers)
         assert r.status_code == 200
-        items = r.json()["data"]["items"]
+        items = r.json()["items"]
         assert all(x["key"] != "theme" for x in items)
 
 
@@ -94,7 +94,7 @@ async def test_todo_rrule_occurrence_and_sync_pull(tmp_path: Path):
             headers=headers,
         )
         assert r.status_code == 200
-        list_id = r.json()["data"]["id"]
+        list_id = r.json()["id"]
 
         # 创建 recurring item
         r = await client.post(
@@ -119,7 +119,7 @@ async def test_todo_rrule_occurrence_and_sync_pull(tmp_path: Path):
             headers=headers,
         )
         assert r.status_code == 200
-        item_id = r.json()["data"]["id"]
+        item_id = r.json()["id"]
 
         # 单次完成（occurrence override）
         r = await client.post(
@@ -138,7 +138,7 @@ async def test_todo_rrule_occurrence_and_sync_pull(tmp_path: Path):
         # sync pull 从 cursor=0 开始，应该能拿到变更
         r = await client.get("/api/v1/sync/pull?cursor=0&limit=50", headers=headers)
         assert r.status_code == 200
-        data = r.json()["data"]
+        data = r.json()
         assert data["next_cursor"] >= 1
         changes = data["changes"]
         assert any(x["id"] == list_id for x in changes["todo_lists"])
@@ -180,7 +180,7 @@ async def test_todo_items_tag_filter(tmp_path: Path):
             headers=headers,
         )
         assert r.status_code == 200
-        list_id = r.json()["data"]["id"]
+        list_id = r.json()["id"]
 
         r = await client.post(
             "/api/v1/todo/items",
@@ -204,7 +204,7 @@ async def test_todo_items_tag_filter(tmp_path: Path):
             headers=headers,
         )
         assert r.status_code == 200
-        health_id = r.json()["data"]["id"]
+        health_id = r.json()["id"]
 
         r = await client.post(
             "/api/v1/todo/items",
@@ -228,11 +228,11 @@ async def test_todo_items_tag_filter(tmp_path: Path):
             headers=headers,
         )
         assert r.status_code == 200
-        work_id = r.json()["data"]["id"]
+        work_id = r.json()["id"]
 
         r = await client.get("/api/v1/todo/items?tag=health", headers=headers)
         assert r.status_code == 200
-        items = r.json()["data"]["items"]
+        items = r.json()["items"]
         ids = {x["id"] for x in items}
         assert health_id in ids
         assert work_id not in ids
@@ -240,7 +240,7 @@ async def test_todo_items_tag_filter(tmp_path: Path):
         # tag filter should ignore surrounding whitespace.
         r = await client.get("/api/v1/todo/items?tag=  work ", headers=headers)
         assert r.status_code == 200
-        items = r.json()["data"]["items"]
+        items = r.json()["items"]
         ids = {x["id"] for x in items}
         assert work_id in ids
         assert health_id not in ids

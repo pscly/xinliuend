@@ -28,7 +28,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
       body: JSON.stringify({ username, password }),
     });
 
-    type RegisterJson = null | { code?: unknown; [key: string]: unknown };
+    type RegisterJson = null | { token?: unknown; [key: string]: unknown };
     let json: RegisterJson = null;
     try {
       json = (await resp.json()) as RegisterJson;
@@ -39,7 +39,10 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   }, { username, password });
 
   expect(registerResult.status, `register status=${registerResult.status}`).toBe(200);
-  expect(registerResult.json?.code, `register response=${JSON.stringify(registerResult.json)}`).toBe(200);
+  expect(
+    typeof registerResult.json?.token,
+    `register response=${JSON.stringify(registerResult.json)}`,
+  ).toBe("string");
   await page.context().clearCookies();
 
   // 2) Login via UI at /login (wait for /api/v1/auth/login and /api/v1/me).
@@ -88,7 +91,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   const shareCreateRespPromise = page.waitForResponse(
     (resp) =>
       resp.request().method() === "POST" &&
-      resp.url().includes(`/api/v2/notes/${noteId}/shares`) &&
+      resp.url().includes(`/api/v1/notes/${noteId}/shares`) &&
       (resp.status() === 201 || resp.status() === 200),
   );
 
@@ -115,14 +118,12 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
     const csrfToken: string | null =
       typeof meJson === "object" &&
       meJson !== null &&
-      "data" in meJson &&
-      typeof (meJson as { data?: unknown }).data === "object" &&
-      (meJson as { data?: { csrf_token?: unknown } }).data !== null &&
-      typeof (meJson as { data?: { csrf_token?: unknown } }).data?.csrf_token === "string"
-        ? (meJson as { data: { csrf_token: string } }).data.csrf_token
+      "csrf_token" in meJson &&
+      typeof (meJson as { csrf_token?: unknown }).csrf_token === "string"
+        ? (meJson as { csrf_token: string }).csrf_token
         : null;
 
-    const resp = await fetch(`/api/v2/shares/${shareId}/comment-config`, {
+    const resp = await fetch(`/api/v1/shares/${shareId}/comment-config`, {
       method: "PATCH",
       credentials: "include",
       headers: {
@@ -163,7 +164,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
 
   const comment1 = `hello from playwright ${Date.now()}`;
   const postCommentRespPromise1 = anonPage.waitForResponse(
-    (resp) => resp.request().method() === "POST" && /\/api\/v2\/public\/shares\/.+\/comments$/.test(resp.url()),
+    (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments$/.test(resp.url()),
   );
   await commentBox.fill(comment1);
   await anonPage.getByRole("button", { name: /^Post comment$/ }).click();
@@ -180,7 +181,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   });
 
   const uploadRespPromise = anonPage.waitForResponse(
-    (resp) => resp.request().method() === "POST" && /\/api\/v2\/public\/shares\/.+\/attachments$/.test(resp.url()),
+    (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/attachments$/.test(resp.url()),
   );
   await anonPage.getByRole("button", { name: /^Upload$/ }).click();
   const uploadResp = await uploadRespPromise;
@@ -192,7 +193,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
 
   const comment2 = `attachment comment ${Date.now()}`;
   const postCommentRespPromise2 = anonPage.waitForResponse(
-    (resp) => resp.request().method() === "POST" && /\/api\/v2\/public\/shares\/.+\/comments$/.test(resp.url()),
+    (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments$/.test(resp.url()),
   );
   await commentBox.fill(comment2);
   await anonPage.getByRole("button", { name: /^Post comment$/ }).click();
@@ -203,7 +204,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   // 9) Download attachment should return 200.
   await expect(anonPage.getByRole("link", { name: /^Download$/ }).first()).toBeVisible();
   const downloadStatus = await anonPage.evaluate(async ({ token }) => {
-    const base = `/api/v2/public/shares/${encodeURIComponent(token)}`;
+    const base = `/api/v1/public/shares/${encodeURIComponent(token)}`;
     const shareResp = await fetch(base, { method: "GET" });
     const shareJson: unknown = await shareResp.json().catch(() => null);
     const attachmentId: string | null =
@@ -235,7 +236,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   await expect(comment1Card).toBeVisible();
 
   const reportRespPromise = anonPage.waitForResponse(
-    (resp) => resp.request().method() === "POST" && /\/api\/v2\/public\/shares\/.+\/comments\/.+\/report$/.test(resp.url()),
+    (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments\/.+\/report$/.test(resp.url()),
   );
   await comment1Card.getByRole("button", { name: /^Report$/ }).click();
   const reportResp = await reportRespPromise;

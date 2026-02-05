@@ -135,14 +135,14 @@ export default function CalendarPage() {
 
     try {
       const itemsResp = await getTodoItems();
-      const recurring = getRecurringItems(itemsResp.data.items);
+      const recurring = getRecurringItems(itemsResp.items);
 
       const occurrenceRespList = await Promise.all(
         recurring.map((it) => getTodoOccurrences({ item_id: it.id, from: range.from, to: range.to }))
       );
       const overrideByKey = new Map<string, TodoOccurrence>();
       for (const resp of occurrenceRespList) {
-        for (const occ of resp.data.items) {
+        for (const occ of resp.items) {
           overrideByKey.set(`${occ.item_id}::${occ.recurrence_id_local}`, occ);
         }
       }
@@ -218,7 +218,7 @@ export default function CalendarPage() {
             completed_at_local: nowLocal,
             client_updated_at_ms: nowUtcMs,
           });
-          setBuckets((prev) => updateRowInBuckets(prev, row.key, { done: true, overrideId: resp.data.id }));
+          setBuckets((prev) => updateRowInBuckets(prev, row.key, { done: true, overrideId: resp.id }));
         } else {
           if (!row.overrideId) return;
           await deleteTodoOccurrence(row.overrideId, Date.now());

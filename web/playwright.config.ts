@@ -1,5 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
 
+function ensureLocalhostBypassesProxy() {
+  const localhostHosts = ["127.0.0.1", "localhost", "::1"];
+  const currentValue = (process.env.NO_PROXY ?? process.env.no_proxy ?? "").trim();
+  const currentParts = currentValue
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const merged = Array.from(new Set([...currentParts, ...localhostHosts])).join(",");
+  process.env.NO_PROXY = merged;
+  process.env.no_proxy = merged;
+}
+
+// Playwright 的 webServer 可用性探测使用 Node 请求，默认会受 http_proxy/https_proxy 影响。
+// 在当前环境里如果没有配置 NO_PROXY，会导致 127.0.0.1 被代理“假响应”，从而误判服务可用。
+ensureLocalhostBypassesProxy();
+
 const backendOrigin = "http://127.0.0.1:31031";
 
 export default defineConfig({
@@ -27,6 +43,9 @@ export default defineConfig({
       ...process.env,
       DEV_BYPASS_MEMOS: "true",
       DATABASE_URL: "sqlite:///./playwright-e2e.db",
+      // 在部分受限/沙箱环境中，uv 默认缓存目录（~/.cache/uv）可能不可写。
+      // 这里显式把缓存写到 /tmp，避免 E2E 在启动阶段因权限失败。
+      UV_CACHE_DIR: "/tmp/uv-cache",
       // E2E determinism: parallel auth flows can trip 429 + contend on SQLite.
       // Disabling these is safe here because it only affects the Playwright-launched server.
       AUTH_REGISTER_RATE_LIMIT_PER_IP: "0",

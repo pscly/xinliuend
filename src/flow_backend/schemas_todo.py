@@ -49,7 +49,7 @@ class TodoItemUpsertRequest(BaseModel):
     is_recurring: bool = False
     rrule: Optional[str] = Field(default=None, max_length=512)
     dtstart_local: Optional[str] = Field(default=None, max_length=19)
-    tzid: str = "Asia/Shanghai"
+    tzid: Optional[str] = Field(default=None, max_length=64)
     reminders: list[dict[str, Any]] = Field(default_factory=list)
 
     client_updated_at_ms: int = 0
@@ -124,10 +124,14 @@ class TodoItemPatchRequest(BaseModel):
         return validate_local_dt(v, "dtstart_local")
 
 
+class TodoItemRestoreRequest(BaseModel):
+    client_updated_at_ms: int = 0
+
+
 class TodoItemOccurrenceUpsertRequest(BaseModel):
     id: Optional[str] = None
     item_id: str = Field(min_length=1, max_length=36)
-    tzid: str = "Asia/Shanghai"
+    tzid: Optional[str] = Field(default=None, max_length=64)
     recurrence_id_local: str = Field(min_length=19, max_length=19)
 
     status_override: Optional[str] = Field(default=None, max_length=20)
