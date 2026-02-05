@@ -38,7 +38,12 @@ OpenAPI / Swagger UI：
 
 ### 2.1 Bearer Token
 
-除注册/登录及公开分享接口外，均需要 Bearer Token：
+除注册/登录及公开分享接口外，绝大多数接口都需要“用户登录态”：
+
+- 移动端/脚本：推荐使用 Bearer Token
+- Web SPA：可使用 Cookie Session + CSRF（见 2.2）
+
+Bearer Token 方式：
 
 ```
 Authorization: Bearer <memos_token>
@@ -119,7 +124,7 @@ v1 TODO 相关字段使用“本地时间字符串”格式：
 
 ### 3.3 tzid 约定
 
-- TODO：支持传 `tzid`；若未传或为空字符串，则使用 `DEFAULT_TZID`（默认 `Asia/Shanghai`）
+- 支持传 `tzid`；若未传或为空字符串，则使用 `DEFAULT_TZID`（默认 `Asia/Shanghai`）
 
 ### 3.4 冲突的表现形式
 
@@ -553,7 +558,7 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 
 ### 5.2 Settings
 
-鉴权：需要 Bearer Token。
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
 #### GET /api/v1/settings
 
@@ -594,7 +599,7 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 
 ### 5.3 TODO Lists
 
-鉴权：需要 Bearer Token。
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
 #### GET /api/v1/todo/lists
 
@@ -643,7 +648,7 @@ Query：
 
 ### 5.4 TODO Items
 
-鉴权：需要 Bearer Token。
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
 #### GET /api/v1/todo/items
 
@@ -712,7 +717,7 @@ Query：`client_updated_at_ms`（默认 0）
 
 ### 5.5 RRULE Occurrences
 
-鉴权：需要 Bearer Token。
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
 #### GET /api/v1/todo/occurrences
 
@@ -740,7 +745,7 @@ Query：`client_updated_at_ms`（默认 0）
 
 ### 5.6 Sync（v1）
 
-鉴权：需要 Bearer Token。
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
 #### GET /api/v1/sync/pull
 
@@ -884,7 +889,7 @@ v1 sync `data` 字段约定（按服务端实际读取的 key）：
 
 ### 6.1 Notes
 
-鉴权：需要 Bearer Token。
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
 #### POST /api/v1/notes
 
@@ -943,7 +948,7 @@ Query：
 
 ### 6.2 Note Revisions
 
-鉴权：需要 Bearer Token。
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
 #### GET /api/v1/notes/{note_id}/revisions
 
@@ -963,7 +968,7 @@ Query：
 
 ### 6.3 Attachments
 
-鉴权：需要 Bearer Token。
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
 #### POST /api/v1/notes/{note_id}/attachments
 
