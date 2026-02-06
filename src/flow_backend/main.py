@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from starlette.background import BackgroundTask, BackgroundTasks
-from starlette.responses import Response
+from starlette.responses import FileResponse, Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -108,7 +108,14 @@ async def _lifespan(_app: FastAPI):
     dispose_engine_cache()
 
 
-app = FastAPI(title=settings.app_name, version=__version__, lifespan=_lifespan)
+app = FastAPI(
+    title=settings.app_name,
+    version=__version__,
+    lifespan=_lifespan,
+    # Swagger UI 默认 favicon 不一定跟站点一致；显式指定更统一。
+    swagger_ui_parameters={"favicon_url": "/favicon.ico"},
+    redoc_favicon_url="/favicon.ico",
+)
 
 app.add_middleware(RequestIdMiddleware)
 register_error_handlers(app)
@@ -249,6 +256,25 @@ async def _v2_removed_fallback(path: str) -> None:  # noqa: ARG001
     raise HTTPException(status_code=404, detail="Not Found")
 
 
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+_FAVICON_PATH = _STATIC_DIR / "favicon.ico"
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> FileResponse:
+    # 即使未导出 web/out，也要保证 favicon 可用（/admin /docs 标签页会用到）。
+    if not _FAVICON_PATH.is_file():
+        raise HTTPException(status_code=404, detail="Not Found")
+    return FileResponse(path=str(_FAVICON_PATH), media_type="image/x-icon")
+
+
+def _try_mount_app_assets(_app: FastAPI) -> None:
+    # 为 /admin 等页面提供 icon 资源（避免依赖 web/out 是否存在）。
+    if not _STATIC_DIR.is_dir():
+        return
+    _app.mount("/_assets", StaticFiles(directory=str(_STATIC_DIR), check_dir=False), name="assets")
+
+
 def _try_mount_exported_web_ui(_app: FastAPI) -> None:
     """Best-effort mount for `web/out` (Next static export).
 
@@ -278,6 +304,7 @@ def _try_mount_exported_web_ui(_app: FastAPI) -> None:
     _app.mount("/", StaticFiles(directory=str(out_dir), html=True, check_dir=False), name="web")
 
 
+_try_mount_app_assets(app)
 _try_mount_exported_web_ui(app)
 
 
