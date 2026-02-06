@@ -70,7 +70,14 @@ export default function LoginPage() {
       <div className={styles.wrap}>
         <header className={styles.header}>
           <div className={styles.brand}>
-            <div className={styles.brandMark} aria-hidden="true" />
+            <img
+              className={styles.brandMark}
+              src="/icon-192.png"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              decoding="async"
+            />
             <div className={styles.brandName}>{t("app.name")}</div>
           </div>
           <div className={styles.controls}>
