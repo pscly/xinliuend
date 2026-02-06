@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api/client";
+import { apiFetchJson } from "@/lib/api/client";
 
 export type MemosMigrationSummary = {
   remote_total: number;
@@ -16,28 +16,8 @@ export type MemosMigrationResponse = {
   warnings: string[];
 };
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
 async function requestMigration(path: string): Promise<MemosMigrationResponse> {
-  const res = await apiFetch(path, { method: "POST" });
-  if (!res.ok) {
-    const clone = res.clone();
-    try {
-      const json = (await res.json()) as unknown;
-      if (isRecord(json) && typeof json.message === "string" && json.message) {
-        throw new Error(json.message);
-      }
-    } catch {
-      // Ignore JSON parse errors; fall back to text.
-    }
-
-    const text = await clone.text().catch(() => "");
-    if (text) throw new Error(text);
-    throw new Error(`请求失败（HTTP ${res.status}）`);
-  }
-  return (await res.json()) as MemosMigrationResponse;
+  return await apiFetchJson<MemosMigrationResponse>(path, { method: "POST" });
 }
 
 export async function previewMemosMigration(): Promise<MemosMigrationResponse> {

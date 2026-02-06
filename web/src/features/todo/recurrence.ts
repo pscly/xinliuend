@@ -2,9 +2,9 @@ import { RRule, type Options as RRuleOptions } from "rrule";
 
 import type { LocalDateTimeString } from "./types";
 
-// Backend contract: tzid is fixed to Asia/Shanghai (UTC+8, no DST).
-// We treat all LocalDateTimeString values as "Asia/Shanghai local" and explicitly
-// convert to/from UTC milliseconds so results are deterministic across environments.
+// 后端约定：tzid 固定为 Asia/Shanghai（UTC+8，无夏令时）。
+// 因此这里把所有 LocalDateTimeString 视为“上海本地时间”，并显式在 UTC 毫秒之间互转，
+// 以保证在不同运行环境下计算结果一致、可复现。
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 const LOCAL_DATE_TIME_RE =
@@ -30,7 +30,7 @@ function parseShanghaiLocalToUtcMs(local: LocalDateTimeString): number {
   const m = LOCAL_DATE_TIME_RE.exec(local);
   if (!m) {
     throw new Error(
-      `Invalid LocalDateTimeString: expected YYYY-MM-DDTHH:mm:ss (len=19), got: ${local}`,
+      `无效的 LocalDateTimeString：期望格式 YYYY-MM-DDTHH:mm:ss（长度=19），实际：${local}`,
     );
   }
 
@@ -41,14 +41,14 @@ function parseShanghaiLocalToUtcMs(local: LocalDateTimeString): number {
   const minute = Number(m[5]);
   const second = Number(m[6]);
 
-  // Interpret the components as Asia/Shanghai local time, then convert to UTC.
+  // 将解析出的组件按“上海本地时间”解释，然后转换为 UTC 毫秒时间戳。
   const utcMs = Date.UTC(yyyy, month - 1, day, hour, minute, second) - SHANGHAI_OFFSET_MS;
 
-  // Calendar validation (e.g. reject 2026-02-31) by round-tripping.
-  // This also guarantees the formatted string keeps length=19.
+  // 日历校验：通过 round-trip 来拒绝非法日期（例如 2026-02-31）。
+  // 同时也保证格式化后的字符串仍保持 length=19 的契约。
   const roundTrip = formatUtcMsToShanghaiLocal(utcMs);
   if (roundTrip !== local) {
-    throw new Error(`Invalid LocalDateTimeString (non-existent datetime): ${local}`);
+    throw new Error(`无效的 LocalDateTimeString（不存在的日期时间）：${local}`);
   }
 
   return utcMs;
@@ -65,9 +65,9 @@ export type ExpandLocalRange = {
 };
 
 /**
- * Expands an RRULE into local recurrence_id strings within an inclusive local range.
+ * 将一个 RRULE 在“闭区间本地时间范围”内展开为 recurrence_id_local 列表。
  *
- * Error handling choice: invalid inputs throw a clear Error (rather than returning []).
+ * 错误处理策略：输入非法时抛出明确的 Error（而不是静默返回 []）。
  */
 export function expandRruleToLocalIds(
   { rrule, dtstart_local }: ExpandRruleSeed,
@@ -84,7 +84,7 @@ export function expandRruleToLocalIds(
     parsed = RRule.parseString(rrule);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Invalid RRULE string: ${msg}`);
+    throw new Error(`无效的 RRULE 字符串：${msg}`);
   }
 
   const rule = new RRule({

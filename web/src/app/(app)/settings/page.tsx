@@ -1,22 +1,45 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { MemosMigrationResponse, MemosMigrationSummary } from "@/features/memos/memosMigrationApi";
 import { applyMemosMigration, previewMemosMigration } from "@/features/memos/memosMigrationApi";
 import { Page } from "@/features/ui/Page";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useI18n } from "@/lib/i18n/useI18n";
+import { useOfflineEnabled } from "@/lib/offline/useOfflineEnabled";
+import type { SyncStatus } from "@/lib/offline/syncEngine";
+import { getSyncStatus, subscribeSyncStatus, syncNow } from "@/lib/offline/syncEngine";
+import { resetOfflineDb } from "@/lib/offline/db";
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const { t } = useI18n();
+  const { offlineEnabled, updateOfflineEnabled } = useOfflineEnabled();
 
   const [preview, setPreview] = useState<MemosMigrationResponse | null>(null);
   const [applied, setApplied] = useState<MemosMigrationResponse | null>(null);
   const [busy, setBusy] = useState<"preview" | "apply" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => getSyncStatus());
+  const [clearingOffline, setClearingOffline] = useState(false);
+  const [manualSyncing, setManualSyncing] = useState(false);
+
+  useEffect(() => {
+    return subscribeSyncStatus((next) => {
+      setSyncStatus(next);
+    });
+  }, []);
+
+  const lastSyncText = useMemo(() => {
+    if (!syncStatus.last_sync_at_ms) return t("settings.offline.status.never");
+    try {
+      return new Date(syncStatus.last_sync_at_ms).toLocaleString();
+    } catch {
+      return String(syncStatus.last_sync_at_ms);
+    }
+  }, [syncStatus.last_sync_at_ms, t]);
 
   function formatSummaryLines(summary: MemosMigrationSummary) {
     return [
@@ -208,6 +231,10 @@ export default function SettingsPage() {
                   {t("settings.memosMigration.memosBaseUrlPrefix")}
                   {preview.memos_base_url}
                 </div>
+                <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                  {t("settings.memosMigration.warningsTitle")}：{" "}
+                  {preview.warnings?.length ? preview.warnings.join("；") : t("settings.memosMigration.warningsEmpty")}
+                </div>
               </div>
             ) : null}
 
@@ -229,6 +256,144 @@ export default function SettingsPage() {
                     </div>
                   ))}
                 </div>
+                <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                  {t("settings.memosMigration.memosBaseUrlPrefix")}
+                  {applied.memos_base_url}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                  {t("settings.memosMigration.warningsTitle")}：{" "}
+                  {applied.warnings?.length ? applied.warnings.join("；") : t("settings.memosMigration.warningsEmpty")}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section
+          style={{
+            borderTop: "1px solid var(--color-border)",
+            paddingTop: 14,
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
+            {t("settings.offline.title")}
+          </div>
+
+          <div
+            style={{
+              border: "1px solid var(--color-border)",
+              borderRadius: 14,
+              background: "var(--color-surface)",
+              padding: 14,
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text)" }}>{t("settings.offline.cardTitle")}</div>
+                <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 4 }}>{t("settings.offline.subtitle")}</div>
+              </div>
+
+              <label
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 10,
+                  border: "1px solid var(--color-border)",
+                  borderRadius: 999,
+                  padding: "8px 10px",
+                  background: "transparent",
+                  userSelect: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  data-testid="settings-offline-enabled"
+                  type="checkbox"
+                  checked={offlineEnabled}
+                  onChange={(e) => {
+                    updateOfflineEnabled(e.currentTarget.checked);
+                  }}
+                />
+                <span style={{ fontSize: 13, color: "var(--color-text)" }}>{t("settings.offline.toggleLabel")}</span>
+              </label>
+            </div>
+
+            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+              {t("settings.offline.status.title")}：
+              {offlineEnabled ? (
+                <>
+                  {syncStatus.syncing ? ` ${t("settings.offline.status.syncing")}` : syncStatus.online ? ` ${t("settings.offline.status.online")}` : ` ${t("settings.offline.status.offline")}`}
+                  {syncStatus.pending > 0 ? ` · ${t("settings.offline.status.pending")} ${syncStatus.pending}` : ""}
+                  {` · ${t("settings.offline.status.lastSync")} ${lastSyncText}`}
+                </>
+              ) : (
+                " 已关闭"
+              )}
+            </div>
+
+            {offlineEnabled ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  disabled={manualSyncing}
+                  onClick={async () => {
+                    setManualSyncing(true);
+                    try {
+                      await syncNow();
+                    } finally {
+                      setManualSyncing(false);
+                    }
+                  }}
+                  style={{
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-1)",
+                    background: "var(--color-surface)",
+                    color: "var(--color-text)",
+                    padding: "8px 10px",
+                    fontFamily: "var(--font-body)",
+                    cursor: manualSyncing ? "not-allowed" : "pointer",
+                    opacity: manualSyncing ? 0.7 : 1,
+                  }}
+                >
+                  {manualSyncing ? t("settings.offline.status.syncing") : t("settings.offline.actions.syncNow")}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={clearingOffline}
+                  onClick={async () => {
+                    if (!window.confirm(t("settings.offline.confirmClearCache"))) return;
+                    setClearingOffline(true);
+                    try {
+                      await resetOfflineDb();
+                      await syncNow();
+                    } finally {
+                      setClearingOffline(false);
+                    }
+                  }}
+                  style={{
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-1)",
+                    background: "transparent",
+                    color: "var(--color-text)",
+                    padding: "8px 10px",
+                    fontFamily: "var(--font-body)",
+                    cursor: clearingOffline ? "not-allowed" : "pointer",
+                    opacity: clearingOffline ? 0.7 : 1,
+                  }}
+                >
+                  {clearingOffline ? t("common.loadingDots") : t("settings.offline.actions.clearCache")}
+                </button>
+              </div>
+            ) : null}
+
+            {offlineEnabled && syncStatus.last_error ? (
+              <div style={{ fontSize: 12, color: "var(--color-danger)" }}>
+                {t("common.error")}：{syncStatus.last_error}
               </div>
             ) : null}
           </div>

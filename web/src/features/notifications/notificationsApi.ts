@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchJson } from "@/lib/api/client";
+import { apiFetchJson } from "@/lib/api/client";
 
 import type { Notification, NotificationListResponse, UnreadCountResponse } from "./types";
 
@@ -35,11 +35,6 @@ export async function getUnreadCount(): Promise<number> {
 }
 
 export async function markNotificationRead(notificationId: string): Promise<Notification> {
-  // Uses apiFetch so cookie-session auth gets CSRF header injected.
-  const res = await apiFetch(`/api/v1/notifications/${encodeURIComponent(notificationId)}/read`, { method: "POST" });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Failed to mark notification read (${res.status})${text ? ` - ${text}` : ""}`);
-  }
-  return (await res.json()) as Notification;
+  // Cookie-session auth: apiFetchJson will inject X-CSRF-Token for non-safe methods.
+  return await apiFetchJson<Notification>(`/api/v1/notifications/${encodeURIComponent(notificationId)}/read`, { method: "POST" });
 }

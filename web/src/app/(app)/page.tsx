@@ -56,7 +56,7 @@ function normalizeErrorMessage(err: unknown): string {
   try {
     return JSON.stringify(err);
   } catch {
-    return "Unknown error";
+    return "未知错误";
   }
 }
 

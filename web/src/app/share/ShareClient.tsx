@@ -195,7 +195,7 @@ function noteDisplayTitle(note: SharedNote, untitled: string): string {
 
 export default function ShareClient() {
   const searchParams = useSearchParams();
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
   const token = useMemo(() => (searchParams.get("token") ?? "").trim(), [searchParams]);
 
   const [shareLoading, setShareLoading] = useState(false);
@@ -240,11 +240,9 @@ export default function ShareClient() {
           throw new Error(t("share.error.expired"));
         }
         if (err.message) {
-          throw new Error(
-            locale === "zh-CN" ? `加载分享失败：${err.message}` : `Failed to load share: ${err.message}`
-          );
+          throw new Error(`加载分享失败：${err.message}`);
         }
-        throw new Error(locale === "zh-CN" ? `加载分享失败（${res.status}）` : `Failed to load share (${res.status})`);
+        throw new Error(`加载分享失败（${res.status}）`);
       }
 
       const json = (await res.json()) as unknown;
@@ -259,7 +257,7 @@ export default function ShareClient() {
     } finally {
       if (loadTokenRef.current === loadId) setShareLoading(false);
     }
-  }, [locale, t, token]);
+  }, [t, token]);
 
   const refreshComments = useCallback(async () => {
     if (!token) return;
@@ -274,11 +272,9 @@ export default function ShareClient() {
           setCommentsDisabledHint(true);
         }
         if (err.message) {
-          throw new Error(
-            locale === "zh-CN" ? `加载评论失败：${err.message}` : `Failed to load comments: ${err.message}`
-          );
+          throw new Error(`加载评论失败：${err.message}`);
         }
-        throw new Error(locale === "zh-CN" ? `加载评论失败（${res.status}）` : `Failed to load comments (${res.status})`);
+        throw new Error(`加载评论失败（${res.status}）`);
       }
       const json = (await res.json()) as unknown;
       const parsed = parseCommentListResponse(json);
@@ -289,7 +285,7 @@ export default function ShareClient() {
     } finally {
       setCommentsLoading(false);
     }
-  }, [locale, t, token]);
+  }, [t, token]);
 
   useEffect(() => {
     // Reset page state whenever token changes.
@@ -360,9 +356,9 @@ export default function ShareClient() {
           throw new Error(t("share.error.captchaRequired"));
         }
         if (err.message) {
-          throw new Error(locale === "zh-CN" ? `发表评论失败：${err.message}` : `Failed to post comment: ${err.message}`);
+          throw new Error(`发表评论失败：${err.message}`);
         }
-        throw new Error(locale === "zh-CN" ? `发表评论失败（${res.status}）` : `Failed to post comment (${res.status})`);
+        throw new Error(`发表评论失败（${res.status}）`);
       }
 
       setCommentBody("");
@@ -406,9 +402,9 @@ export default function ShareClient() {
           throw new Error(t("share.error.captchaRequired"));
         }
         if (err.message) {
-          throw new Error(locale === "zh-CN" ? `上传失败：${err.message}` : `Upload failed: ${err.message}`);
+          throw new Error(`上传失败：${err.message}`);
         }
-        throw new Error(locale === "zh-CN" ? `上传失败（${res.status}）` : `Upload failed (${res.status})`);
+        throw new Error(`上传失败（${res.status}）`);
       }
 
       const json = (await res.json()) as unknown;
@@ -445,9 +441,9 @@ export default function ShareClient() {
       if (!res.ok) {
         const err = await readApiErrorPayload(res);
         if (err.message) {
-          throw new Error(locale === "zh-CN" ? `举报失败：${err.message}` : `Failed to report: ${err.message}`);
+          throw new Error(`举报失败：${err.message}`);
         }
-        throw new Error(locale === "zh-CN" ? `举报失败（${res.status}）` : `Failed to report (${res.status})`);
+        throw new Error(`举报失败（${res.status}）`);
       }
 
       await refreshComments();
@@ -663,7 +659,7 @@ export default function ShareClient() {
 
                   {share.attachments.length === 0 ? (
                     <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 14 }}>
-                      {locale === "zh-CN" ? "暂无附件。" : "No attachments."}
+                      暂无附件。
                     </div>
                   ) : (
                     <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
@@ -731,9 +727,7 @@ export default function ShareClient() {
                   lineHeight: 1.6,
                 }}
               >
-                {locale === "zh-CN"
-                  ? "该分享已禁用匿名评论（以及附件上传）。"
-                  : "Posting comments (and uploading attachments) is disabled for this share."}
+                该分享已禁用匿名评论（以及附件上传）。
               </div>
             ) : null}
 
@@ -759,7 +753,7 @@ export default function ShareClient() {
                   data-testid="share-captcha-token"
                   value={captchaToken}
                   onChange={(e) => setCaptchaToken(e.target.value)}
-                  placeholder={locale === "zh-CN" ? "粘贴验证码 token" : "Paste captcha token"}
+                  placeholder="粘贴验证码令牌"
                   style={styles.input}
                   inputMode="text"
                   autoComplete="off"
@@ -776,7 +770,7 @@ export default function ShareClient() {
               >
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
                   <div style={{ fontFamily: "var(--font-display)", letterSpacing: "0.01em" }}>{t("share.upload.sectionTitle")}</div>
-                  <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>POST /attachments</div>
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>接口：POST /attachments</div>
                 </div>
 
                 <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -854,7 +848,7 @@ export default function ShareClient() {
                                 </div>
                                 <div style={{ color: "var(--color-text-muted)", fontSize: 12, marginTop: 2 }}>
                                   {a.id}
-                                  {known ? "" : locale === "zh-CN" ? "（刷新后可获取元信息）" : " (refresh note to see metadata)"}
+                                  {known ? "" : "（刷新后可获取元信息）"}
                                 </div>
                               </span>
                             </span>
@@ -889,7 +883,7 @@ export default function ShareClient() {
               >
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
                   <div style={{ fontFamily: "var(--font-display)", letterSpacing: "0.01em" }}>{t("share.comment.writeTitle")}</div>
-                  <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>POST /comments</div>
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>接口：POST /comments</div>
                 </div>
 
                 <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
@@ -921,9 +915,7 @@ export default function ShareClient() {
 
                   {selectedAttachmentIds.length > 0 ? (
                     <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>
-                      {locale === "zh-CN"
-                        ? `将附加 ${selectedAttachmentIds.length} 个附件到本条评论。`
-                        : `Attaching ${selectedAttachmentIds.length} file(s) to this comment.`}
+                      将附加 {selectedAttachmentIds.length} 个附件到本条评论。
                     </div>
                   ) : null}
 

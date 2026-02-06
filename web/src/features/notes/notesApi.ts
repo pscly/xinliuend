@@ -41,13 +41,38 @@ export class NotesApiErrorException extends Error {
 }
 
 function formatNotesApiErrorMessage(err: NotesApiError): string {
+  function extractMessageFromText(text: string | undefined): string | null {
+    const trimmed = (text ?? "").trim();
+    if (!trimmed) return null;
+    try {
+      const json = JSON.parse(trimmed) as unknown;
+      if (json && typeof json === "object") {
+        const o = json as Record<string, unknown>;
+        const msg = (typeof o.message === "string" && o.message.trim()) ? o.message.trim() : null;
+        const detail = (typeof o.detail === "string" && o.detail.trim()) ? o.detail.trim() : null;
+        const errCode = (typeof o.error === "string" && o.error.trim()) ? o.error.trim() : null;
+        return msg ?? detail ?? errCode;
+      }
+    } catch {
+      // Not JSON.
+    }
+    return trimmed;
+  }
+
   if (err.kind === "notes_conflict") {
-    return `Notes API conflict (409): ${err.body.message}`;
+    const msg = err.body.message?.trim();
+    return msg ? `保存冲突（HTTP 409）：${msg}` : "保存冲突（HTTP 409）";
   }
   if (err.kind === "v2_error") {
-    return `Notes API error (${err.status}): ${err.body.error} - ${err.body.message}`;
+    const prefix = `请求失败（HTTP ${err.status}）`;
+    const msg = err.body.message?.trim();
+    if (!msg) return prefix;
+    const code = err.body.error?.trim();
+    return code ? `${prefix}：${msg}（${code}）` : `${prefix}：${msg}`;
   }
-  return `Notes API error (${err.status}): ${err.statusText}${err.text ? ` - ${err.text}` : ""}`;
+  const prefix = `请求失败（HTTP ${err.status}）`;
+  const msg = extractMessageFromText(err.text);
+  return msg ? `${prefix}：${msg}` : prefix;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {

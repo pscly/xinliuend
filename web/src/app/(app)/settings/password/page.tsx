@@ -77,7 +77,7 @@ export default function SettingsPasswordPage() {
           return;
         }
 
-        setError(`HTTP ${res.status}`);
+        setError(`请求失败（HTTP ${res.status}）`);
         return;
       }
 

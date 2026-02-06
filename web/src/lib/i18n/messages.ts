@@ -49,6 +49,8 @@ export type MessageKey =
   | "settings.memosMigration.applying"
   | "settings.memosMigration.confirmApply"
   | "settings.memosMigration.hint"
+  | "settings.memosMigration.warningsTitle"
+  | "settings.memosMigration.warningsEmpty"
   | "settings.memosMigration.errorPrefix"
   | "settings.memosMigration.errorGeneric"
   | "settings.memosMigration.previewResult"
@@ -59,6 +61,20 @@ export type MessageKey =
   | "settings.memosMigration.summary.update"
   | "settings.memosMigration.summary.delete"
   | "settings.memosMigration.summary.conflicts"
+  | "settings.offline.title"
+  | "settings.offline.cardTitle"
+  | "settings.offline.subtitle"
+  | "settings.offline.toggleLabel"
+  | "settings.offline.status.title"
+  | "settings.offline.status.online"
+  | "settings.offline.status.offline"
+  | "settings.offline.status.syncing"
+  | "settings.offline.status.pending"
+  | "settings.offline.status.lastSync"
+  | "settings.offline.status.never"
+  | "settings.offline.actions.syncNow"
+  | "settings.offline.actions.clearCache"
+  | "settings.offline.confirmClearCache"
   | "settings.admin.title"
   | "settings.admin.subtitle"
   | "settings.admin.openAppAdmin"
@@ -259,7 +275,7 @@ const zhCN: Messages = {
   "nav.notifications": "通知",
   "nav.settings": "设置",
   "page.home.title": "欢迎",
-  "page.home.subtitle": "这是用户端前端工程的最小脚手架：i18n + 暗色模式 + Playwright。",
+  "page.home.subtitle": "在这里管理你的笔记、待办、日历与通知。",
   "page.login.title": "登录",
   "page.login.subtitle": "使用账号密码建立会话（Cookie + CSRF）。",
   "page.notes.title": "笔记",
@@ -298,6 +314,8 @@ const zhCN: Messages = {
   "settings.memosMigration.applying": "执行中…",
   "settings.memosMigration.confirmApply": "确定要执行迁移吗？这会把 Memos 的更新覆盖到本地，并可能生成冲突快照。",
   "settings.memosMigration.hint": "建议先预览：执行迁移后，本地会按 Memos 最新内容更新；若覆盖本地修改，会保留冲突快照（可在冲突列表中查看）。",
+  "settings.memosMigration.warningsTitle": "注意事项",
+  "settings.memosMigration.warningsEmpty": "无",
   "settings.memosMigration.errorPrefix": "迁移失败：",
   "settings.memosMigration.errorGeneric": "请求失败，请稍后重试。",
   "settings.memosMigration.previewResult": "预览结果（预计）",
@@ -308,6 +326,20 @@ const zhCN: Messages = {
   "settings.memosMigration.summary.update": "将更新",
   "settings.memosMigration.summary.delete": "将删除",
   "settings.memosMigration.summary.conflicts": "冲突快照",
+  "settings.offline.title": "离线与同步",
+  "settings.offline.cardTitle": "本地缓存与后台同步",
+  "settings.offline.subtitle": "可选：在浏览器端缓存数据，并后台增量同步（适合弱网/断网场景）。",
+  "settings.offline.toggleLabel": "启用本地缓存与后台同步",
+  "settings.offline.status.title": "同步状态",
+  "settings.offline.status.online": "在线",
+  "settings.offline.status.offline": "离线",
+  "settings.offline.status.syncing": "同步中…",
+  "settings.offline.status.pending": "待同步",
+  "settings.offline.status.lastSync": "上次同步",
+  "settings.offline.status.never": "从未",
+  "settings.offline.actions.syncNow": "立即同步",
+  "settings.offline.actions.clearCache": "清空本地缓存",
+  "settings.offline.confirmClearCache": "确定要清空本地缓存吗？这不会删除服务端数据。",
   "settings.admin.title": "管理",
   "settings.admin.subtitle": "管理入口（仅管理员可见）。",
   "settings.admin.openAppAdmin": "打开应用管理区",
@@ -471,7 +503,7 @@ const zhCN: Messages = {
   "share.error.failedLoadShare": "加载分享失败。",
   "share.error.failedLoadComments": "加载评论失败。",
   "share.error.commentsDisabled": "该分享已禁用匿名评论。",
-  "share.error.captchaRequired": "需要验证码 token：请粘贴后重试。",
+  "share.error.captchaRequired": "需要验证码令牌：请粘贴后重试。",
   "share.error.failedPostComment": "发表评论失败。",
   "share.error.uploadInvalidResponse": "上传成功但返回内容无效。",
   "share.error.uploadFailed": "上传失败。",
@@ -480,7 +512,7 @@ const zhCN: Messages = {
   "share.comment.writeTitle": "发表评论",
   "share.comment.field.nameOptional": "称呼（可选）",
   "share.comment.field.message": "内容",
-  "share.comment.field.captchaToken": "验证码 token（如需要）",
+  "share.comment.field.captchaToken": "验证码令牌（如需要）",
   "share.comment.placeholder.anonymous": "匿名",
   "share.comment.placeholder.message": "友善一点：不支持 HTML 渲染。",
   "share.comment.attachHint": "将附加所选附件到本条评论。",
@@ -546,6 +578,8 @@ const en: Messages = {
   "settings.memosMigration.applying": "Applying…",
   "settings.memosMigration.confirmApply": "Proceed with migration? This may overwrite local notes and create conflict snapshots.",
   "settings.memosMigration.hint": "Preview first. The migration pulls the latest content from Memos; overwrites preserve conflict snapshots for later review.",
+  "settings.memosMigration.warningsTitle": "Warnings",
+  "settings.memosMigration.warningsEmpty": "None",
   "settings.memosMigration.errorPrefix": "Migration failed: ",
   "settings.memosMigration.errorGeneric": "Request failed. Please try again.",
   "settings.memosMigration.previewResult": "Preview (planned)",
@@ -556,6 +590,20 @@ const en: Messages = {
   "settings.memosMigration.summary.update": "Update",
   "settings.memosMigration.summary.delete": "Delete",
   "settings.memosMigration.summary.conflicts": "Conflicts",
+  "settings.offline.title": "Offline & Sync",
+  "settings.offline.cardTitle": "Offline cache and background sync",
+  "settings.offline.subtitle": "Optional: cache data in the browser and keep it in sync in the background (helps in bad networks).",
+  "settings.offline.toggleLabel": "Enable offline cache and background sync",
+  "settings.offline.status.title": "Sync status",
+  "settings.offline.status.online": "Online",
+  "settings.offline.status.offline": "Offline",
+  "settings.offline.status.syncing": "Syncing…",
+  "settings.offline.status.pending": "Pending",
+  "settings.offline.status.lastSync": "Last sync",
+  "settings.offline.status.never": "Never",
+  "settings.offline.actions.syncNow": "Sync now",
+  "settings.offline.actions.clearCache": "Clear offline cache",
+  "settings.offline.confirmClearCache": "Clear offline cache? This does not delete server data.",
   "settings.admin.title": "Admin",
   "settings.admin.subtitle": "Admin entry points.",
   "settings.admin.openAppAdmin": "Open app admin",

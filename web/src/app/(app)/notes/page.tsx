@@ -9,7 +9,10 @@ import { NotesApiErrorException, createNote, getNote, listNotes, patchNote } fro
 import type { Note } from "@/features/notes/types";
 import { Page } from "@/features/ui/Page";
 import { apiFetch } from "@/lib/api/client";
+import { useAuth } from "@/lib/auth/useAuth";
 import { useI18n } from "@/lib/i18n/useI18n";
+import { cacheGetNote, cacheListNotes, cacheUpsertNote, cacheUpsertNotes } from "@/lib/offline/notesCache";
+import { useOfflineEnabled } from "@/lib/offline/useOfflineEnabled";
 
 type ShareCreateResponse = {
   share_id: string;
@@ -70,7 +73,10 @@ export default function NotesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get("id") ?? "";
+  const { user } = useAuth();
   const { locale, t } = useI18n();
+  const { offlineEnabled } = useOfflineEnabled();
+  const offlineUserKey = user?.username ?? null;
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
@@ -104,14 +110,29 @@ export default function NotesPage() {
     setNotesError(null);
     setNotesLoading(true);
     try {
+      if (offlineEnabled && offlineUserKey) {
+        try {
+          const cached = await cacheListNotes(offlineUserKey);
+          if (cached.length) {
+            cached.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+            setNotes(cached);
+          }
+        } catch {
+          // Best-effort: cache should not block online refresh.
+        }
+      }
+
       const res = await listNotes({ limit: 100, offset: 0 });
       setNotes(res.items);
+      if (offlineEnabled && offlineUserKey) {
+        await cacheUpsertNotes(offlineUserKey, res.items);
+      }
     } catch (e) {
       setNotesError(e instanceof Error ? e.message : t("notes.error.loadNotes"));
     } finally {
       setNotesLoading(false);
     }
-  }, [t]);
+  }, [offlineEnabled, offlineUserKey, t]);
 
   useEffect(() => {
     void refreshNotesList();
@@ -212,15 +233,34 @@ export default function NotesPage() {
     setNoteError(null);
 
     void (async () => {
+      let seededFromCache = false;
       try {
+        if (offlineEnabled && offlineUserKey) {
+          try {
+            const cached = await cacheGetNote(offlineUserKey, selectedId);
+            if (cached && loadTokenRef.current === token) {
+              seededFromCache = true;
+              setNote(cached);
+              setEditorBody(cached.body_md);
+            }
+          } catch {
+            // Ignore cache errors; fall back to network.
+          }
+        }
+
         const loaded = await getNote(selectedId);
         if (loadTokenRef.current !== token) return;
         setNote(loaded);
         setEditorBody(loaded.body_md);
+        if (offlineEnabled && offlineUserKey) {
+          await cacheUpsertNote(offlineUserKey, loaded);
+        }
       } catch (e) {
         if (loadTokenRef.current !== token) return;
-        setNote(null);
-        setEditorBody("");
+        if (!seededFromCache) {
+          setNote(null);
+          setEditorBody("");
+        }
         setNoteError(e instanceof Error ? e.message : t("notes.error.loadNote"));
       } finally {
         if (loadTokenRef.current === token) {
@@ -228,7 +268,7 @@ export default function NotesPage() {
         }
       }
     })();
-  }, [selectedId]);
+  }, [offlineEnabled, offlineUserKey, selectedId, t]);
 
   const isDirty = useMemo(() => {
     if (!note) return editorBody.trim().length > 0;
@@ -254,6 +294,9 @@ export default function NotesPage() {
       router.replace(buildNotesHref(searchParams, created.id), { scroll: false });
       setNote(created);
       setEditorBody(created.body_md);
+      if (offlineEnabled && offlineUserKey) {
+        await cacheUpsertNote(offlineUserKey, created);
+      }
     } catch (e) {
       setActionError(e instanceof Error ? e.message : t("notes.error.createNote"));
     } finally {
@@ -273,6 +316,9 @@ export default function NotesPage() {
       setNote(updated);
       await refreshNotesList();
       setSaved(true);
+      if (offlineEnabled && offlineUserKey) {
+        await cacheUpsertNote(offlineUserKey, updated);
+      }
     } catch (e) {
       if (e instanceof NotesApiErrorException && e.data.kind === "notes_conflict" && e.data.serverSnapshot) {
         setConflictSnapshot(e.data.serverSnapshot);

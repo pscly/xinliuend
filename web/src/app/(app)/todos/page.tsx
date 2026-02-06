@@ -67,6 +67,15 @@ function normalizeErrorMessage(err: unknown): string {
   return "未知错误";
 }
 
+function formatTodoStatus(status: string): string {
+  const s = (status ?? "").trim().toLowerCase();
+  if (!s) return "-";
+  if (s === "open") return "未完成";
+  if (s === "done") return "已完成";
+  if (s === "archived") return "已归档";
+  return status;
+}
+
 export default function TodosPage() {
   const { locale, t } = useI18n();
   const [lists, setLists] = useState<TodoList[]>([]);
@@ -434,12 +443,12 @@ export default function TodosPage() {
               </label>
 
               <div style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>
-                RRULE: <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{`FREQ=DAILY;COUNT=${clampInt(recurringDays, 1, 365)}`}</code>
+                重复规则： <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{`FREQ=DAILY;COUNT=${clampInt(recurringDays, 1, 365)}`}</code>
                 <span style={{ marginLeft: 10 }}>
-                  dtstart_local: <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{formatLocalDateTimeString19(new Date())}</code>
+                  起始时间： <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{formatLocalDateTimeString19(new Date())}</code>
                 </span>
                 <span style={{ marginLeft: 10 }}>
-                  tzid: <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{TZID}</code>
+                  时区： <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{TZID}</code>
                 </span>
               </div>
             </div>
@@ -477,7 +486,7 @@ export default function TodosPage() {
                             {t("todos.item.recurring")} ·{" "}
                             <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{it.rrule ?? "-"}</code> ·
                             <span style={{ marginLeft: 6 }}>
-                              dtstart_local <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{toHumanLocalDateTime(it.dtstart_local)}</code>
+                              起始时间 <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{toHumanLocalDateTime(it.dtstart_local)}</code>
                             </span>
                           </span>
                         ) : (
@@ -487,7 +496,7 @@ export default function TodosPage() {
                     </div>
 
                     <div style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))", textAlign: "right" }}>
-                      {it.status}
+                      {formatTodoStatus(it.status)}
                     </div>
                   </li>
                 ))}

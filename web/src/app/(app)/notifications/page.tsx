@@ -23,6 +23,13 @@ function formatTimestamp(iso: string): string {
   return d.toLocaleString();
 }
 
+function formatNotificationKind(kind: string): string {
+  const k = kind.trim().toLowerCase();
+  if (!k) return "-";
+  if (k === "mention") return "提及";
+  return kind;
+}
+
 export default function NotificationsPage() {
   const { locale, t } = useI18n();
   const [unreadOnly, setUnreadOnly] = useState<boolean>(false);
@@ -180,10 +187,10 @@ export default function NotificationsPage() {
                 >
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                     <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                        <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-                          {n.kind}
-                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                          <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
+                          {formatNotificationKind(n.kind)}
+                          </div>
                         {isUnread ? (
                           <div
                             style={{

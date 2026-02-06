@@ -9,6 +9,8 @@ import { useI18n } from "@/lib/i18n/useI18n";
 import { useTheme } from "@/lib/theme/ThemeProvider";
 import { nextThemePreference } from "@/lib/theme/theme";
 import { useAuth } from "@/lib/auth/useAuth";
+import { useOfflineEnabled } from "@/lib/offline/useOfflineEnabled";
+import { startSyncLoop } from "@/lib/offline/syncEngine";
 
 import styles from "./AppShell.module.css";
 
@@ -46,6 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const { preference, setPreference } = useTheme();
   const { user, logout } = useAuth();
+  const { offlineEnabled } = useOfflineEnabled();
 
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
@@ -74,6 +77,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       window.removeEventListener("notifications:changed", onChanged);
     };
   }, [user]);
+
+  const username = user?.username ?? null;
+
+  useEffect(() => {
+    if (!username) return;
+    if (!offlineEnabled) return;
+    const cleanup = startSyncLoop(username);
+    return () => {
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, [offlineEnabled, username]);
 
   const normalizedPathname = pathname && pathname.endsWith("/") && pathname !== "/" ? pathname.slice(0, -1) : pathname;
 
