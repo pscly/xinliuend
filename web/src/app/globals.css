@@ -34,6 +34,7 @@
   --color-border: rgba(21, 17, 15, 0.14);
   --color-accent: var(--qinglu-jade);
   --color-accent-contrast: #fffaf0;
+  --color-danger: #b42318;
 
   /* Optional extras; components may ignore these. */
   --color-accent-2: var(--qinglu-azurite);
@@ -69,6 +70,7 @@
     --color-border: rgba(231, 244, 238, 0.14);
     --color-accent: #3cc7a7;
     --color-accent-contrast: #05100e;
+    --color-danger: #ff7875;
 
     --color-accent-2: #37b7c2;
     --color-accent-gold: #d7b65a;
@@ -101,6 +103,7 @@ html[data-theme="light"] {
   --color-border: rgba(21, 17, 15, 0.14);
   --color-accent: var(--qinglu-jade);
   --color-accent-contrast: #fffaf0;
+  --color-danger: #b42318;
 
   --color-accent-2: var(--qinglu-azurite);
   --color-accent-gold: var(--qinglu-gold);
@@ -132,6 +135,7 @@ html[data-theme="dark"] {
   --color-border: rgba(231, 244, 238, 0.14);
   --color-accent: #3cc7a7;
   --color-accent-contrast: #05100e;
+  --color-danger: #ff7875;
 
   --color-accent-2: #37b7c2;
   --color-accent-gold: #d7b65a;

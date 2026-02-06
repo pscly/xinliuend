@@ -40,6 +40,25 @@ export type MessageKey =
   | "settings.account.role.admin"
   | "settings.account.role.user"
   | "settings.account.changePassword"
+  | "settings.memosMigration.title"
+  | "settings.memosMigration.cardTitle"
+  | "settings.memosMigration.subtitle"
+  | "settings.memosMigration.preview"
+  | "settings.memosMigration.previewing"
+  | "settings.memosMigration.apply"
+  | "settings.memosMigration.applying"
+  | "settings.memosMigration.confirmApply"
+  | "settings.memosMigration.hint"
+  | "settings.memosMigration.errorPrefix"
+  | "settings.memosMigration.errorGeneric"
+  | "settings.memosMigration.previewResult"
+  | "settings.memosMigration.applyResult"
+  | "settings.memosMigration.memosBaseUrlPrefix"
+  | "settings.memosMigration.summary.remoteTotal"
+  | "settings.memosMigration.summary.create"
+  | "settings.memosMigration.summary.update"
+  | "settings.memosMigration.summary.delete"
+  | "settings.memosMigration.summary.conflicts"
   | "settings.admin.title"
   | "settings.admin.subtitle"
   | "settings.admin.openAppAdmin"
@@ -270,6 +289,25 @@ const zhCN: Messages = {
   "settings.account.role.admin": "管理员",
   "settings.account.role.user": "普通用户",
   "settings.account.changePassword": "修改密码",
+  "settings.memosMigration.title": "数据迁移",
+  "settings.memosMigration.cardTitle": "从 Memos 迁移笔记",
+  "settings.memosMigration.subtitle": "将 Memos 中的笔记拉取到当前后端（仅拉取，不会写回 Memos）。",
+  "settings.memosMigration.preview": "预览变更（不写入）",
+  "settings.memosMigration.previewing": "预览中…",
+  "settings.memosMigration.apply": "确认执行迁移",
+  "settings.memosMigration.applying": "执行中…",
+  "settings.memosMigration.confirmApply": "确定要执行迁移吗？这会把 Memos 的更新覆盖到本地，并可能生成冲突快照。",
+  "settings.memosMigration.hint": "建议先预览：执行迁移后，本地会按 Memos 最新内容更新；若覆盖本地修改，会保留冲突快照（可在冲突列表中查看）。",
+  "settings.memosMigration.errorPrefix": "迁移失败：",
+  "settings.memosMigration.errorGeneric": "请求失败，请稍后重试。",
+  "settings.memosMigration.previewResult": "预览结果（预计）",
+  "settings.memosMigration.applyResult": "执行结果（实际）",
+  "settings.memosMigration.memosBaseUrlPrefix": "Memos 地址：",
+  "settings.memosMigration.summary.remoteTotal": "远端条目",
+  "settings.memosMigration.summary.create": "将新增",
+  "settings.memosMigration.summary.update": "将更新",
+  "settings.memosMigration.summary.delete": "将删除",
+  "settings.memosMigration.summary.conflicts": "冲突快照",
   "settings.admin.title": "管理",
   "settings.admin.subtitle": "管理入口（仅管理员可见）。",
   "settings.admin.openAppAdmin": "打开应用管理区",
@@ -499,6 +537,25 @@ const en: Messages = {
   "settings.account.role.admin": "Admin",
   "settings.account.role.user": "User",
   "settings.account.changePassword": "Change password",
+  "settings.memosMigration.title": "Data migration",
+  "settings.memosMigration.cardTitle": "Migrate notes from Memos",
+  "settings.memosMigration.subtitle": "Pull memos into this backend (pull-only; never writes back to Memos).",
+  "settings.memosMigration.preview": "Preview (dry-run)",
+  "settings.memosMigration.previewing": "Previewing…",
+  "settings.memosMigration.apply": "Apply migration",
+  "settings.memosMigration.applying": "Applying…",
+  "settings.memosMigration.confirmApply": "Proceed with migration? This may overwrite local notes and create conflict snapshots.",
+  "settings.memosMigration.hint": "Preview first. The migration pulls the latest content from Memos; overwrites preserve conflict snapshots for later review.",
+  "settings.memosMigration.errorPrefix": "Migration failed: ",
+  "settings.memosMigration.errorGeneric": "Request failed. Please try again.",
+  "settings.memosMigration.previewResult": "Preview (planned)",
+  "settings.memosMigration.applyResult": "Result (applied)",
+  "settings.memosMigration.memosBaseUrlPrefix": "Memos URL: ",
+  "settings.memosMigration.summary.remoteTotal": "Remote total",
+  "settings.memosMigration.summary.create": "Create",
+  "settings.memosMigration.summary.update": "Update",
+  "settings.memosMigration.summary.delete": "Delete",
+  "settings.memosMigration.summary.conflicts": "Conflicts",
   "settings.admin.title": "Admin",
   "settings.admin.subtitle": "Admin entry points.",
   "settings.admin.openAppAdmin": "Open app admin",

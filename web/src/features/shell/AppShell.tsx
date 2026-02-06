@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 
 import { getUnreadCount } from "@/features/notifications/notificationsApi";
 import { useI18n } from "@/lib/i18n/useI18n";
-import type { AppLocale } from "@/lib/i18n/locales";
 import { useTheme } from "@/lib/theme/ThemeProvider";
 import { nextThemePreference } from "@/lib/theme/theme";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -44,13 +43,11 @@ function themeLabelKey(preference: "system" | "light" | "dark") {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { locale, setLocale, t } = useI18n();
+  const { t } = useI18n();
   const { preference, setPreference } = useTheme();
   const { user, logout } = useAuth();
 
   const [unreadCount, setUnreadCount] = useState<number>(0);
-
-  const nextLocale: AppLocale = locale === "zh-CN" ? "en" : "zh-CN";
 
   useEffect(() => {
     if (!user) return;
@@ -122,16 +119,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className={styles.controls}>
-            <button
-              type="button"
-              className={styles.pill}
-              onClick={() => setLocale(nextLocale)}
-              aria-label={`${t("ui.language")}: ${nextLocale}`}
-            >
-              <span className={styles.pillLabel}>{t("ui.language")}</span>
-              <span className={styles.pillValue}>{locale === "zh-CN" ? "中文" : "EN"}</span>
-            </button>
-
             <button
               type="button"
               className={styles.pill}

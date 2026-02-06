@@ -64,7 +64,7 @@ async function loginViaUi(page: Page, username: string, password: string) {
   await page.waitForURL((url) => !/\/login\/?$/.test(url.pathname));
 }
 
-test("i18n + theme toggles: CN/EN and light/dark persist", async ({ page }) => {
+test("主题切换持久化 + 语言强制中文", async ({ page }) => {
   const username = makeUniqueUsername();
   const password = "pass1234";
 
@@ -75,9 +75,7 @@ test("i18n + theme toggles: CN/EN and light/dark persist", async ({ page }) => {
   await page.goto("/notes");
   await expect(page).toHaveURL(/\/notes/);
 
-  const languageToggle = page.getByRole("button", { name: /^(Language|\u8bed\u8a00):/ });
   const themeToggle = page.getByRole("button", { name: /^(Theme|\u4e3b\u9898):/ });
-  await expect(languageToggle).toBeVisible();
   await expect(themeToggle).toBeVisible();
 
   // Theme: system -> light -> dark (attribute on <html> + localStorage persistence).
@@ -89,37 +87,20 @@ test("i18n + theme toggles: CN/EN and light/dark persist", async ({ page }) => {
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   await expect(page.evaluate(() => localStorage.getItem("theme-preference"))).resolves.toBe("dark");
 
-  // Language: toggle and assert the notifications label flips between EN/CN.
+  // Language: 强制中文（即使本地 storage 写成 en）。
+  const languageToggle = page.getByRole("button", { name: /^(Language|\u8bed\u8a00):/ });
+  await expect(languageToggle).toHaveCount(0);
+
   const navNotifications = page.getByTestId("nav-notifications");
   await expect(navNotifications).toBeVisible();
+  await expect(navNotifications).toContainText("\u901a\u77e5");
 
-  const EN_LABEL = "Notifications";
-  const ZH_LABEL = "\u901a\u77e5";
-
-  const initialLabelText = await navNotifications.innerText();
-  const initialIsEn = initialLabelText.includes(EN_LABEL);
-  const initialIsZh = initialLabelText.includes(ZH_LABEL);
-  expect(
-    initialIsEn || initialIsZh,
-    `unexpected nav-notifications label: ${JSON.stringify(initialLabelText)}`,
-  ).toBeTruthy();
-
-  const expectedAfterLabel = initialIsEn ? ZH_LABEL : EN_LABEL;
-  const expectedLocaleAfter = initialIsEn ? "zh-CN" : "en";
-
-  await languageToggle.click();
-  await expect(navNotifications).toContainText(expectedAfterLabel);
-  await expect(page.evaluate(() => localStorage.getItem("locale"))).resolves.toBe(expectedLocaleAfter);
-
-  // Reload: verify both preferences persist.
+  await page.evaluate(() => localStorage.setItem("locale", "en"));
   await page.reload();
   await expect(navNotifications).toBeVisible();
-  await expect(navNotifications).toContainText(expectedAfterLabel);
+  await expect(navNotifications).toContainText("\u901a\u77e5");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
 
-  const stored = await page.evaluate(() => ({
-    theme: localStorage.getItem("theme-preference"),
-    locale: localStorage.getItem("locale"),
-  }));
-  expect(stored).toEqual({ theme: "dark", locale: expectedLocaleAfter });
+  const stored = await page.evaluate(() => ({ theme: localStorage.getItem("theme-preference") }));
+  expect(stored).toEqual({ theme: "dark" });
 });

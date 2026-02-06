@@ -1,11 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useEffect, useMemo } from "react";
 
 import type { MessageKey } from "./messages";
 import { MESSAGES_BY_LOCALE } from "./messages";
-import { LOCALE_STORAGE_KEY, normalizeLocale, type AppLocale } from "./locales";
+import type { AppLocale } from "./locales";
 
 type I18nContextValue = {
   locale: AppLocale;
@@ -16,16 +16,11 @@ type I18nContextValue = {
 export const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<AppLocale>(() => {
-    if (typeof window === "undefined") return "zh-CN";
-    const storedRaw = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-    // 默认中文：避免浏览器语言为英文时导致整个站点首次打开全是英文。
-    return storedRaw ? normalizeLocale(storedRaw) : "zh-CN";
-  });
+  // 语言策略：强制中文（避免出现英文 UI）。
+  const locale: AppLocale = "zh-CN";
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
   }, [locale]);
 
   const t = useCallback(
@@ -37,7 +32,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   );
 
   const setLocale = useCallback((next: AppLocale) => {
-    setLocaleState(next);
+    // 强制中文：保留 API 以兼容旧组件，但不允许切换。
+    void next;
   }, []);
 
   const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);

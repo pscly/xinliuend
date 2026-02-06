@@ -615,7 +615,86 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 
 冲突：409 `ErrorResponse(error="conflict", message="conflict (stale delete)")`
 
-### 5.3 TODO Lists
+### 5.3 Memos（迁移/同步）
+
+说明：该组接口用于 **将 Memos 中的笔记拉取到本后端**，便于在心流 Web/后端中继续使用与多端同步。
+
+本轮默认策略（与 Web 设置页保持一致）：
+
+- 仅迁移/同步 Notes（笔记正文为 Markdown）
+- 自动解析 `#tag` 为本地标签
+- **仅拉取（pull-only）**：不会向 Memos 写入/删除任何数据
+- 覆盖策略：当远端（Memos）有更新且本地也修改过时，会将本地旧内容保留为 `CONFLICT` revision（避免直接丢失本地修改）
+
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
+
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| POST /api/v1/memos/migration/preview | 200 | `MemosMigrationResponse(kind=preview)` | 只做预览统计，不写入数据库 |
+| POST /api/v1/memos/migration/apply | 200 | `MemosMigrationResponse(kind=apply)` | 执行拉取并写入本地（不写回 Memos） |
+
+#### POST /api/v1/memos/migration/preview
+
+用途：预览本次迁移将会对本地造成的变更（新增/更新/删除/冲突数量），用于用户二次确认。
+
+请求体：无
+
+成功：
+
+```json
+{
+  "ok": true,
+  "kind": "preview",
+  "summary": {
+    "remote_total": 123,
+    "created_local": 10,
+    "updated_local_from_remote": 2,
+    "deleted_local_from_remote": 1,
+    "conflicts": 1
+  },
+  "memos_base_url": "https://memos.example.com",
+  "warnings": []
+}
+```
+
+常见错误：
+
+- 409 `ErrorResponse(message="当前账号未绑定 Memos Token，请联系管理员处理。")`
+- 500 `ErrorResponse(message="服务端未配置 MEMOS_BASE_URL，无法连接 Memos。")`
+- 502 `ErrorResponse(message="Memos 接口调用失败：...")`
+
+#### POST /api/v1/memos/migration/apply
+
+用途：执行迁移（仅拉取）。执行后会写入本地数据库，并记录 `SyncEvent` 供多端同步拉取。
+
+请求体：无
+
+成功：返回与 preview 相同结构，但 `kind="apply"` 且统计为“实际执行结果”。
+
+```json
+{
+  "ok": true,
+  "kind": "apply",
+  "summary": {
+    "remote_total": 123,
+    "created_local": 10,
+    "updated_local_from_remote": 2,
+    "deleted_local_from_remote": 1,
+    "conflicts": 1
+  },
+  "memos_base_url": "https://memos.example.com",
+  "warnings": []
+}
+```
+
+注意事项：
+
+- 该接口不会向 Memos 写回数据（不会创建/更新/删除 Memos 的 memo）。
+- 当远端覆盖本地修改时，会生成 `NoteRevision(kind=CONFLICT)`，可用于用户回溯或手动合并。
+
+### 5.4 TODO Lists
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
@@ -695,7 +774,7 @@ Query：
 ]
 ```
 
-### 5.4 TODO Items
+### 5.5 TODO Items
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
@@ -800,7 +879,7 @@ Query：`client_updated_at_ms`（默认 0）
 {"ok":true}
 ```
 
-### 5.5 RRULE Occurrences
+### 5.6 RRULE Occurrences
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
@@ -837,7 +916,7 @@ Query：`client_updated_at_ms`（默认 0）
 
 说明：occurrence 不存在会返回 404。
 
-### 5.6 Sync（v1）
+### 5.7 Sync（v1）
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
@@ -1003,7 +1082,7 @@ v1 sync `data` 字段约定（按服务端实际读取的 key）：
 
 删除（op=delete）时，服务端不会读取 data。
 
-### 5.7 Admin（内部管理后台，HTML）
+### 5.8 Admin（内部管理后台，HTML）
 
 这些接口是管理后台页面/表单提交使用，通常不需要在 App/Web 客户端对接（除非你要做运维工具）。
 

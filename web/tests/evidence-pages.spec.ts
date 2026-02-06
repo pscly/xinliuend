@@ -3,7 +3,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 type AppTheme = "light" | "dark" | "system";
-type AppLocale = "zh-CN" | "en";
 
 function makeUniqueUsername(): string {
   // Backend restricts usernames to alphanumeric only.
@@ -116,7 +115,6 @@ async function screenshot(page: import("@playwright/test").Page, filename: strin
 
 async function runEvidenceSet(
   opts: {
-    locale: AppLocale;
     theme: Exclude<AppTheme, "system">;
     filenames: {
       dashboard: string;
@@ -135,11 +133,10 @@ async function runEvidenceSet(
   const baseURL = (testInfo.project.use as unknown as { baseURL?: string }).baseURL;
   const context = await browser.newContext({ baseURL });
   await context.addInitScript(
-    ({ localeValue, themeValue }: { localeValue: AppLocale; themeValue: Exclude<AppTheme, "system"> }) => {
-      window.localStorage.setItem("locale", localeValue);
+    ({ themeValue }: { themeValue: Exclude<AppTheme, "system"> }) => {
       window.localStorage.setItem("theme-preference", themeValue);
     },
-    { localeValue: opts.locale, themeValue: opts.theme },
+    { themeValue: opts.theme },
   );
 
   const username = makeUniqueUsername();
@@ -156,24 +153,24 @@ async function runEvidenceSet(
   // Dashboard
   await page.goto("/");
   await waitForPageHeading(page);
-  await expect(page.getByText(opts.locale === "zh-CN" ? "快捷入口" : "Quick links", { exact: true })).toBeVisible();
+  await expect(page.getByText("快捷入口", { exact: true })).toBeVisible();
   await screenshot(page, opts.filenames.dashboard);
 
   // Notes (also generate a share URL for /share evidence).
-  const noteContent = `Playwright evidence ${Date.now()} ${username}`;
+  const noteContent = `Playwright 证据 ${Date.now()} ${username}`;
   const shareUrl = await createNoteAndShareUrl(page, noteContent);
   await screenshot(page, opts.filenames.notes);
 
   // Todos
   await page.goto("/todos");
   await waitForPageHeading(page);
-  await expect(page.getByText(opts.locale === "zh-CN" ? "待办清单" : "Todo list", { exact: true })).toBeVisible();
+  await expect(page.getByText("待办清单", { exact: true })).toBeVisible();
   await screenshot(page, opts.filenames.todos);
 
   // Extra pages depend on which set we are running.
   if (opts.filenames.extra1.includes("share")) {
     await page.goto(shareUrl);
-    await expect(page.getByText(opts.locale === "zh-CN" ? "公开分享" : "Public Share", { exact: true })).toBeVisible();
+    await expect(page.getByText("公开分享", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await screenshot(page, opts.filenames.extra1);
 
@@ -201,7 +198,6 @@ async function runEvidenceSet(
 test("evidence: pages (zh-CN + light)", async ({ browser }, testInfo) => {
   await runEvidenceSet(
     {
-      locale: "zh-CN",
       theme: "light",
       filenames: {
         dashboard: "dashboard-zh-light.png",
@@ -216,17 +212,16 @@ test("evidence: pages (zh-CN + light)", async ({ browser }, testInfo) => {
   );
 });
 
-test("evidence: pages (en + dark)", async ({ browser }, testInfo) => {
+test("evidence: pages (zh-CN + dark)", async ({ browser }, testInfo) => {
   await runEvidenceSet(
     {
-      locale: "en",
       theme: "dark",
       filenames: {
-        dashboard: "dashboard-en-dark.png",
-        notes: "notes-en-dark.png",
-        todos: "todos-en-dark.png",
-        extra1: "notifications-en-dark.png",
-        extra2: "search-en-dark.png",
+        dashboard: "dashboard-zh-dark.png",
+        notes: "notes-zh-dark.png",
+        todos: "todos-zh-dark.png",
+        extra1: "notifications-zh-dark.png",
+        extra2: "search-zh-dark.png",
       },
     },
     { browser },

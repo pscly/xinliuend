@@ -307,6 +307,80 @@
         "title": "MeResponse",
         "type": "object"
       },
+      "MemosMigrationResponse": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "preview",
+              "apply"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "memos_base_url": {
+            "title": "Memos Base Url",
+            "type": "string"
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/MemosMigrationSummary"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "summary",
+          "memos_base_url"
+        ],
+        "title": "MemosMigrationResponse",
+        "type": "object"
+      },
+      "MemosMigrationSummary": {
+        "properties": {
+          "conflicts": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Conflicts",
+            "type": "integer"
+          },
+          "created_local": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Created Local",
+            "type": "integer"
+          },
+          "deleted_local_from_remote": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Deleted Local From Remote",
+            "type": "integer"
+          },
+          "remote_total": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Remote Total",
+            "type": "integer"
+          },
+          "updated_local_from_remote": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Updated Local From Remote",
+            "type": "integer"
+          }
+        },
+        "title": "MemosMigrationSummary",
+        "type": "object"
+      },
       "Note": {
         "properties": {
           "body_md": {
@@ -2553,7 +2627,7 @@
   },
   "info": {
     "title": "Flow Backend",
-    "version": "0.6.0"
+    "version": "0.7.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -4229,6 +4303,504 @@
         "summary": "Change Password",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/api/v1/memos/migration/apply": {
+      "post": {
+        "operationId": "apply_migration_api_v1_memos_migration_apply_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemosMigrationResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Payload Too Large",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply Migration",
+        "tags": [
+          "memos"
+        ]
+      }
+    },
+    "/api/v1/memos/migration/preview": {
+      "post": {
+        "operationId": "preview_migration_api_v1_memos_migration_preview_post",
+        "parameters": [
+          {
+            "description": "Optional client-provided request id; echoed back in responses.",
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemosMigrationResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Payload Too Large",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Upstream Error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Echoed or generated request id.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Migration",
+        "tags": [
+          "memos"
         ]
       }
     },

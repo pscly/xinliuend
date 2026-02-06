@@ -4,7 +4,6 @@ import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import type { AppLocale } from "@/lib/i18n/locales";
 import { useI18n } from "@/lib/i18n/useI18n";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { useTheme } from "@/lib/theme/ThemeProvider";
@@ -31,11 +30,9 @@ function validateUsername(username: string): MessageKey | null {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { t, locale, setLocale } = useI18n();
+  const { t } = useI18n();
   const { preference, setPreference } = useTheme();
   const { login } = useAuth();
-
-  const nextLocale: AppLocale = locale === "zh-CN" ? "en" : "zh-CN";
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -81,15 +78,6 @@ export default function LoginPage() {
             <div className={styles.brandName}>{t("app.name")}</div>
           </div>
           <div className={styles.controls}>
-            <button
-              type="button"
-              className={styles.pill}
-              onClick={() => setLocale(nextLocale)}
-              aria-label={`${t("ui.language")}: ${nextLocale}`}
-            >
-              <span className={styles.pillLabel}>{t("ui.language")}</span>
-              <span className={styles.pillValue}>{locale === "zh-CN" ? "中文" : "EN"}</span>
-            </button>
             <button
               type="button"
               className={styles.pill}
