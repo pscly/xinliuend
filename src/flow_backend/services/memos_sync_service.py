@@ -513,8 +513,12 @@ async def apply_pull_user_notes(
             local_hash = sha256_hex(note.body_md)
             last_remote_hash = nr.remote_sha256_hex
 
-            remote_changed_since_last = last_remote_hash is not None and last_remote_hash != remote_hash
-            local_changed_since_last = last_remote_hash is not None and local_hash != last_remote_hash
+            remote_changed_since_last = (
+                last_remote_hash is not None and last_remote_hash != remote_hash
+            )
+            local_changed_since_last = (
+                last_remote_hash is not None and local_hash != last_remote_hash
+            )
 
             should_apply_remote = local_deleted or remote_changed_since_last
             if should_apply_remote:

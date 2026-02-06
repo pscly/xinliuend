@@ -282,10 +282,7 @@ class Settings(BaseSettings):
             warnings.append("ADMIN_SESSION_SECRET is using placeholder value")
         if self.user_session_secret == "user_session_secret_change_me":
             warnings.append("USER_SESSION_SECRET is using placeholder value")
-        if (
-            self.user_password_encryption_key
-            == "ITfQicSA5iZ34TlOneaqNmrDcDG8ZtPVCx3IE7lu_L4="
-        ):
+        if self.user_password_encryption_key == "ITfQicSA5iZ34TlOneaqNmrDcDG8ZtPVCx3IE7lu_L4=":
             warnings.append("USER_PASSWORD_ENCRYPTION_KEY is using placeholder value")
         share_secret = self.share_token_secret.strip()
         if not share_secret or share_secret == "share_token_secret_change_me":

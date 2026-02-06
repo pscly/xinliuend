@@ -25,4 +25,3 @@ def test_password_crypto_requires_key():
             _ = encrypt_password("x")
     finally:
         settings.user_password_encryption_key = old_key
-

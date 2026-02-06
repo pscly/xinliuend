@@ -511,7 +511,9 @@ async def restore_todo_item(
 ):
     user_id = user.id
     if user_id is None:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="user missing id")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="user missing id"
+        )
 
     # 与 sync_planner 的 tombstone 语义保持一致：对被软删除的 todo_item，需要显式 restore。
     _ = await todo_items_service.restore_item(

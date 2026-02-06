@@ -96,12 +96,10 @@ async def test_v1_todo_item_tzid_respects_payload_and_default(tmp_path: Path):
             assert r_list.status_code == 200
             items = r_list.json()["items"]
             assert any(
-                it.get("title") == "tzid custom" and it.get("tzid") == "Asia/Tokyo"
-                for it in items
+                it.get("title") == "tzid custom" and it.get("tzid") == "Asia/Tokyo" for it in items
             )
             assert any(
-                it.get("title") == "tzid default" and it.get("tzid") == "UTC"
-                for it in items
+                it.get("title") == "tzid default" and it.get("tzid") == "UTC" for it in items
             )
     finally:
         settings.database_url = old_db

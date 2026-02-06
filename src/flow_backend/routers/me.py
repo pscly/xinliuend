@@ -42,7 +42,9 @@ async def change_password(
 
     user_id = user.id
     if user_id is None:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="user id missing")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="user id missing"
+        )
 
     if not settings.dev_bypass_memos:
         if not user.memos_token:
@@ -65,7 +67,9 @@ async def change_password(
             timeout_seconds=settings.memos_request_timeout_seconds,
         )
         try:
-            await client.update_user_password(user_id=int(user.memos_id), new_password=payload.new_password)
+            await client.update_user_password(
+                user_id=int(user.memos_id), new_password=payload.new_password
+            )
         except MemosClientError as e:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
 

@@ -30,4 +30,3 @@ def decrypt_password(token: str) -> str:
     except InvalidToken as e:
         raise ValueError("密码密文无法解密（密钥不匹配或数据已损坏）") from e
     return raw.decode("utf-8")
-

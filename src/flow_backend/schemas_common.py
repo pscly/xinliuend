@@ -17,4 +17,3 @@ class IdResponse(BaseModel):
 
 class IdsResponse(BaseModel):
     ids: list[str] = Field(default_factory=list)
-

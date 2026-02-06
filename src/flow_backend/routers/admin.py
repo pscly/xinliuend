@@ -18,7 +18,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from flow_backend.config import settings
 from flow_backend.db import get_session
 from flow_backend.device_tracking import extract_client_ip
-from flow_backend.memos_client import MemosClient, MemosClientError, memos_password_from_app_password
+from flow_backend.memos_client import (
+    MemosClient,
+    MemosClientError,
+    memos_password_from_app_password,
+)
 from flow_backend.models import User, UserDevice, UserDeviceIP
 from flow_backend.password_crypto import decrypt_password, encrypt_password
 from flow_backend.rate_limiting import build_ip_key, enforce_rate_limit
@@ -515,7 +519,10 @@ async def admin_user_secrets(
         )
 
     if not user.password_enc:
-        return {"ok": False, "error": "该用户未记录可解密密码（旧版本数据无法恢复）；可通过重置密码写入。"}
+        return {
+            "ok": False,
+            "error": "该用户未记录可解密密码（旧版本数据无法恢复）；可通过重置密码写入。",
+        }
 
     try:
         password = decrypt_password(user.password_enc)

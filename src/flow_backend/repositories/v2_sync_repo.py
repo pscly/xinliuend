@@ -33,7 +33,9 @@ async def get_user_setting(
 ) -> UserSetting | None:
     stmt = select(UserSetting).where(UserSetting.user_id == user_id).where(UserSetting.key == key)
     if not include_deleted:
-        stmt = stmt.where(cast(ColumnElement[object], cast(object, UserSetting.deleted_at)).is_(None))
+        stmt = stmt.where(
+            cast(ColumnElement[object], cast(object, UserSetting.deleted_at)).is_(None)
+        )
     return (await session.exec(stmt)).first()
 
 

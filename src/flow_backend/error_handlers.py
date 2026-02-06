@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """统一异常处理（ErrorResponse）。
 
 目标：
@@ -7,6 +5,8 @@ from __future__ import annotations
   {error, message, request_id, details}
 - 避免 FastAPI 默认 {"detail": ...} 与自定义错误混杂，降低客户端分支成本
 """
+
+from __future__ import annotations
 
 import logging
 from typing import cast

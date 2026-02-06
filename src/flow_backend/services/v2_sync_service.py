@@ -156,7 +156,9 @@ async def push(
             "todo_item": 2,
             "todo_occurrence": 3,
         }
-        for raw in sorted(mutations, key=lambda r: resource_order.get(str(r.get("resource") or ""), 99)):
+        for raw in sorted(
+            mutations, key=lambda r: resource_order.get(str(r.get("resource") or ""), 99)
+        ):
             resource = str(raw.get("resource") or "")
             entity_id = str(raw.get("entity_id") or "")
             op = str(raw.get("op") or "")
@@ -190,7 +192,9 @@ async def push(
                 server_setting = await v2_sync_repo.get_user_setting(
                     session, user_id=user_id, key=entity_id, include_deleted=True
                 )
-                if server_setting is not None and incoming_ms < int(server_setting.client_updated_at_ms or 0):
+                if server_setting is not None and incoming_ms < int(
+                    server_setting.client_updated_at_ms or 0
+                ):
                     rejected.append(
                         {
                             "resource": resource,
@@ -228,7 +232,9 @@ async def push(
                 server_list = await v2_sync_repo.get_todo_list(
                     session, user_id=user_id, list_id=entity_id, include_deleted=True
                 )
-                if server_list is not None and incoming_ms < int(server_list.client_updated_at_ms or 0):
+                if server_list is not None and incoming_ms < int(
+                    server_list.client_updated_at_ms or 0
+                ):
                     rejected.append(
                         {
                             "resource": resource,
@@ -263,7 +269,11 @@ async def push(
                         row2.sort_order = _parse_int(payload.get("sort_order"))
                     if "archived" in payload:
                         archived_obj = payload.get("archived")
-                        row2.archived = bool(archived_obj) if isinstance(archived_obj, bool) else bool(archived_obj)
+                        row2.archived = (
+                            bool(archived_obj)
+                            if isinstance(archived_obj, bool)
+                            else bool(archived_obj)
+                        )
                     row2.deleted_at = None
 
                 session.add(row2)
@@ -389,7 +399,11 @@ async def push(
                     list_id_in = str((data or {}).get("list_id") or "").strip()
                     if not list_id_in:
                         rejected.append(
-                            {"resource": resource, "entity_id": entity_id, "reason": "missing list_id"}
+                            {
+                                "resource": resource,
+                                "entity_id": entity_id,
+                                "reason": "missing list_id",
+                            }
                         )
                         continue
 
@@ -443,14 +457,22 @@ async def push(
                         list_id_payload = str(payload3.get("list_id") or "").strip()
                         if not list_id_payload:
                             rejected.append(
-                                {"resource": resource, "entity_id": entity_id, "reason": "missing list_id"}
+                                {
+                                    "resource": resource,
+                                    "entity_id": entity_id,
+                                    "reason": "missing list_id",
+                                }
                             )
                             continue
                     elif "list_id" in payload3:
                         list_id_payload = str(payload3.get("list_id") or "").strip()
                         if not list_id_payload:
                             rejected.append(
-                                {"resource": resource, "entity_id": entity_id, "reason": "missing list_id"}
+                                {
+                                    "resource": resource,
+                                    "entity_id": entity_id,
+                                    "reason": "missing list_id",
+                                }
                             )
                             continue
 
@@ -463,7 +485,11 @@ async def push(
                         )
                         if list_row is None:
                             rejected.append(
-                                {"resource": resource, "entity_id": entity_id, "reason": "todo list not found"}
+                                {
+                                    "resource": resource,
+                                    "entity_id": entity_id,
+                                    "reason": "todo list not found",
+                                }
                             )
                             continue
 
@@ -482,15 +508,25 @@ async def push(
                         if "rrule" in payload3
                         else current_rrule
                     )
-                    dtstart_next_obj = payload3.get("dtstart_local") if "dtstart_local" in payload3 else current_dtstart
-                    dtstart_next = str(dtstart_next_obj) if isinstance(dtstart_next_obj, str) else None
+                    dtstart_next_obj = (
+                        payload3.get("dtstart_local")
+                        if "dtstart_local" in payload3
+                        else current_dtstart
+                    )
+                    dtstart_next = (
+                        str(dtstart_next_obj) if isinstance(dtstart_next_obj, str) else None
+                    )
 
                     recurring_reason = _validate_recurring_fields(
                         is_recurring_next, rrule_next, dtstart_next
                     )
                     if recurring_reason is not None:
                         rejected.append(
-                            {"resource": resource, "entity_id": entity_id, "reason": recurring_reason}
+                            {
+                                "resource": resource,
+                                "entity_id": entity_id,
+                                "reason": recurring_reason,
+                            }
                         )
                         continue
 
@@ -513,7 +549,9 @@ async def push(
                     if "parent_id" in payload3:
                         parent_obj = payload3.get("parent_id")
                         item.parent_id = (
-                            str(parent_obj).strip() if isinstance(parent_obj, str) and parent_obj.strip() else None
+                            str(parent_obj).strip()
+                            if isinstance(parent_obj, str) and parent_obj.strip()
+                            else None
                         )
                     if "title" in payload3:
                         title_obj = str(payload3.get("title") or "").strip()
@@ -530,7 +568,9 @@ async def push(
                         item.due_at_local = str(due_obj) if isinstance(due_obj, str) else None
                     if "completed_at_local" in payload3:
                         done_obj = payload3.get("completed_at_local")
-                        item.completed_at_local = str(done_obj) if isinstance(done_obj, str) else None
+                        item.completed_at_local = (
+                            str(done_obj) if isinstance(done_obj, str) else None
+                        )
                     if "sort_order" in payload3:
                         item.sort_order = _parse_int(payload3.get("sort_order"))
                     if "tags" in payload3:
@@ -569,7 +609,9 @@ async def push(
                 server_occ = await v2_sync_repo.get_todo_occurrence(
                     session, user_id=user_id, occ_id=entity_id, include_deleted=True
                 )
-                if server_occ is not None and incoming_ms < int(server_occ.client_updated_at_ms or 0):
+                if server_occ is not None and incoming_ms < int(
+                    server_occ.client_updated_at_ms or 0
+                ):
                     rejected.append(
                         {
                             "resource": resource,
@@ -599,7 +641,11 @@ async def push(
                     item_id_in = str(payload4.get("item_id") or "").strip()
                     if not item_id_in:
                         rejected.append(
-                            {"resource": resource, "entity_id": entity_id, "reason": "missing item_id"}
+                            {
+                                "resource": resource,
+                                "entity_id": entity_id,
+                                "reason": "missing item_id",
+                            }
                         )
                         continue
                     rec_id_in = str(payload4.get("recurrence_id_local") or "").strip()
@@ -617,7 +663,11 @@ async def push(
                     )
                     if item_row is None:
                         rejected.append(
-                            {"resource": resource, "entity_id": entity_id, "reason": "todo item not found"}
+                            {
+                                "resource": resource,
+                                "entity_id": entity_id,
+                                "reason": "todo item not found",
+                            }
                         )
                         continue
                     tzid_in = str(payload4.get("tzid") or "").strip()
@@ -635,7 +685,11 @@ async def push(
                         item_id_in = str(payload4.get("item_id") or "").strip()
                         if not item_id_in:
                             rejected.append(
-                                {"resource": resource, "entity_id": entity_id, "reason": "missing item_id"}
+                                {
+                                    "resource": resource,
+                                    "entity_id": entity_id,
+                                    "reason": "missing item_id",
+                                }
                             )
                             continue
                         item_row = await v2_sync_repo.get_todo_item(
@@ -643,7 +697,11 @@ async def push(
                         )
                         if item_row is None:
                             rejected.append(
-                                {"resource": resource, "entity_id": entity_id, "reason": "todo item not found"}
+                                {
+                                    "resource": resource,
+                                    "entity_id": entity_id,
+                                    "reason": "todo item not found",
+                                }
                             )
                             continue
                         occ.item_id = item_id_in
@@ -670,7 +728,9 @@ async def push(
                 if "note_override" in payload4:
                     occ.note_override = cast(str | None, payload4.get("note_override"))
                 if "due_at_override_local" in payload4:
-                    occ.due_at_override_local = cast(str | None, payload4.get("due_at_override_local"))
+                    occ.due_at_override_local = cast(
+                        str | None, payload4.get("due_at_override_local")
+                    )
                 if "completed_at_local" in payload4:
                     occ.completed_at_local = cast(str | None, payload4.get("completed_at_local"))
 
@@ -763,14 +823,18 @@ async def pull(
 
     todo_lists: list[dict[str, object]] = []
     for lid in sorted(list_ids):
-        l = await v2_sync_repo.get_todo_list(session, user_id=user_id, list_id=lid, include_deleted=True)
-        if l is None:
+        todo_list = await v2_sync_repo.get_todo_list(
+            session, user_id=user_id, list_id=lid, include_deleted=True
+        )
+        if todo_list is None:
             continue
-        todo_lists.append(_serialize_list(l))
+        todo_lists.append(_serialize_list(todo_list))
 
     todo_items: list[dict[str, object]] = []
     for tid in sorted(todo_ids):
-        t = await v2_sync_repo.get_todo_item(session, user_id=user_id, item_id=tid, include_deleted=True)
+        t = await v2_sync_repo.get_todo_item(
+            session, user_id=user_id, item_id=tid, include_deleted=True
+        )
         if t is None:
             continue
         todo_items.append(_serialize_item(t))
