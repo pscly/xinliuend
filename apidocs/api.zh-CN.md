@@ -629,6 +629,27 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 | DELETE /api/v1/todo/lists/{list_id} | 200 | `OkResponse` | 幂等：不存在也返回 ok |
 | POST /api/v1/todo/lists/reorder | 200 | `OkResponse` | 调整 sort_order |
 
+最小请求/响应示例（创建 TODO List）：
+
+请求（`TodoListUpsertRequest`）：
+
+```json
+{
+  "id": null,
+  "name": "Inbox",
+  "color": null,
+  "sort_order": 0,
+  "archived": false,
+  "client_updated_at_ms": 1700000000000
+}
+```
+
+响应（200，`IdResponse`）：
+
+```json
+{"id":"list_123"}
+```
+
 #### GET /api/v1/todo/lists
 
 Query：
@@ -688,6 +709,31 @@ Query：
 | PATCH /api/v1/todo/items/{item_id} | 200 | `OkResponse` | 部分字段更新 |
 | DELETE /api/v1/todo/items/{item_id} | 200 | `OkResponse` | 幂等：不存在也返回 ok |
 | POST /api/v1/todo/items/{item_id}/restore | 200 | `OkResponse` | 取消软删除 |
+
+最小请求/响应示例（创建 TODO Item）：
+
+请求（`TodoItemUpsertRequest`）：
+
+```json
+{
+  "id": null,
+  "list_id": "list_123",
+  "title": "buy milk",
+  "tags": [],
+  "client_updated_at_ms": 1700000000001,
+  "tzid": "Asia/Shanghai"
+}
+```
+
+说明：
+
+- `tzid` 可省略或传空字符串；服务端会回退到 `DEFAULT_TZID`。
+
+响应（200，`IdResponse`）：
+
+```json
+{"id":"item_123"}
+```
 
 #### GET /api/v1/todo/items
 
@@ -801,6 +847,51 @@ Query：`client_updated_at_ms`（默认 0）
 |---|---:|---|---|
 | GET /api/v1/sync/pull | 200 | `SyncPullResponse` | 增量拉取（cursor/next_cursor/has_more） |
 | POST /api/v1/sync/push | 200 | `SyncPushResponse` | applied/rejected；冲突常见为 409 |
+
+最小请求/响应示例（push：upsert 一个 note）：
+
+请求（`SyncPushRequest`）：
+
+```json
+{
+  "mutations": [
+    {
+      "resource": "note",
+      "op": "upsert",
+      "entity_id": "note_123",
+      "client_updated_at_ms": 1700000000000,
+      "data": {"body_md": "# from sync", "title": "demo", "tags": []}
+    }
+  ]
+}
+```
+
+响应（200，全部应用成功，`SyncPushResponse`）：
+
+```json
+{
+  "cursor": 123,
+  "applied": [{"resource": "note", "entity_id": "note_123"}],
+  "rejected": []
+}
+```
+
+响应（200，出现冲突，`rejected` 带服务端快照）：
+
+```json
+{
+  "cursor": 123,
+  "applied": [],
+  "rejected": [
+    {
+      "resource": "note",
+      "entity_id": "note_123",
+      "reason": "conflict",
+      "server": {"id": "note_123", "client_updated_at_ms": 1700000000001}
+    }
+  ]
+}
+```
 
 #### GET /api/v1/sync/pull
 
@@ -956,6 +1047,35 @@ v1 sync `data` 字段约定（按服务端实际读取的 key）：
 | PATCH /api/v1/notes/{note_id} | 200 | `Note` | 并发冲突返回 409 |
 | DELETE /api/v1/notes/{note_id} | 204 | 无 | 使用 query 传 `client_updated_at_ms` |
 | POST /api/v1/notes/{note_id}/restore | 200 | `Note` | 取消软删除 |
+
+最小请求/响应示例（创建 Note）：
+
+请求（`NoteCreateRequest`）：
+
+```json
+{
+  "id": null,
+  "title": "demo",
+  "body_md": "# Hello",
+  "tags": ["work"],
+  "client_updated_at_ms": 1700000000000
+}
+```
+
+响应（201，`Note`）：
+
+```json
+{
+  "id": "note_123",
+  "title": "demo",
+  "body_md": "# Hello",
+  "tags": ["work"],
+  "client_updated_at_ms": 1700000000000,
+  "created_at": "2026-02-01T00:00:00Z",
+  "updated_at": "2026-02-01T00:00:00Z",
+  "deleted_at": null
+}
+```
 
 #### POST /api/v1/notes
 
@@ -1184,6 +1304,20 @@ Query：
 - 若需要验证码：可通过 header 传 `X-Captcha-Token`（JSON body 的 `captcha_token` 仅作为兼容字段）
 
 成功：201，返回 `PublicShareComment`。
+
+响应示例（`PublicShareComment`）：
+
+```json
+{
+  "id": "comment_123",
+  "body": "hello",
+  "author_name": "anonymous",
+  "attachment_ids": [],
+  "is_folded": false,
+  "folded_reason": null,
+  "created_at": "2026-02-01T00:00:00Z"
+}
+```
 
 #### POST /api/v1/public/shares/{share_token}/comments/{comment_id}/report
 
