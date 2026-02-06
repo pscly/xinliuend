@@ -447,6 +447,16 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 
 ### 5.1 Auth
 
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| POST /api/v1/auth/register | 200 | `AuthTokenResponse` | 返回 `token/csrf_token/server_url` |
+| POST /api/v1/auth/login | 200 | `AuthTokenResponse` | 同上 |
+| POST /api/v1/auth/logout | 200 | `OkResponse` | cookie-session 有效时要求 CSRF |
+| GET /api/v1/me | 200 | `MeResponse` | cookie-session 下返回 `csrf_token` |
+| POST /api/v1/me/password | 200 | `ChangePasswordResponse` | cookie-session 写请求需 CSRF |
+
 #### POST /api/v1/auth/register
 
 请求体：`RegisterRequest`（`src/flow_backend/schemas.py`）
@@ -560,6 +570,14 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| GET /api/v1/settings | 200 | `SettingsListResponse` | 仅返回未删除的 items |
+| PUT /api/v1/settings/{key} | 200 | `SettingOut` | LWW：`client_updated_at_ms` 越大越新 |
+| DELETE /api/v1/settings/{key} | 200 | `OkResponse` | 软删除；LWW 冲突会返回 409 |
+
 #### GET /api/v1/settings
 
 成功：
@@ -600,6 +618,16 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 ### 5.3 TODO Lists
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
+
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| GET /api/v1/todo/lists | 200 | `TodoListListResponse` | 支持 `include_archived` |
+| POST /api/v1/todo/lists | 200 | `IdResponse` | upsert（`id` 为空则创建） |
+| PATCH /api/v1/todo/lists/{list_id} | 200 | `OkResponse` | 部分字段更新 |
+| DELETE /api/v1/todo/lists/{list_id} | 200 | `OkResponse` | 幂等：不存在也返回 ok |
+| POST /api/v1/todo/lists/reorder | 200 | `OkResponse` | 调整 sort_order |
 
 #### GET /api/v1/todo/lists
 
@@ -649,6 +677,17 @@ Query：
 ### 5.4 TODO Items
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
+
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| GET /api/v1/todo/items | 200 | `TodoItemListResponse` | 支持多种过滤与分页 |
+| POST /api/v1/todo/items | 200 | `IdResponse` | upsert（`id` 为空则创建） |
+| POST /api/v1/todo/items/bulk | 200 | `IdsResponse` | 批量 upsert |
+| PATCH /api/v1/todo/items/{item_id} | 200 | `OkResponse` | 部分字段更新 |
+| DELETE /api/v1/todo/items/{item_id} | 200 | `OkResponse` | 幂等：不存在也返回 ok |
+| POST /api/v1/todo/items/{item_id}/restore | 200 | `OkResponse` | 取消软删除 |
 
 #### GET /api/v1/todo/items
 
@@ -719,6 +758,15 @@ Query：`client_updated_at_ms`（默认 0）
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| GET /api/v1/todo/occurrences | 200 | `TodoOccurrenceListResponse` | 需传 `item_id` |
+| POST /api/v1/todo/occurrences | 200 | `IdResponse` | upsert（`id` 为空则创建） |
+| POST /api/v1/todo/occurrences/bulk | 200 | `IdsResponse` | 批量 upsert |
+| DELETE /api/v1/todo/occurrences/{occurrence_id} | 200 | `OkResponse` | 不存在返回 404 |
+
 #### GET /api/v1/todo/occurrences
 
 Query：
@@ -746,6 +794,13 @@ Query：`client_updated_at_ms`（默认 0）
 ### 5.6 Sync（v1）
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
+
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| GET /api/v1/sync/pull | 200 | `SyncPullResponse` | 增量拉取（cursor/next_cursor/has_more） |
+| POST /api/v1/sync/push | 200 | `SyncPushResponse` | applied/rejected；冲突常见为 409 |
 
 #### GET /api/v1/sync/pull
 
@@ -891,6 +946,17 @@ v1 sync `data` 字段约定（按服务端实际读取的 key）：
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| POST /api/v1/notes | 201 | `Note` | 创建；必须带 `client_updated_at_ms` |
+| GET /api/v1/notes | 200 | `NoteList` | 列表 + 搜索 |
+| GET /api/v1/notes/{note_id} | 200 | `Note` | 支持 `include_deleted` |
+| PATCH /api/v1/notes/{note_id} | 200 | `Note` | 并发冲突返回 409 |
+| DELETE /api/v1/notes/{note_id} | 204 | 无 | 使用 query 传 `client_updated_at_ms` |
+| POST /api/v1/notes/{note_id}/restore | 200 | `Note` | 取消软删除 |
+
 #### POST /api/v1/notes
 
 请求体：`NoteCreateRequest`（`src/flow_backend/v2/schemas/notes.py`）
@@ -950,6 +1016,13 @@ Query：
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
 
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| GET /api/v1/notes/{note_id}/revisions | 200 | `NoteRevisionList` | 默认 limit=100 |
+| POST /api/v1/notes/{note_id}/revisions/{revision_id}/restore | 200 | `Note` | 以 revision 快照回滚 |
+
 #### GET /api/v1/notes/{note_id}/revisions
 
 Query：
@@ -969,6 +1042,13 @@ Query：
 ### 6.3 Attachments
 
 鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
+
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| POST /api/v1/notes/{note_id}/attachments | 201 | `Attachment` | `multipart/form-data`（form field: `file`） |
+| GET /api/v1/attachments/{attachment_id} | 200 | bytes | 返回文件流（下载） |
 
 #### POST /api/v1/notes/{note_id}/attachments
 
@@ -1005,6 +1085,16 @@ Query：
   - 上限由 `ATTACHMENTS_MAX_SIZE_BYTES` 控制（默认 25MB）。
 
 ### 6.4 Shares（鉴权）
+
+鉴权：需要登录态（Bearer Token 或 Cookie Session；Cookie 写请求需 CSRF）。
+
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| POST /api/v1/notes/{note_id}/shares | 201 | `ShareCreated` | 创建分享（返回 share_url/share_token） |
+| DELETE /api/v1/shares/{share_id} | 204 | 无 | 撤销分享 |
+| PATCH /api/v1/shares/{share_id}/comment-config | 200 | `ShareCommentConfig` | 配置匿名评论/验证码策略 |
 
 #### POST /api/v1/notes/{note_id}/shares
 
@@ -1046,6 +1136,17 @@ Query：
 ### 6.5 Public Shares（匿名）
 
 这些接口无需 Bearer Token。
+
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| GET /api/v1/public/shares/{share_token} | 200 | `SharedNote` | 返回 note + attachments |
+| GET /api/v1/public/shares/{share_token}/comments | 200 | `PublicShareCommentListResponse` | 评论列表 |
+| POST /api/v1/public/shares/{share_token}/comments | 201 | `PublicShareComment` | 发表评论 |
+| POST /api/v1/public/shares/{share_token}/comments/{comment_id}/report | 200 | `PublicShareComment` | 举报评论 |
+| POST /api/v1/public/shares/{share_token}/attachments | 201 | `SharedAttachment` | 上传匿名附件（multipart） |
+| GET /api/v1/public/shares/{share_token}/attachments/{attachment_id} | 200 | bytes | 下载匿名附件 |
 
 #### GET /api/v1/public/shares/{share_token}
 
@@ -1122,6 +1223,14 @@ Query：
   - `read_at`: ISO8601 datetime string | null
 - 列表返回：`NotificationListResponse { notifications, total, limit, offset }`
 
+成功状态码与返回体速查：
+
+| Endpoint | 成功 | 返回体 | 备注 |
+|---|---:|---|---|
+| GET /api/v1/notifications | 200 | `NotificationListResponse` | 分页列表 |
+| GET /api/v1/notifications/unread-count | 200 | `UnreadCountResponse` | 未读数量 |
+| POST /api/v1/notifications/{notification_id}/read | 200 | `Notification` | 幂等 |
+
 #### GET /api/v1/notifications
 
 用途：分页获取通知列表（默认按时间倒序）。
@@ -1178,6 +1287,12 @@ Query：
 - 该路由仅在 `ENVIRONMENT != production` 时挂载（生产环境默认不可用）。
 - 默认不出现在 OpenAPI schema 中（因此不会包含在 `GET /openapi.json` 与 `apidocs/openapi-v1.json`）。
 - 若你在本地联调/测试工具里希望看到 debug 端点，可导入 `apidocs/openapi-v1.dev.json`（由导出脚本 `--include-dev` 生成）。
+
+行为速查（该接口用于“故意失败”的验证场景）：
+
+| Endpoint | 预期行为 | 返回体 | 备注 |
+|---|---|---|---|
+| POST /api/v1/debug/tx-fail | 固定抛 500 | `ErrorResponse` | 用于验证事务回滚；不要用于正式客户端 |
 
 #### POST /api/v1/debug/tx-fail
 
@@ -1266,6 +1381,21 @@ export BASE_URL="http://localhost:31031"
 curl -sS "$BASE_URL/health"
 ```
 
+### 9.1.1 生成毫秒时间戳（client_updated_at_ms）
+
+很多写入接口需要 `client_updated_at_ms`（毫秒时间戳）。推荐用 `python3` 生成，跨平台稳定：
+
+```bash
+now_ms() { python3 -c 'import time; print(int(time.time() * 1000))'; }
+```
+
+（可选）如果你明确在使用 GNU date，也可以：
+
+```bash
+# 仅 GNU date 支持 %3N；某些系统的 date 可能不支持
+now_ms() { date +%s%3N; }
+```
+
 ### 9.2 注册/登录（Bearer Token）
 
 注册（若用户已存在会返回 409）：
@@ -1297,10 +1427,10 @@ curl -sS -H "Authorization: Bearer $TOKEN" \
 
 ### 9.4 Notes：创建 + 列表 + 更新 + 删除/恢复
 
-生成毫秒时间戳（GNU date 通常支持 `%3N`）：
+生成毫秒时间戳（用于 `client_updated_at_ms`）：
 
 ```bash
-NOW_MS="$(date +%s%3N)"
+NOW_MS="$(now_ms)"
 ```
 
 创建笔记并提取 `note_id`：
@@ -1325,7 +1455,7 @@ curl -sS -H "Authorization: Bearer $TOKEN" \
 更新（PATCH，注意必须提供 `client_updated_at_ms`）：
 
 ```bash
-NOW_MS="$(date +%s%3N)"
+NOW_MS="$(now_ms)"
 curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"body_md\":\"# Updated\",\"client_updated_at_ms\":$NOW_MS}" \
   "$BASE_URL/api/v1/notes/$NOTE_ID"
@@ -1334,7 +1464,7 @@ curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
 删除（204，无 body；使用 query 传 `client_updated_at_ms`）：
 
 ```bash
-NOW_MS="$(date +%s%3N)"
+NOW_MS="$(now_ms)"
 curl -sS -H "Authorization: Bearer $TOKEN" \
   -X DELETE "$BASE_URL/api/v1/notes/$NOTE_ID?client_updated_at_ms=$NOW_MS" -i
 ```
@@ -1342,7 +1472,7 @@ curl -sS -H "Authorization: Bearer $TOKEN" \
 恢复（restore）：
 
 ```bash
-NOW_MS="$(date +%s%3N)"
+NOW_MS="$(now_ms)"
 curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"client_updated_at_ms\":$NOW_MS}" \
   "$BASE_URL/api/v1/notes/$NOTE_ID/restore"
@@ -1391,11 +1521,11 @@ curl -sS "$BASE_URL/api/v1/public/shares/$SHARE_TOKEN"
 创建 TODO list（返回 id）：
 
 ```bash
+NOW_MS="$(now_ms)"
 LIST_ID="$(
-  NOW_MS=\"$(date +%s%3N)\"; \
-  curl -sS -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \
-    -d \"{\\\"id\\\":null,\\\"name\\\":\\\"Inbox\\\",\\\"color\\\":null,\\\"sort_order\\\":0,\\\"archived\\\":false,\\\"client_updated_at_ms\\\":$NOW_MS}\" \
-    \"$BASE_URL/api/v1/todo/lists\" \
+  curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"id\":null,\"name\":\"Inbox\",\"color\":null,\"sort_order\":0,\"archived\":false,\"client_updated_at_ms\":$NOW_MS}" \
+    "$BASE_URL/api/v1/todo/lists" \
   | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])'
 )"
 echo "$LIST_ID"
@@ -1404,11 +1534,11 @@ echo "$LIST_ID"
 创建 TODO item（返回 id）：
 
 ```bash
+NOW_MS="$(now_ms)"
 ITEM_ID="$(
-  NOW_MS=\"$(date +%s%3N)\"; \
-  curl -sS -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" \
-    -d \"{\\\"id\\\":null,\\\"list_id\\\":\\\"$LIST_ID\\\",\\\"title\\\":\\\"buy milk\\\",\\\"tags\\\":[],\\\"client_updated_at_ms\\\":$NOW_MS}\" \
-    \"$BASE_URL/api/v1/todo/items\" \
+  curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d "{\"id\":null,\"list_id\":\"$LIST_ID\",\"title\":\"buy milk\",\"tags\":[],\"client_updated_at_ms\":$NOW_MS}" \
+    "$BASE_URL/api/v1/todo/items" \
   | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])'
 )"
 echo "$ITEM_ID"
@@ -1433,7 +1563,7 @@ curl -sS -H "Authorization: Bearer $TOKEN" \
 push（示例：upsert 一个 note；实际请按你的本地变更组装 mutations）：
 
 ```bash
-NOW_MS="$(date +%s%3N)"
+NOW_MS="$(now_ms)"
 curl -sS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d "{\"mutations\":[{\"resource\":\"note\",\"op\":\"upsert\",\"entity_id\":\"$NOTE_ID\",\"client_updated_at_ms\":$NOW_MS,\"data\":{\"body_md\":\"# from sync\"}}]}" \
   "$BASE_URL/api/v1/sync/push"
@@ -1467,7 +1597,7 @@ curl -sS -c .tmp.cookies.txt -H "Content-Type: application/json" \
 CSRF="$(python3 -c 'import json; print(json.load(open(".tmp.login.json"))["csrf_token"])')"
 echo "$CSRF"
 
-NOW_MS="$(date +%s%3N)"
+NOW_MS="$(now_ms)"
 curl -sS -b .tmp.cookies.txt -H "X-CSRF-Token: $CSRF" -H "Content-Type: application/json" \
   -d "{\"title\":\"cookie-note\",\"body_md\":\"hello\",\"tags\":[],\"client_updated_at_ms\":$NOW_MS}" \
   "$BASE_URL/api/v1/notes"
