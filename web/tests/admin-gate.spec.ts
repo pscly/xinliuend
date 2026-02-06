@@ -84,6 +84,6 @@ test("admin gate: non-admin cannot access /settings/admin", async ({ page }) => 
   await page.goto("/settings/admin");
   await page.waitForURL((url) => !/\/settings\/admin\/?$/.test(url.pathname));
   expect(new URL(page.url()).pathname).toBe("/");
-  await expect(page.getByText(/^Quick links$/)).toBeVisible();
+  await expect(page.getByText(/^(Quick links|\u5feb\u6377\u5165\u53e3)$/)).toBeVisible();
   await expect(page.getByTestId("settings-admin-page")).toHaveCount(0);
 });

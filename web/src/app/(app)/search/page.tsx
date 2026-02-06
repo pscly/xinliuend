@@ -8,6 +8,7 @@ import type { Note, NoteList } from "@/features/notes/types";
 import { getTodoItems } from "@/features/todo/todoApi";
 import type { TodoItem, TodoItemsResponse } from "@/features/todo/types";
 import { Page } from "@/features/ui/Page";
+import { useI18n } from "@/lib/i18n/useI18n";
 
 function normalizeQuery(v: string): string {
   return v.trim().replace(/\s+/g, " ");
@@ -80,6 +81,7 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
 }
 
 export default function SearchPage() {
+  const { locale, t } = useI18n();
   const [queryDraft, setQueryDraft] = useState<string>("");
   const [tagDraft, setTagDraft] = useState<string>("");
 
@@ -211,9 +213,9 @@ export default function SearchPage() {
   };
 
   const activeLabel = normalizedTag
-    ? `Tag: ${normalizedTag}`
+    ? `${t("search.active.tagPrefix")}${normalizedTag}`
     : normalizedQuery
-      ? `Query: ${normalizedQuery}`
+      ? `${t("search.active.queryPrefix")}${normalizedQuery}`
       : "";
 
   return (
@@ -231,11 +233,12 @@ export default function SearchPage() {
         >
           <div style={{ display: "grid", gap: 10 }}>
             <label style={{ display: "grid", gap: 6 }}>
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Search</div>
+              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("search.query.label")}</div>
               <input
+                data-testid="search-query-input"
                 value={queryDraft}
                 onChange={(e) => setQueryDraft(e.target.value)}
-                placeholder={normalizedTag ? "(Tag filter active)" : "Search notes + todos"}
+                placeholder={normalizedTag ? t("search.query.placeholderTagActive") : t("search.query.placeholder")}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -249,15 +252,16 @@ export default function SearchPage() {
             </label>
 
             <div style={{ display: "grid", gap: 6 }}>
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Tag filter</div>
+              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("search.tag.label")}</div>
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
                 {normalizedTag ? (
-                  <ChipButton label={`#${normalizedTag}  x`} title="Clear tag filter" onClick={onClearTag} />
+                  <ChipButton label={`#${normalizedTag}  x`} title={t("search.tag.clear")} onClick={onClearTag} />
                 ) : null}
                 <input
+                  data-testid="search-tag-input"
                   value={tagDraft}
                   onChange={(e) => setTagDraft(e.target.value)}
-                  placeholder="Type tag (optional)"
+                  placeholder={t("search.tag.placeholder")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -276,6 +280,7 @@ export default function SearchPage() {
                   }}
                 />
                 <button
+                  data-testid="search-apply-tag"
                   type="button"
                   onClick={onApplyTag}
                   style={{
@@ -287,22 +292,25 @@ export default function SearchPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Apply
+                  {t("common.apply")}
                 </button>
               </div>
               {normalizedTag ? (
                 <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-                  Tag mode uses tag endpoints for both notes and todos.
+                  {t("search.tag.modeHint")}
                 </div>
               ) : null}
             </div>
           </div>
 
           {activeLabel ? (
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Active: {activeLabel}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+              {t("search.active.prefix")}
+              {activeLabel}
+            </div>
           ) : (
             <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-              Tip: paste a URL like <code>?q=meeting</code> or <code>?tag=work</code>.
+              {t("search.tip")}
             </div>
           )}
         </div>
@@ -317,14 +325,22 @@ export default function SearchPage() {
             }}
           >
             <SectionTitle
-              title="Notes"
-              subtitle={notesLoading ? "Loading..." : notesError ? "Error" : `${notes.length}${notesTotal ? ` / ${notesTotal}` : ""}`}
+              title={t("search.section.notes")}
+              subtitle={
+                notesLoading
+                  ? t("common.loadingDots")
+                  : notesError
+                    ? t("search.subtitle.error")
+                    : locale === "zh-CN"
+                      ? `${notes.length}${notesTotal ? ` / ${notesTotal}` : ""} 条`
+                      : `${notes.length}${notesTotal ? ` / ${notesTotal}` : ""}`
+              }
             />
             {notesError ? (
               <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>{notesError}</div>
             ) : null}
             {!notesLoading && !notesError && notes.length === 0 ? (
-              <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>No matching notes.</div>
+              <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>{t("search.empty.notes")}</div>
             ) : null}
             <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
               {notesLoading
@@ -357,7 +373,7 @@ export default function SearchPage() {
                             lineHeight: 1.2,
                           }}
                         >
-                          {n.title || "(Untitled)"}
+                          {n.title || t("common.untitled")}
                         </Link>
                         <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{n.updated_at.slice(0, 10)}</div>
                       </div>
@@ -366,8 +382,8 @@ export default function SearchPage() {
                       ) : null}
                       {n.tags.length ? (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                          {n.tags.slice(0, 10).map((t) => (
-                            <ChipButton key={t} label={`#${t}`} title={`Filter by tag: ${t}`} onClick={() => onPickTag(t)} />
+                          {n.tags.slice(0, 10).map((tag) => (
+                            <ChipButton key={tag} label={`#${tag}`} title={`${t("search.tag.filterByTagTitlePrefix")}${tag}`} onClick={() => onPickTag(tag)} />
                           ))}
                         </div>
                       ) : null}
@@ -384,12 +400,23 @@ export default function SearchPage() {
               background: "var(--color-surface)",
             }}
           >
-            <SectionTitle title="Todos" subtitle={todosLoading ? "Loading..." : todosError ? "Error" : String(todos.length)} />
+            <SectionTitle
+              title={t("search.section.todos")}
+              subtitle={
+                todosLoading
+                  ? t("common.loadingDots")
+                  : todosError
+                    ? t("search.subtitle.error")
+                    : locale === "zh-CN"
+                      ? `${todos.length} 项`
+                      : String(todos.length)
+              }
+            />
             {todosError ? (
               <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>{todosError}</div>
             ) : null}
             {!todosLoading && !todosError && todos.length === 0 ? (
-              <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>No matching todos.</div>
+              <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>{t("search.empty.todos")}</div>
             ) : null}
             <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
               {todosLoading
@@ -420,8 +447,8 @@ export default function SearchPage() {
                       ) : null}
                       {it.tags.length ? (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                          {it.tags.slice(0, 10).map((t) => (
-                            <ChipButton key={`${it.id}:${t}`} label={`#${t}`} title={`Filter by tag: ${t}`} onClick={() => onPickTag(t)} />
+                          {it.tags.slice(0, 10).map((tag) => (
+                            <ChipButton key={`${it.id}:${tag}`} label={`#${tag}`} title={`${t("search.tag.filterByTagTitlePrefix")}${tag}`} onClick={() => onPickTag(tag)} />
                           ))}
                         </div>
                       ) : null}

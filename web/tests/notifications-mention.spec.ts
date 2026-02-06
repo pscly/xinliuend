@@ -71,8 +71,8 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
   // 3) Create a note and share link.
   await page.goto("/notes");
   await expect(page).toHaveURL(/\/notes/);
-  const newButton = page.getByRole("button", { name: /^New$/ });
-  const saveButton = page.getByRole("button", { name: /^Save$/ });
+  const newButton = page.getByTestId("notes-new");
+  const saveButton = page.getByTestId("notes-save");
   const editor = page.locator("textarea");
 
   await expect(newButton).toBeVisible();
@@ -86,7 +86,7 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
   await editor.fill(["# Mention seed", `user: ${username}`, `key: ${mentionKey}`].join("\n"));
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^(Saved|\u5df2\u4fdd\u5b58)$/)).toBeVisible();
 
   const shareCreateRespPromise = page.waitForResponse(
     (resp) =>
@@ -150,9 +150,9 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
   const anonContext = await browser.newContext();
   const anonPage = await anonContext.newPage();
   await anonPage.goto(shareUrlAbs);
-  await expect(anonPage.getByText("Public Share", { exact: true })).toBeVisible();
+  await expect(anonPage.getByText(/^(Public Share|\u516c\u5f00\u5206\u4eab)$/)).toBeVisible();
 
-  const commentBox = anonPage.getByPlaceholder("Be kind. No HTML is rendered.");
+  const commentBox = anonPage.getByTestId("share-comment-body");
   await expect(commentBox).toBeVisible();
   const comment = `hello @${username} ${mentionKey}`;
 
@@ -160,7 +160,7 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
     (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments$/.test(resp.url()),
   );
   await commentBox.fill(comment);
-  await anonPage.getByRole("button", { name: /^Post comment$/ }).click();
+  await anonPage.getByTestId("share-post-comment").click();
   const postResp = await postCommentRespPromise;
   expect([200, 201], `post comment status=${postResp.status()}`).toContain(postResp.status());
   await expect(anonPage.getByText(comment, { exact: true })).toBeVisible();
@@ -195,7 +195,7 @@ test("notifications: @mention from anonymous share comment", async ({ page, brow
   // 7) Click “Open share” and verify share page loads.
   await notifItem.getByRole("link", { name: /打开分享|Open share/ }).click();
   await expect(page).toHaveURL(/\/share\/?\?token=/);
-  await expect(page.getByText("Public Share", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^(Public Share|\u516c\u5f00\u5206\u4eab)$/)).toBeVisible();
 
   // 8) Go back and mark notification as read.
   await page.goBack();

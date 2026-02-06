@@ -69,8 +69,8 @@ test("notes: 409 conflict -> use server version", async ({ page }) => {
   // Create and save an initial note.
   await page.goto("/notes");
   await expect(page).toHaveURL(/\/notes/);
-  const newButton = page.getByRole("button", { name: /^New$/ });
-  const saveButton = page.getByRole("button", { name: /^Save$/ });
+  const newButton = page.getByTestId("notes-new");
+  const saveButton = page.getByTestId("notes-save");
   const editor = page.locator("textarea");
 
   await expect(newButton).toBeVisible();
@@ -95,7 +95,7 @@ test("notes: 409 conflict -> use server version", async ({ page }) => {
 
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^(Saved|\u5df2\u4fdd\u5b58)$/)).toBeVisible();
 
   // Force a newer server version by PATCHing with a future timestamp.
   const serverBody = [
@@ -147,8 +147,8 @@ test("notes: 409 conflict -> use server version", async ({ page }) => {
   expect(conflictResp.status(), `conflict status=${conflictResp.status()}`).toBe(409);
 
   // Assert conflict UI and the resolution action.
-  await expect(page.getByText("Conflict", { exact: true })).toBeVisible();
-  const useServerButton = page.getByRole("button", { name: "Use server version" });
+  await expect(page.getByText(/^(Conflict|\u51b2\u7a81)$/)).toBeVisible();
+  const useServerButton = page.getByTestId("notes-use-server-version");
   await expect(useServerButton).toBeVisible();
 
   // Clicking should replace the textarea with the server snapshot body.

@@ -79,25 +79,25 @@ test("todos: recurring daily occurrences render + mark done persists", async ({ 
   // Go to /todos and create a list + recurring item.
   await page.goto("/todos");
   await expect(page).toHaveURL(/\/todos/);
-  const todoListSelect = page.getByLabel("Todo list");
+  const todoListSelect = page.getByTestId("todo-list-select");
   await expect(todoListSelect).toBeVisible();
 
-  await page.getByLabel("New list name").fill(listName);
-  await page.getByRole("button", { name: /^Create list$/ }).click();
+  await page.getByTestId("todo-new-list-name").fill(listName);
+  await page.getByTestId("todo-create-list").click();
   const listOption = page.getByRole("option", { name: listName });
   await expect(listOption).toHaveCount(1);
   const listId = await listOption.getAttribute("value");
   expect(listId, "created list option has value").not.toBeNull();
   await expect(todoListSelect).toHaveValue(listId);
 
-  await page.getByLabel("New item title").fill(itemTitle);
-  await page.getByRole("checkbox", { name: /^Create as daily recurring$/ }).check();
-  await page.getByLabel("Days").fill(String(days));
+  await page.getByTestId("todo-new-item-title").fill(itemTitle);
+  await page.getByTestId("todo-recurring-daily").check();
+  await page.getByTestId("todo-recurring-days").fill(String(days));
 
   const addItemRespPromise = page.waitForResponse(
     (resp) => resp.request().method() === "POST" && /\/api\/v1\/todo\/items\b/.test(resp.url()) && resp.status() === 200,
   );
-  await page.getByRole("button", { name: /^Add item$/ }).click();
+  await page.getByTestId("todo-add-item").click();
   await addItemRespPromise;
   await expect(page.getByText(itemTitle, { exact: true })).toBeVisible();
 
@@ -111,7 +111,7 @@ test("todos: recurring daily occurrences render + mark done persists", async ({ 
   await page.goto("/calendar");
   await expect(page).toHaveURL(/\/calendar/);
   await Promise.all([calItemsRespPromise, calOccRespPromise]);
-  await expect(page.getByText(/Showing recurring todo occurrences only\./)).toBeVisible();
+  await expect(page.getByTestId("calendar-hint")).toBeVisible();
 
   const titleNodes = page.getByTitle(itemTitle);
   await expect(titleNodes).toHaveCount(days);
@@ -120,12 +120,12 @@ test("todos: recurring daily occurrences render + mark done persists", async ({ 
   const markOccRespPromise = page.waitForResponse(
     (resp) => resp.request().method() === "POST" && /\/api\/v1\/todo\/occurrences\b/.test(resp.url()) && resp.status() === 200,
   );
-  const firstMarkButton = titleNodes.first().locator("..").locator("..").getByRole("button", { name: /^Mark$/ });
+  const firstMarkButton = titleNodes.first().locator("..").locator("..").getByRole("button", { name: /^(Mark|\u6807\u8bb0)$/ });
   await expect(firstMarkButton).toBeEnabled();
   await firstMarkButton.click();
   await markOccRespPromise;
 
-  const doneButtonsForTitle = titleNodes.locator("..").locator("..").getByRole("button", { name: /^Done$/ });
+  const doneButtonsForTitle = titleNodes.locator("..").locator("..").getByRole("button", { name: /^(Done|\u5b8c\u6210)$/ });
   await expect(doneButtonsForTitle).toHaveCount(1);
 
   // Reload /calendar and verify done state persists (exactly 1 Done for this title).
@@ -136,6 +136,6 @@ test("todos: recurring daily occurrences render + mark done persists", async ({ 
     .getByTitle(itemTitle)
     .locator("..")
     .locator("..")
-    .getByRole("button", { name: /^Done$/ });
+    .getByRole("button", { name: /^(Done|\u5b8c\u6210)$/ });
   await expect(doneButtonsForTitleAfterReload).toHaveCount(1);
 });

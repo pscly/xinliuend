@@ -19,7 +19,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<AppLocale>(() => {
     if (typeof window === "undefined") return "zh-CN";
     const storedRaw = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-    return storedRaw ? normalizeLocale(storedRaw) : normalizeLocale(window.navigator.language);
+    // 默认中文：避免浏览器语言为英文时导致整个站点首次打开全是英文。
+    return storedRaw ? normalizeLocale(storedRaw) : "zh-CN";
   });
 
   useEffect(() => {

@@ -11,6 +11,7 @@ import { getTodoItems, getTodoOccurrences } from "@/features/todo/todoApi";
 import type { LocalDateTimeString, TodoItem, TodoOccurrence } from "@/features/todo/types";
 
 import { Page } from "@/features/ui/Page";
+import { useI18n } from "@/lib/i18n/useI18n";
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -87,6 +88,7 @@ type TodayOccurrenceRow = {
 };
 
 export default function HomePage() {
+  const { locale, t } = useI18n();
   const [initialNowMs] = useState(() => Date.now());
   const shanghaiToday = useMemo(() => buildShanghaiTodayRange(initialNowMs), [initialNowMs]);
 
@@ -172,7 +174,11 @@ export default function HomePage() {
       setTodayRows(allRows.slice(0, 10));
 
       if (overrideFailures > 0) {
-        setTodayWarning(`Some overrides failed to load (${overrideFailures}/${overrideResults.length}). Showing best-effort results.`);
+        setTodayWarning(
+          locale === "zh-CN"
+            ? `部分覆盖项加载失败（${overrideFailures}/${overrideResults.length}），已尽量展示可用结果。`
+            : `Some overrides failed to load (${overrideFailures}/${overrideResults.length}). Showing best-effort results.`
+        );
       }
     } catch (err: unknown) {
       if (todayRunIdRef.current !== runId) return;
@@ -184,7 +190,7 @@ export default function HomePage() {
         setTodayLoading(false);
       }
     }
-  }, [shanghaiToday.from, shanghaiToday.to]);
+  }, [locale, shanghaiToday.from, shanghaiToday.to]);
 
   const loadNotes = useCallback(async () => {
     const runId = ++notesRunIdRef.current;
@@ -217,13 +223,13 @@ export default function HomePage() {
   const quickLinks = useMemo(
     () =>
       [
-        { href: "/notes", title: "Notes", subtitle: "Write, review, tag" },
-        { href: "/todos", title: "Todos", subtitle: "Lists + recurring" },
-        { href: "/calendar", title: "Calendar", subtitle: "Recurring preview" },
-        { href: "/search", title: "Search", subtitle: "Notes + todos" },
-        { href: "/settings", title: "Settings", subtitle: "Account + sync" },
+        { href: "/notes", title: t("nav.notes"), subtitle: t("home.quickLinks.notes.subtitle") },
+        { href: "/todos", title: t("nav.todos"), subtitle: t("home.quickLinks.todos.subtitle") },
+        { href: "/calendar", title: t("nav.calendar"), subtitle: t("home.quickLinks.calendar.subtitle") },
+        { href: "/search", title: t("nav.search"), subtitle: t("home.quickLinks.search.subtitle") },
+        { href: "/settings", title: t("nav.settings"), subtitle: t("home.quickLinks.settings.subtitle") },
       ] as const,
-    []
+    [t]
   );
 
   return (
@@ -240,8 +246,8 @@ export default function HomePage() {
           }}
         >
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>Quick links</div>
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Jump in</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>{t("home.quickLinks.title")}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("home.quickLinks.subtitle")}</div>
           </div>
           <div
             style={{
@@ -268,7 +274,7 @@ export default function HomePage() {
               >
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
                   <div style={{ fontWeight: 750, letterSpacing: "-0.01em" }}>{l.title}</div>
-                  <div style={{ fontSize: 12, color: "var(--color-accent)", fontWeight: 700 }}>Open</div>
+                  <div style={{ fontSize: 12, color: "var(--color-accent)", fontWeight: 700 }}>{t("common.open")}</div>
                 </div>
                 <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{l.subtitle}</div>
               </Link>
@@ -296,7 +302,7 @@ export default function HomePage() {
           >
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <div style={{ display: "grid", gap: 2 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>Today (Asia/Shanghai)</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>{t("home.today.title")}</div>
                 <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{shanghaiToday.dateLocal}</div>
               </div>
               <button
@@ -314,13 +320,14 @@ export default function HomePage() {
                   cursor: todayLoading ? "not-allowed" : "pointer",
                 }}
               >
-                {todayLoading ? "Loading…" : "Refresh"}
+                {todayLoading ? t("common.loading") : t("common.refresh")}
               </button>
             </div>
 
             {todayError ? (
               <div role="alert" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-                Failed to load today: {todayError}
+                {t("home.today.failedPrefix")}
+                {todayError}
               </div>
             ) : null}
 
@@ -329,7 +336,7 @@ export default function HomePage() {
             ) : null}
 
             {!todayLoading && !todayError && todayRows.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>No recurring occurrences for today.</div>
+              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("home.today.noOccurrences")}</div>
             ) : null}
 
             <div style={{ display: "grid", gap: 10 }}>
@@ -387,7 +394,7 @@ export default function HomePage() {
                           lineHeight: 1,
                         }}
                       >
-                        Done
+                        {t("common.done")}
                       </div>
                     ) : null}
                   </div>
@@ -396,7 +403,9 @@ export default function HomePage() {
             </div>
 
             {!todayLoading && !todayError && todayTotal > 10 ? (
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Showing 10 / {todayTotal} occurrences.</div>
+              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                {locale === "zh-CN" ? `仅展示前 10 条，共 ${todayTotal} 条。` : `Showing 10 / ${todayTotal} occurrences.`}
+              </div>
             ) : null}
           </section>
 
@@ -411,7 +420,7 @@ export default function HomePage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>Recent notes</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>{t("home.recentNotes.title")}</div>
               <button
                 type="button"
                 onClick={() => {
@@ -427,18 +436,19 @@ export default function HomePage() {
                   cursor: notesLoading ? "not-allowed" : "pointer",
                 }}
               >
-                {notesLoading ? "Loading…" : "Refresh"}
+                {notesLoading ? t("common.loading") : t("common.refresh")}
               </button>
             </div>
 
             {notesError ? (
               <div role="alert" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-                Failed to load notes: {notesError}
+                {t("home.recentNotes.failedPrefix")}
+                {notesError}
               </div>
             ) : null}
 
             {!notesLoading && !notesError && notes.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>No notes yet.</div>
+              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("home.recentNotes.empty")}</div>
             ) : null}
 
             <div style={{ display: "grid", gap: 10 }}>
@@ -466,7 +476,7 @@ export default function HomePage() {
                   >
                     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
                       <div
-                        title={n.title || "(Untitled)"}
+                        title={n.title || t("common.untitled")}
                         style={{
                           fontSize: 14,
                           fontWeight: 750,
@@ -476,7 +486,7 @@ export default function HomePage() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {n.title || "(Untitled)"}
+                        {n.title || t("common.untitled")}
                       </div>
                       <div style={{ fontSize: 12, color: "var(--color-text-muted)", flex: "0 0 auto" }}>{n.updated_at.slice(0, 10)}</div>
                     </div>

@@ -69,8 +69,8 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   // 3) Create a note via UI at /notes.
   await page.goto("/notes");
   await expect(page).toHaveURL(/\/notes/);
-  const newButton = page.getByRole("button", { name: /^New$/ });
-  const saveButton = page.getByRole("button", { name: /^Save$/ });
+  const newButton = page.getByTestId("notes-new");
+  const saveButton = page.getByTestId("notes-save");
   const editor = page.locator("textarea");
 
   await expect(newButton).toBeVisible();
@@ -85,7 +85,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   await editor.fill(["# Share seed", `user: ${username}`, `ts: ${Date.now()}`].join("\n"));
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^(Saved|\u5df2\u4fdd\u5b58)$/)).toBeVisible();
 
   // 4) Create share link via Notes UI and capture share_id/share_url from the API response.
   const shareCreateRespPromise = page.waitForResponse(
@@ -152,14 +152,14 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   const anonContext = await browser.newContext();
   const anonPage = await anonContext.newPage();
   await anonPage.goto(shareUrlAbs);
-  await expect(anonPage.getByText("Public Share", { exact: true })).toBeVisible();
+  await expect(anonPage.getByText(/^(Public Share|\u516c\u5f00\u5206\u4eab)$/)).toBeVisible();
 
   // 7) Fill captcha token and post first anonymous comment.
-  const captchaInput = anonPage.getByPlaceholder("Paste captcha token");
+  const captchaInput = anonPage.getByTestId("share-captcha-token");
   await expect(captchaInput).toBeVisible();
   await captchaInput.fill("test-pass");
 
-  const commentBox = anonPage.getByPlaceholder("Be kind. No HTML is rendered.");
+  const commentBox = anonPage.getByTestId("share-comment-body");
   await expect(commentBox).toBeVisible();
 
   const comment1 = `hello from playwright ${Date.now()}`;
@@ -167,7 +167,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
     (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments$/.test(resp.url()),
   );
   await commentBox.fill(comment1);
-  await anonPage.getByRole("button", { name: /^Post comment$/ }).click();
+  await anonPage.getByTestId("share-post-comment").click();
   const postResp1 = await postCommentRespPromise1;
   expect([200, 201], `post comment status=${postResp1.status()}`).toContain(postResp1.status());
   await expect(anonPage.getByText(comment1, { exact: true })).toBeVisible();
@@ -183,7 +183,7 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   const uploadRespPromise = anonPage.waitForResponse(
     (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/attachments$/.test(resp.url()),
   );
-  await anonPage.getByRole("button", { name: /^Upload$/ }).click();
+  await anonPage.getByRole("button", { name: /^(Upload|\u4e0a\u4f20)$/ }).click();
   const uploadResp = await uploadRespPromise;
   expect([200, 201], `upload status=${uploadResp.status()}`).toContain(uploadResp.status());
   await expect(anonPage.getByText(fileName)).toBeVisible();
@@ -196,13 +196,13 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
     (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments$/.test(resp.url()),
   );
   await commentBox.fill(comment2);
-  await anonPage.getByRole("button", { name: /^Post comment$/ }).click();
+  await anonPage.getByTestId("share-post-comment").click();
   const postResp2 = await postCommentRespPromise2;
   expect([200, 201], `post comment 2 status=${postResp2.status()}`).toContain(postResp2.status());
   await expect(anonPage.getByText(comment2, { exact: true })).toBeVisible();
 
   // 9) Download attachment should return 200.
-  await expect(anonPage.getByRole("link", { name: /^Download$/ }).first()).toBeVisible();
+  await expect(anonPage.getByRole("link", { name: /^(Download|\u4e0b\u8f7d)$/ }).first()).toBeVisible();
   const downloadStatus = await anonPage.evaluate(async ({ token }) => {
     const base = `/api/v1/public/shares/${encodeURIComponent(token)}`;
     const shareResp = await fetch(base, { method: "GET" });
@@ -238,12 +238,12 @@ test("share: anonymous comments + captcha + attachment + report", async ({ page,
   const reportRespPromise = anonPage.waitForResponse(
     (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments\/.+\/report$/.test(resp.url()),
   );
-  await comment1Card.getByRole("button", { name: /^Report$/ }).click();
+  await comment1Card.getByRole("button", { name: /^(Report|\u4e3e\u62a5)$/ }).click();
   const reportResp = await reportRespPromise;
   expect([200, 201], `report status=${reportResp.status()}`).toContain(reportResp.status());
 
-  await expect(comment1Card.getByText(/^Folded$/)).toBeVisible();
-  await expect(comment1Card.getByText(/^Reason:/)).toBeVisible();
+  await expect(comment1Card.getByText(/^(Folded|\u5df2\u6298\u53e0)$/)).toBeVisible();
+  await expect(comment1Card.getByText(/^(Reason:|原因：)/)).toBeVisible();
 
   await anonContext.close();
 });

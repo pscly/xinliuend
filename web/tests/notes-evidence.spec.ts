@@ -61,9 +61,9 @@ async function createNoteOpenRichPreview(page: import("@playwright/test").Page, 
   await page.goto("/notes");
   await expect(page).toHaveURL(/\/notes/);
 
-  const newButton = page.getByRole("button", { name: /^New$/ });
-  const saveButton = page.getByRole("button", { name: /^Save$/ });
-  const richButton = page.getByRole("button", { name: /^Rich$/ });
+  const newButton = page.getByTestId("notes-new");
+  const saveButton = page.getByTestId("notes-save");
+  const richButton = page.getByRole("button", { name: /^(Rich|\u5bcc\u6587\u672c)$/ });
   const editor = page.locator("textarea");
 
   await expect(newButton).toBeVisible();
@@ -78,24 +78,16 @@ async function createNoteOpenRichPreview(page: import("@playwright/test").Page, 
   await expect(richButton).toBeVisible();
   await richButton.click();
 
-  // Robust: prefer label, fallback to any checkbox.
-  let previewCheckbox = page.getByLabel(/^Preview$/);
-  if ((await previewCheckbox.count()) === 0) {
-    previewCheckbox = page.locator('label:has-text("Preview") >> input[type="checkbox"]');
-  }
-  if ((await previewCheckbox.count()) === 0) {
-    previewCheckbox = page.locator('input[type="checkbox"]').first();
-  }
-
+  const previewCheckbox = page.getByRole("checkbox", { name: /^(Preview|\u9884\u89c8)$/ });
   await previewCheckbox.check();
-  await expect(page.getByText("Preview (plain text)", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^(Preview \(plain text\)|\u9884\u89c8\uff08\u7eaf\u6587\u672c\uff09)$/)).toBeVisible();
   // Avoid strict-mode ambiguity: noteContent exists in both textarea and preview.
   await expect(page.locator("pre")).toContainText(noteContent);
 
   // Optional: persist the note so evidence captures a realistic state.
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(page.getByText(/^Saved$/)).toBeVisible();
+  await expect(page.getByText(/^(Saved|\u5df2\u4fdd\u5b58)$/)).toBeVisible();
 }
 
 async function runEvidenceFlow(theme: "light" | "dark", screenshotFilename: string, { browser }: { browser: import("@playwright/test").Browser }, testInfo: import("@playwright/test").TestInfo) {

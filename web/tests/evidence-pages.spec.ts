@@ -80,7 +80,7 @@ async function createNoteAndShareUrl(page: import("@playwright/test").Page, note
   await waitForAppShell(page);
   await waitForPageHeading(page);
 
-  const newButton = page.getByRole("button", { name: /^New$/ });
+  const newButton = page.getByTestId("notes-new");
   await expect(newButton).toBeVisible();
   await newButton.click();
 
@@ -92,10 +92,10 @@ async function createNoteAndShareUrl(page: import("@playwright/test").Page, note
   await editor.fill(noteContent);
 
   // Optional: persist the note so the share page has realistic content.
-  const saveButton = page.getByRole("button", { name: /^Save$/ });
+  const saveButton = page.getByTestId("notes-save");
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(page.getByText(/^Saved$/)).toBeVisible();
+  await expect(page.getByText(/^(Saved|\u5df2\u4fdd\u5b58)$/)).toBeVisible();
 
   const createShare = page.getByTestId("create-share");
   await expect(createShare).toBeEnabled();
@@ -156,7 +156,7 @@ async function runEvidenceSet(
   // Dashboard
   await page.goto("/");
   await waitForPageHeading(page);
-  await expect(page.getByText("Quick links", { exact: true })).toBeVisible();
+  await expect(page.getByText(opts.locale === "zh-CN" ? "快捷入口" : "Quick links", { exact: true })).toBeVisible();
   await screenshot(page, opts.filenames.dashboard);
 
   // Notes (also generate a share URL for /share evidence).
@@ -167,13 +167,13 @@ async function runEvidenceSet(
   // Todos
   await page.goto("/todos");
   await waitForPageHeading(page);
-  await expect(page.getByText("Todo list", { exact: true })).toBeVisible();
+  await expect(page.getByText(opts.locale === "zh-CN" ? "待办清单" : "Todo list", { exact: true })).toBeVisible();
   await screenshot(page, opts.filenames.todos);
 
   // Extra pages depend on which set we are running.
   if (opts.filenames.extra1.includes("share")) {
     await page.goto(shareUrl);
-    await expect(page.getByText("Public Share", { exact: true })).toBeVisible();
+    await expect(page.getByText(opts.locale === "zh-CN" ? "公开分享" : "Public Share", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await screenshot(page, opts.filenames.extra1);
 
@@ -190,7 +190,7 @@ async function runEvidenceSet(
 
     await page.goto("/search");
     await waitForPageHeading(page);
-    await expect(page.locator('input[placeholder="Search notes + todos"]')).toBeVisible();
+    await expect(page.getByTestId("search-query-input")).toBeVisible();
     await screenshot(page, opts.filenames.extra2);
   }
 

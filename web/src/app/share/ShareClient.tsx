@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { apiFetch } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/useI18n";
 
 type SharedNote = {
   id: string;
@@ -184,16 +185,17 @@ function maybeCaptchaHeader(captchaToken: string): Record<string, string> {
   return t ? { "X-Captcha-Token": t } : {};
 }
 
-function noteDisplayTitle(note: SharedNote): string {
+function noteDisplayTitle(note: SharedNote, untitled: string): string {
   const t = (note.title ?? "").trim();
   if (t) return t;
   const firstLine = note.body_md.split("\n")[0]?.trim() ?? "";
   if (firstLine) return firstLine.slice(0, 80);
-  return "Untitled";
+  return untitled;
 }
 
 export default function ShareClient() {
   const searchParams = useSearchParams();
+  const { locale, t } = useI18n();
   const token = useMemo(() => (searchParams.get("token") ?? "").trim(), [searchParams]);
 
   const [shareLoading, setShareLoading] = useState(false);
@@ -232,27 +234,32 @@ export default function ShareClient() {
       if (!res.ok) {
         const err = await readApiErrorPayload(res);
         if (res.status === 404) {
-          throw new Error("This share link is invalid or has been revoked.");
+          throw new Error(t("share.error.invalidOrRevoked"));
         }
         if (res.status === 410) {
-          throw new Error("This share link has expired.");
+          throw new Error(t("share.error.expired"));
         }
-        throw new Error(err.message ? `Failed to load share: ${err.message}` : `Failed to load share (${res.status})`);
+        if (err.message) {
+          throw new Error(
+            locale === "zh-CN" ? `加载分享失败：${err.message}` : `Failed to load share: ${err.message}`
+          );
+        }
+        throw new Error(locale === "zh-CN" ? `加载分享失败（${res.status}）` : `Failed to load share (${res.status})`);
       }
 
       const json = (await res.json()) as unknown;
       const parsed = parseSharedNoteResponse(json);
-      if (!parsed) throw new Error("Invalid share response");
+      if (!parsed) throw new Error(t("share.error.invalidResponse"));
       if (loadTokenRef.current !== loadId) return;
       setShare(parsed);
     } catch (e) {
       if (loadTokenRef.current !== loadId) return;
       setShare(null);
-      setShareError(e instanceof Error ? e.message : "Failed to load share");
+      setShareError(e instanceof Error ? e.message : t("share.error.failedLoadShare"));
     } finally {
       if (loadTokenRef.current === loadId) setShareLoading(false);
     }
-  }, [token]);
+  }, [locale, t, token]);
 
   const refreshComments = useCallback(async () => {
     if (!token) return;
@@ -266,18 +273,23 @@ export default function ShareClient() {
         if (res.status === 403) {
           setCommentsDisabledHint(true);
         }
-        throw new Error(err.message ? `Failed to load comments: ${err.message}` : `Failed to load comments (${res.status})`);
+        if (err.message) {
+          throw new Error(
+            locale === "zh-CN" ? `加载评论失败：${err.message}` : `Failed to load comments: ${err.message}`
+          );
+        }
+        throw new Error(locale === "zh-CN" ? `加载评论失败（${res.status}）` : `Failed to load comments (${res.status})`);
       }
       const json = (await res.json()) as unknown;
       const parsed = parseCommentListResponse(json);
       setComments(parsed.comments);
     } catch (e) {
-      setCommentsError(e instanceof Error ? e.message : "Failed to load comments");
+      setCommentsError(e instanceof Error ? e.message : t("share.error.failedLoadComments"));
       setComments([]);
     } finally {
       setCommentsLoading(false);
     }
-  }, [token]);
+  }, [locale, t, token]);
 
   useEffect(() => {
     // Reset page state whenever token changes.
@@ -298,9 +310,9 @@ export default function ShareClient() {
   }, [refreshComments, refreshShare, token]);
 
   const shareTitle = useMemo(() => {
-    if (!share?.note) return "Shared note";
-    return noteDisplayTitle(share.note);
-  }, [share]);
+    if (!share?.note) return t("share.title.fallback");
+    return noteDisplayTitle(share.note, t("notes.untitled"));
+  }, [share, t]);
 
   const tokenHint = useMemo(() => {
     if (!token) return "";
@@ -341,13 +353,16 @@ export default function ShareClient() {
         const err = await readApiErrorPayload(res);
         if (res.status === 403) {
           setCommentsDisabledHint(true);
-          throw new Error("Anonymous comments are disabled for this share.");
+          throw new Error(t("share.error.commentsDisabled"));
         }
         if (res.status === 400 && (err.message ?? "").toLowerCase().includes("captcha")) {
           setCaptchaRequiredHint(true);
-          throw new Error("Captcha token required. Paste it in the field above and retry.");
+          throw new Error(t("share.error.captchaRequired"));
         }
-        throw new Error(err.message ? `Failed to post comment: ${err.message}` : `Failed to post comment (${res.status})`);
+        if (err.message) {
+          throw new Error(locale === "zh-CN" ? `发表评论失败：${err.message}` : `Failed to post comment: ${err.message}`);
+        }
+        throw new Error(locale === "zh-CN" ? `发表评论失败（${res.status}）` : `Failed to post comment (${res.status})`);
       }
 
       setCommentBody("");
@@ -356,7 +371,7 @@ export default function ShareClient() {
       // Newly posted comment may reference newly uploaded attachments; refresh share to surface them.
       await refreshShare();
     } catch (err) {
-      setCommentActionError(err instanceof Error ? err.message : "Failed to post comment");
+      setCommentActionError(err instanceof Error ? err.message : t("share.error.failedPostComment"));
     } finally {
       setCommentSubmitting(false);
     }
@@ -384,18 +399,21 @@ export default function ShareClient() {
         const err = await readApiErrorPayload(res);
         if (res.status === 403) {
           setCommentsDisabledHint(true);
-          throw new Error("Anonymous comments are disabled for this share.");
+          throw new Error(t("share.error.commentsDisabled"));
         }
         if (res.status === 400 && (err.message ?? "").toLowerCase().includes("captcha")) {
           setCaptchaRequiredHint(true);
-          throw new Error("Captcha token required. Paste it in the field above and retry.");
+          throw new Error(t("share.error.captchaRequired"));
         }
-        throw new Error(err.message ? `Upload failed: ${err.message}` : `Upload failed (${res.status})`);
+        if (err.message) {
+          throw new Error(locale === "zh-CN" ? `上传失败：${err.message}` : `Upload failed: ${err.message}`);
+        }
+        throw new Error(locale === "zh-CN" ? `上传失败（${res.status}）` : `Upload failed (${res.status})`);
       }
 
       const json = (await res.json()) as unknown;
       const parsed = parseSharedAttachment(json);
-      if (!parsed) throw new Error("Upload succeeded but response is invalid");
+      if (!parsed) throw new Error(t("share.error.uploadInvalidResponse"));
 
       setUploadedAttachments((prev) => {
         const exists = prev.some((a) => a.id === parsed.id);
@@ -406,7 +424,7 @@ export default function ShareClient() {
       setCaptchaRequiredHint(false);
       await refreshShare();
     } catch (e) {
-      setUploadError(e instanceof Error ? e.message : "Upload failed");
+      setUploadError(e instanceof Error ? e.message : t("share.error.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -426,12 +444,15 @@ export default function ShareClient() {
 
       if (!res.ok) {
         const err = await readApiErrorPayload(res);
-        throw new Error(err.message ? `Failed to report: ${err.message}` : `Failed to report (${res.status})`);
+        if (err.message) {
+          throw new Error(locale === "zh-CN" ? `举报失败：${err.message}` : `Failed to report: ${err.message}`);
+        }
+        throw new Error(locale === "zh-CN" ? `举报失败（${res.status}）` : `Failed to report (${res.status})`);
       }
 
       await refreshComments();
     } catch (e) {
-      setCommentActionError(e instanceof Error ? e.message : "Failed to report comment");
+      setCommentActionError(e instanceof Error ? e.message : t("share.error.reportFailed"));
     }
   }
 
@@ -508,10 +529,10 @@ export default function ShareClient() {
                 fontSize: 18,
               }}
             >
-              Public Share
+              {t("share.header.title")}
             </div>
             <div style={{ color: "var(--color-text-muted)", fontSize: 13, marginTop: 4 }}>
-              {token ? `Token: ${tokenHint}` : "Open a share link to view a note."}
+              {token ? `${t("share.header.tokenPrefix")}${tokenHint}` : t("share.header.openHint")}
             </div>
           </div>
 
@@ -525,7 +546,7 @@ export default function ShareClient() {
               style={styles.button}
               disabled={!token || shareLoading || commentsLoading}
             >
-              Refresh
+              {t("common.refresh")}
             </button>
           </div>
         </header>
@@ -533,10 +554,10 @@ export default function ShareClient() {
         {!token ? (
           <section style={{ ...styles.card, padding: 18 }}>
             <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontSize: 26, letterSpacing: "0.01em" }}>
-              Missing token
+              {t("share.missingToken.title")}
             </h1>
             <p style={{ margin: "10px 0 0", color: "var(--color-text-muted)", lineHeight: 1.6 }}>
-              This page expects a share token in the URL. Example:
+              {t("share.missingToken.subtitle")}
             </p>
             <pre
               style={{
@@ -568,13 +589,14 @@ export default function ShareClient() {
               </h1>
               {share?.note?.updated_at ? (
                 <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>
-                  Updated: {formatDateTime(share.note.updated_at)}
+                  {t("share.note.updatedPrefix")}
+                  {formatDateTime(share.note.updated_at)}
                 </div>
               ) : null}
             </div>
 
             {shareLoading ? (
-              <div style={{ marginTop: 12, color: "var(--color-text-muted)" }}>Loading...</div>
+              <div style={{ marginTop: 12, color: "var(--color-text-muted)" }}>{t("common.loadingDots")}</div>
             ) : null}
             {shareError ? (
               <div
@@ -613,7 +635,7 @@ export default function ShareClient() {
                 ) : null}
 
                 <div style={{ marginTop: 14 }}>
-                  <div style={{ color: "var(--color-text-muted)", fontSize: 13, marginBottom: 8 }}>Body</div>
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 13, marginBottom: 8 }}>{t("share.note.body")}</div>
                   <pre
                     style={{
                       margin: 0,
@@ -633,7 +655,7 @@ export default function ShareClient() {
 
                 <div style={{ marginTop: 16 }}>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                    <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>Attachments</div>
+                    <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>{t("share.note.attachments")}</div>
                     <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>
                       {share.attachments.length}
                     </div>
@@ -641,7 +663,7 @@ export default function ShareClient() {
 
                   {share.attachments.length === 0 ? (
                     <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 14 }}>
-                      No attachments.
+                      {locale === "zh-CN" ? "暂无附件。" : "No attachments."}
                     </div>
                   ) : (
                     <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
@@ -678,7 +700,7 @@ export default function ShareClient() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            Download
+                            {t("share.note.download")}
                           </a>
                         </div>
                       ))}
@@ -693,7 +715,7 @@ export default function ShareClient() {
         {token ? (
           <section style={{ ...styles.card, padding: 18 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-              <h2 style={{ margin: 0, fontFamily: "var(--font-display)", letterSpacing: "0.01em" }}>Comments</h2>
+              <h2 style={{ margin: 0, fontFamily: "var(--font-display)", letterSpacing: "0.01em" }}>{t("share.comment.sectionTitle")}</h2>
               <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>{comments.length}</div>
             </div>
 
@@ -709,7 +731,9 @@ export default function ShareClient() {
                   lineHeight: 1.6,
                 }}
               >
-                Posting comments (and uploading attachments) is disabled for this share.
+                {locale === "zh-CN"
+                  ? "该分享已禁用匿名评论（以及附件上传）。"
+                  : "Posting comments (and uploading attachments) is disabled for this share."}
               </div>
             ) : null}
 
@@ -724,17 +748,18 @@ export default function ShareClient() {
                   lineHeight: 1.6,
                 }}
               >
-                Captcha required. Fill in a captcha token and retry.
+                {t("share.error.captchaRequired")}
               </div>
             ) : null}
 
             <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
               <label>
-                <span style={styles.label}>Captcha token (if required)</span>
+                <span style={styles.label}>{t("share.comment.field.captchaToken")}</span>
                 <input
+                  data-testid="share-captcha-token"
                   value={captchaToken}
                   onChange={(e) => setCaptchaToken(e.target.value)}
-                  placeholder="Paste captcha token"
+                  placeholder={locale === "zh-CN" ? "粘贴验证码 token" : "Paste captcha token"}
                   style={styles.input}
                   inputMode="text"
                   autoComplete="off"
@@ -750,7 +775,7 @@ export default function ShareClient() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                  <div style={{ fontFamily: "var(--font-display)", letterSpacing: "0.01em" }}>Upload (optional)</div>
+                  <div style={{ fontFamily: "var(--font-display)", letterSpacing: "0.01em" }}>{t("share.upload.sectionTitle")}</div>
                   <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>POST /attachments</div>
                 </div>
 
@@ -768,7 +793,7 @@ export default function ShareClient() {
                     style={styles.button}
                     disabled={uploading || !uploadFile}
                   >
-                    {uploading ? "Uploading..." : "Upload"}
+                    {uploading ? t("share.upload.uploading") : t("share.upload.upload")}
                   </button>
                 </div>
 
@@ -789,7 +814,7 @@ export default function ShareClient() {
                 {uploadedAttachments.length > 0 ? (
                   <div style={{ marginTop: 12 }}>
                     <div style={{ color: "var(--color-text-muted)", fontSize: 13, marginBottom: 8 }}>
-                      Uploaded (select to attach in next comment)
+                      {t("share.upload.uploadedTitle")}
                     </div>
                     <div style={{ display: "grid", gap: 8 }}>
                       {uploadedAttachments.map((a) => {
@@ -829,7 +854,7 @@ export default function ShareClient() {
                                 </div>
                                 <div style={{ color: "var(--color-text-muted)", fontSize: 12, marginTop: 2 }}>
                                   {a.id}
-                                  {known ? "" : " (refresh note to see metadata)"}
+                                  {known ? "" : locale === "zh-CN" ? "（刷新后可获取元信息）" : " (refresh note to see metadata)"}
                                 </div>
                               </span>
                             </span>
@@ -841,7 +866,7 @@ export default function ShareClient() {
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              Download
+                              {t("share.note.download")}
                             </a>
                           </label>
                         );
@@ -863,17 +888,18 @@ export default function ShareClient() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                  <div style={{ fontFamily: "var(--font-display)", letterSpacing: "0.01em" }}>Write a comment</div>
+                  <div style={{ fontFamily: "var(--font-display)", letterSpacing: "0.01em" }}>{t("share.comment.writeTitle")}</div>
                   <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>POST /comments</div>
                 </div>
 
                 <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
                   <label>
-                    <span style={styles.label}>Name (optional)</span>
+                    <span style={styles.label}>{t("share.comment.field.nameOptional")}</span>
                     <input
+                      data-testid="share-author-name"
                       value={authorName}
                       onChange={(e) => setAuthorName(e.target.value)}
-                      placeholder="Anonymous"
+                      placeholder={t("share.comment.placeholder.anonymous")}
                       style={styles.input}
                       inputMode="text"
                       autoComplete="name"
@@ -882,11 +908,12 @@ export default function ShareClient() {
                   </label>
 
                   <label>
-                    <span style={styles.label}>Message</span>
+                    <span style={styles.label}>{t("share.comment.field.message")}</span>
                     <textarea
+                      data-testid="share-comment-body"
                       value={commentBody}
                       onChange={(e) => setCommentBody(e.target.value)}
-                      placeholder="Be kind. No HTML is rendered."
+                      placeholder={t("share.comment.placeholder.message")}
                       style={{ ...styles.input, minHeight: 120, resize: "vertical", whiteSpace: "pre-wrap" }}
                       maxLength={4000}
                     />
@@ -894,7 +921,9 @@ export default function ShareClient() {
 
                   {selectedAttachmentIds.length > 0 ? (
                     <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>
-                      Attaching {selectedAttachmentIds.length} file(s) to this comment.
+                      {locale === "zh-CN"
+                        ? `将附加 ${selectedAttachmentIds.length} 个附件到本条评论。`
+                        : `Attaching ${selectedAttachmentIds.length} file(s) to this comment.`}
                     </div>
                   ) : null}
 
@@ -913,11 +942,12 @@ export default function ShareClient() {
 
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button
+                      data-testid="share-post-comment"
                       type="submit"
                       style={styles.primaryButton}
                       disabled={commentSubmitting || commentBody.trim().length < 1}
                     >
-                      {commentSubmitting ? "Posting..." : "Post comment"}
+                      {commentSubmitting ? t("share.comment.posting") : t("share.comment.post")}
                     </button>
                     <button
                       type="button"
@@ -925,7 +955,7 @@ export default function ShareClient() {
                       onClick={() => void refreshComments()}
                       disabled={commentsLoading}
                     >
-                      Reload comments
+                      {t("share.comment.reload")}
                     </button>
                   </div>
                 </div>
@@ -933,7 +963,7 @@ export default function ShareClient() {
             </div>
 
             <div style={{ marginTop: 16 }}>
-              {commentsLoading ? <div style={{ color: "var(--color-text-muted)" }}>Loading...</div> : null}
+              {commentsLoading ? <div style={{ color: "var(--color-text-muted)" }}>{t("common.loadingDots")}</div> : null}
               {commentsError ? (
                 <div
                   style={{
@@ -950,7 +980,7 @@ export default function ShareClient() {
 
               {comments.length === 0 && !commentsLoading && !commentsError ? (
                 <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 14 }}>
-                  No comments yet.
+                  {t("share.comment.none")}
                 </div>
               ) : null}
 
@@ -972,7 +1002,7 @@ export default function ShareClient() {
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-                              {c.author_name?.trim() ? c.author_name : "Anonymous"}
+                              {c.author_name?.trim() ? c.author_name : t("share.comment.placeholder.anonymous")}
                             </span>
                             <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{formatDateTime(c.created_at)}</span>
                             {c.is_folded ? (
@@ -985,19 +1015,20 @@ export default function ShareClient() {
                                   borderRadius: 999,
                                 }}
                               >
-                                Folded
+                                {t("share.comment.folded")}
                               </span>
                             ) : null}
                           </div>
 
                           <button type="button" style={styles.button} onClick={() => void onReportComment(c.id)}>
-                            Report
+                            {t("share.comment.report")}
                           </button>
                         </div>
 
                         {c.folded_reason ? (
                           <div style={{ marginTop: 8, color: "var(--color-text-muted)", fontSize: 13 }}>
-                            Reason: {c.folded_reason}
+                            {t("share.comment.reasonPrefix")}
+                            {c.folded_reason}
                           </div>
                         ) : null}
 
@@ -1019,7 +1050,7 @@ export default function ShareClient() {
 
                         {hasAttachments ? (
                           <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
-                            <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>Attachments</div>
+                            <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>{t("share.note.attachments")}</div>
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                               {c.attachment_ids.map((id) => (
                                 <a

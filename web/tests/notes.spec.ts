@@ -69,9 +69,9 @@ test("notes: register -> login -> create -> save -> reload persists", async ({ p
   // Navigate to /notes.
   await page.goto("/notes");
   await expect(page).toHaveURL(/\/notes/);
-  const newButton = page.getByRole("button", { name: /^New$/ });
-  const richButton = page.getByRole("button", { name: /^Rich$/ });
-  const saveButton = page.getByRole("button", { name: /^Save$/ });
+  const newButton = page.getByTestId("notes-new");
+  const richButton = page.getByRole("button", { name: /^(Rich|\u5bcc\u6587\u672c)$/ });
+  const saveButton = page.getByTestId("notes-save");
   const editor = page.locator("textarea");
 
   await expect(newButton).toBeVisible();
@@ -100,7 +100,7 @@ test("notes: register -> login -> create -> save -> reload persists", async ({ p
   await richButton.click();
 
   // Optional: enable Preview if the checkbox exists and is stable.
-  const previewCheckbox = page.getByRole("checkbox", { name: /preview/i });
+  const previewCheckbox = page.getByRole("checkbox", { name: /^(Preview|\u9884\u89c8)$/ });
   if (await previewCheckbox.isVisible().catch(() => false)) {
     if (!(await previewCheckbox.isChecked())) {
       await previewCheckbox.check();
@@ -109,7 +109,7 @@ test("notes: register -> login -> create -> save -> reload persists", async ({ p
 
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(page.getByText(/^Saved$/)).toBeVisible();
+  await expect(page.getByText(/^(Saved|\u5df2\u4fdd\u5b58)$/)).toBeVisible();
 
   // Reload and verify the note persists (URL keeps id=... for selection).
   await expect(page).toHaveURL(/\/notes\/?\?id=/);

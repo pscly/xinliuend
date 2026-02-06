@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/features/ui/Page";
+import { useI18n } from "@/lib/i18n/useI18n";
+import type { AppLocale } from "@/lib/i18n/locales";
 
 import {
   deleteTodoOccurrence,
@@ -43,9 +45,12 @@ function getShanghaiTodayStartUtcMs(nowUtcMs: number): number {
   return Date.UTC(yyyy, month - 1, day, 0, 0, 0) - SHANGHAI_OFFSET_MS;
 }
 
-function getWeekdayShortFromShanghaiDayStartUtcMs(dayStartUtcMs: number): string {
+function getWeekdayShortFromShanghaiDayStartUtcMs(dayStartUtcMs: number, locale: AppLocale): string {
   const weekday = new Date(dayStartUtcMs + SHANGHAI_OFFSET_MS).getUTCDay();
-  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const names =
+    locale === "zh-CN"
+      ? ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+      : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return names[weekday] ?? "";
 }
 
@@ -91,7 +96,10 @@ function getRecurringItems(items: TodoItem[]): RecurringReadyItem[] {
   return items.filter(isRecurringReadyItem);
 }
 
-function buildShanghai7DayRange(nowUtcMs: number): { from: LocalDateTimeString; to: LocalDateTimeString; days: DayMeta[] } {
+function buildShanghai7DayRange(
+  nowUtcMs: number,
+  locale: AppLocale
+): { from: LocalDateTimeString; to: LocalDateTimeString; days: DayMeta[] } {
   const startUtcMs = getShanghaiTodayStartUtcMs(nowUtcMs);
   const from = formatUtcMsToShanghaiLocal(startUtcMs);
   const to = formatUtcMsToShanghaiLocal(startUtcMs + 7 * DAY_MS - 1000);
@@ -101,7 +109,7 @@ function buildShanghai7DayRange(nowUtcMs: number): { from: LocalDateTimeString; 
     const dayStartUtcMs = startUtcMs + i * DAY_MS;
     const dayStartLocal = formatUtcMsToShanghaiLocal(dayStartUtcMs);
     const dateLocal = dayStartLocal.slice(0, 10);
-    const weekday = getWeekdayShortFromShanghaiDayStartUtcMs(dayStartUtcMs);
+    const weekday = getWeekdayShortFromShanghaiDayStartUtcMs(dayStartUtcMs, locale);
     days.push({ dateLocal, label: `${weekday} ${dateLocal}` });
   }
 
@@ -121,8 +129,9 @@ function updateRowInBuckets(buckets: DayBucket[], key: string, patch: Partial<Pi
 }
 
 export default function CalendarPage() {
+  const { locale, t } = useI18n();
   const [initialNowMs] = useState(() => Date.now());
-  const range = useMemo(() => buildShanghai7DayRange(initialNowMs), [initialNowMs]);
+  const range = useMemo(() => buildShanghai7DayRange(initialNowMs, locale), [initialNowMs, locale]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -240,12 +249,12 @@ export default function CalendarPage() {
   return (
     <Page titleKey="page.calendar.title">
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 13, opacity: 0.8 }}>
-            Range (Asia/Shanghai): <code>{range.from}</code> to <code>{range.to}</code>
-          </div>
-          <button
-            type="button"
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 13, opacity: 0.8 }}>
+              {t("calendar.range.prefix")} <code>{range.from}</code> {t("calendar.range.to")} <code>{range.to}</code>
+            </div>
+            <button
+              type="button"
             onClick={() => {
               void load();
             }}
@@ -256,11 +265,11 @@ export default function CalendarPage() {
               border: "1px solid var(--border-color, rgba(120,120,120,0.25))",
               background: "var(--card-bg, transparent)",
               cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            {loading ? "Loading..." : "Refresh"}
-          </button>
-        </div>
+              }}
+            >
+              {loading ? t("common.loadingDots") : t("common.refresh")}
+            </button>
+          </div>
 
         {error ? (
           <div
@@ -298,7 +307,7 @@ export default function CalendarPage() {
             >
               <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.9, marginBottom: 8 }}>{b.label}</div>
               {b.rows.length === 0 ? (
-                <div style={{ fontSize: 12, opacity: 0.55 }}>No occurrences</div>
+                <div style={{ fontSize: 12, opacity: 0.55 }}>{t("calendar.empty")}</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {b.rows.map((row) => {
@@ -345,9 +354,9 @@ export default function CalendarPage() {
                             fontSize: 12,
                             flex: "0 0 auto",
                           }}
-                          title={row.done ? "Mark occurrence undone" : "Mark occurrence done"}
+                          title={row.done ? t("calendar.action.titleMarkUndone") : t("calendar.action.titleMarkDone")}
                         >
-                          {busy ? "..." : row.done ? "Done" : "Mark"}
+                          {busy ? "..." : row.done ? t("common.done") : t("common.mark")}
                         </button>
                       </div>
                     );
@@ -358,8 +367,8 @@ export default function CalendarPage() {
           ))}
         </div>
 
-        <div style={{ fontSize: 12, opacity: 0.6 }}>
-          Showing recurring todo occurrences only. Override deletion only applies when an override exists.
+        <div data-testid="calendar-hint" style={{ fontSize: 12, opacity: 0.6 }}>
+          {t("calendar.footer.hint")}
         </div>
       </div>
     </Page>

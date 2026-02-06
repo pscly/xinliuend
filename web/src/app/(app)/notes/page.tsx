@@ -9,6 +9,7 @@ import { NotesApiErrorException, createNote, getNote, listNotes, patchNote } fro
 import type { Note } from "@/features/notes/types";
 import { Page } from "@/features/ui/Page";
 import { apiFetch } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/useI18n";
 
 type ShareCreateResponse = {
   share_id: string;
@@ -44,11 +45,11 @@ function extractApiErrorMessage(raw: string): string {
   return trimmed;
 }
 
-function noteTitle(n: Note): string {
+function noteTitle(n: Note, untitled: string): string {
   const t = n.title?.trim();
   if (t) return t;
   const firstLine = n.body_md.split("\n")[0]?.trim();
-  return firstLine ? firstLine.slice(0, 80) : "Untitled";
+  return firstLine ? firstLine.slice(0, 80) : untitled;
 }
 
 function noteSnippet(n: Note): string {
@@ -69,6 +70,7 @@ export default function NotesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get("id") ?? "";
+  const { locale, t } = useI18n();
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
@@ -105,11 +107,11 @@ export default function NotesPage() {
       const res = await listNotes({ limit: 100, offset: 0 });
       setNotes(res.items);
     } catch (e) {
-      setNotesError(e instanceof Error ? e.message : "Failed to load notes");
+      setNotesError(e instanceof Error ? e.message : t("notes.error.loadNotes"));
     } finally {
       setNotesLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refreshNotesList();
@@ -173,7 +175,7 @@ export default function NotesPage() {
   const insertLink = useCallback(() => {
     applyEditorTransform((text, start, end) => {
       const selected = text.slice(start, end);
-      const label = selected || "text";
+      const label = selected || t("notes.link.placeholderText");
       const url = "https://";
       const inserted = `[${label}](${url})`;
       const nextText = `${text.slice(0, start)}${inserted}${text.slice(end)}`;
@@ -183,7 +185,7 @@ export default function NotesPage() {
       const nextEnd = selected ? urlEnd : start + 1 + label.length;
       return { nextText, nextStart, nextEnd };
     });
-  }, [applyEditorTransform]);
+  }, [applyEditorTransform, t]);
 
   useEffect(() => {
     setSaved(false);
@@ -219,7 +221,7 @@ export default function NotesPage() {
         if (loadTokenRef.current !== token) return;
         setNote(null);
         setEditorBody("");
-        setNoteError(e instanceof Error ? e.message : "Failed to load note");
+        setNoteError(e instanceof Error ? e.message : t("notes.error.loadNote"));
       } finally {
         if (loadTokenRef.current === token) {
           setNoteLoading(false);
@@ -247,13 +249,13 @@ export default function NotesPage() {
     setConflictSnapshot(null);
 
     try {
-      const created = await createNote({ body_md: "# New note\n\n", client_updated_at_ms: Date.now() });
+      const created = await createNote({ body_md: t("notes.newNoteTemplate"), client_updated_at_ms: Date.now() });
       await refreshNotesList();
       router.replace(buildNotesHref(searchParams, created.id), { scroll: false });
       setNote(created);
       setEditorBody(created.body_md);
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Failed to create note");
+      setActionError(e instanceof Error ? e.message : t("notes.error.createNote"));
     } finally {
       setCreating(false);
     }
@@ -275,7 +277,7 @@ export default function NotesPage() {
       if (e instanceof NotesApiErrorException && e.data.kind === "notes_conflict" && e.data.serverSnapshot) {
         setConflictSnapshot(e.data.serverSnapshot);
       } else {
-        setActionError(e instanceof Error ? e.message : "Failed to save note");
+        setActionError(e instanceof Error ? e.message : t("notes.error.saveNote"));
       }
     } finally {
       setSaving(false);
@@ -302,18 +304,22 @@ export default function NotesPage() {
         const raw = await res.text().catch(() => "");
         const msg = extractApiErrorMessage(raw);
         if (res.status === 401 || res.status === 403) {
-          throw new Error(msg ? `Not authorized: ${msg}` : "Not authorized. Please log in again.");
+          throw new Error(msg ? `${t("notes.error.notAuthorizedPrefix")}${msg}` : t("notes.error.notAuthorizedGeneric"));
         }
-        throw new Error(msg ? `Failed to create share: ${msg}` : `Failed to create share (${res.status})`);
+        throw new Error(
+          msg
+            ? `${t("notes.error.createSharePrefix")}${msg}`
+            : `${t("notes.error.createShareGeneric")} (${res.status})`
+        );
       }
 
       const json = (await res.json()) as unknown;
       const parsed = parseShareCreateResponse(json);
-      if (!parsed) throw new Error("Share created but response is invalid");
+      if (!parsed) throw new Error(t("notes.error.shareResponseInvalid"));
       setShareUrl(parsed.share_url);
     } catch (e) {
       setShareUrl(null);
-      setShareError(e instanceof Error ? e.message : "Failed to create share link");
+      setShareError(e instanceof Error ? e.message : t("notes.error.createShareLink"));
     } finally {
       setShareCreating(false);
     }
@@ -339,7 +345,7 @@ export default function NotesPage() {
       setShareCopied(true);
     } catch {
       setShareCopied(false);
-      setShareError("Copy failed. Please copy the URL manually.");
+      setShareError(t("notes.share.copyFailed"));
     }
   }
 
@@ -371,10 +377,10 @@ export default function NotesPage() {
             gridTemplateRows: "auto 1fr",
             minHeight: 0,
           }}
-        >
-          <div
-            style={{
-              padding: 12,
+          >
+            <div
+              style={{
+                padding: 12,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -385,11 +391,18 @@ export default function NotesPage() {
           >
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-                Notes
+                {t("nav.notes")}
               </div>
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{notesLoading ? "Loading…" : `${notes.length} items`}</div>
+              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                {notesLoading
+                  ? t("common.loading")
+                  : locale === "zh-CN"
+                    ? `${notes.length}${t("notes.sidebar.itemsUnit")}`
+                    : `${notes.length} ${t("notes.sidebar.itemsUnit")}`}
+              </div>
             </div>
             <button
+              data-testid="notes-new"
               type="button"
               onClick={onCreate}
               disabled={creating}
@@ -403,7 +416,7 @@ export default function NotesPage() {
                 cursor: creating ? "not-allowed" : "pointer",
               }}
             >
-              {creating ? "Creating…" : "New"}
+              {creating ? t("common.creating") : t("common.new")}
             </button>
           </div>
 
@@ -437,10 +450,10 @@ export default function NotesPage() {
                       }}
                     >
                       <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.25, marginBottom: 4 }}>
-                        {noteTitle(n)}
+                        {noteTitle(n, t("notes.untitled"))}
                       </div>
                       <div style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.4 }}>
-                        {noteSnippet(n) || "(empty)"}
+                        {noteSnippet(n) || t("common.empty")}
                       </div>
                     </button>
                   </li>
@@ -464,10 +477,16 @@ export default function NotesPage() {
           >
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-                Editor
+                {t("notes.editor.title")}
               </div>
               <div style={{ fontSize: 13, color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {noteLoading ? "Loading…" : selectedInList ? noteTitle(selectedInList) : selectedId ? selectedId : "No note selected"}
+                {noteLoading
+                  ? t("common.loading")
+                  : selectedInList
+                    ? noteTitle(selectedInList, t("notes.untitled"))
+                    : selectedId
+                      ? selectedId
+                      : t("notes.editor.noSelection")}
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -485,7 +504,7 @@ export default function NotesPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Markdown
+                  {t("notes.editor.mode.markdown")}
                 </button>
                 <button
                   type="button"
@@ -500,12 +519,13 @@ export default function NotesPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Rich
+                  {t("notes.editor.mode.rich")}
                 </button>
               </div>
 
-              {saved ? <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Saved</span> : null}
+              {saved ? <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("common.saved")}</span> : null}
               <button
+                data-testid="notes-save"
                 type="button"
                 onClick={onSave}
                 disabled={!note || saving || !isDirty}
@@ -519,7 +539,7 @@ export default function NotesPage() {
                   cursor: !note || saving || !isDirty ? "not-allowed" : "pointer",
                 }}
               >
-                {saving ? "Saving…" : "Save"}
+                {saving ? t("common.saving") : t("common.save")}
               </button>
             </div>
           </div>
@@ -543,29 +563,29 @@ export default function NotesPage() {
                     <button type="button" disabled={!canEdit} onClick={() => insertPrefixAtLine("# ")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
                       H1
                     </button>
-                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("**", "**", "bold")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
-                      Bold
+                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("**", "**", "加粗文字")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                      {t("notes.rich.bold")}
                     </button>
-                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("*", "*", "italic")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
-                      Italic
+                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("*", "*", "斜体文字")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                      {t("notes.rich.italic")}
                     </button>
                     <button type="button" disabled={!canEdit} onClick={insertLink} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
-                      Link
+                      {t("notes.rich.link")}
                     </button>
                     <button type="button" disabled={!canEdit} onClick={() => insertPrefixAtLine("- ")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
-                      List
+                      {t("notes.rich.list")}
                     </button>
-                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("`", "`", "code")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
-                      Code
+                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("`", "`", "代码")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                      {t("notes.rich.code")}
                     </button>
-                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("```\n", "\n```", "code\n")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
-                      Code Block
+                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("```\n", "\n```", "代码\n")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                      {t("notes.rich.codeBlock")}
                     </button>
                   </div>
 
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--color-text-muted)", cursor: "pointer", userSelect: "none" }}>
                     <input type="checkbox" checked={showPreview} onChange={(e) => setShowPreview(e.target.checked)} />
-                    Preview
+                    {t("notes.editor.previewToggle")}
                   </label>
                 </div>
               ) : null}
@@ -584,10 +604,10 @@ export default function NotesPage() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-                        Share
+                        {t("notes.share.title")}
                       </div>
                       <div style={{ fontSize: 13, color: "var(--color-text)", marginTop: 4 }}>
-                        Create a public link for this note.
+                        {t("notes.share.subtitle")}
                       </div>
                     </div>
 
@@ -607,7 +627,11 @@ export default function NotesPage() {
                           cursor: !selectedId || shareCreating ? "not-allowed" : "pointer",
                         }}
                       >
-                        {shareCreating ? "Creating…" : shareUrl ? "Recreate link" : "Create share link"}
+                        {shareCreating
+                          ? t("common.creating")
+                          : shareUrl
+                            ? t("notes.share.recreate")
+                            : t("notes.share.create")}
                       </button>
                       {shareUrl ? (
                         <button
@@ -623,7 +647,7 @@ export default function NotesPage() {
                             cursor: "pointer",
                           }}
                         >
-                          Open
+                          {t("common.open")}
                         </button>
                       ) : null}
                       {shareUrl ? (
@@ -640,7 +664,7 @@ export default function NotesPage() {
                             cursor: "pointer",
                           }}
                         >
-                          {shareCopied ? "Copied" : "Copy link"}
+                          {shareCopied ? t("common.copied") : t("notes.share.copy")}
                         </button>
                       ) : null}
                     </div>
@@ -678,10 +702,13 @@ export default function NotesPage() {
                 <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", padding: 10, background: "color-mix(in srgb, var(--color-accent-gold) 14%, var(--color-surface-2))" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>Conflict</div>
-                      <div style={{ fontSize: 13, color: "var(--color-text)", marginTop: 4 }}>Your save conflicted with a newer server version.</div>
+                      <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
+                        {t("notes.conflict.title")}
+                      </div>
+                      <div style={{ fontSize: 13, color: "var(--color-text)", marginTop: 4 }}>{t("notes.conflict.subtitle")}</div>
                     </div>
                     <button
+                      data-testid="notes-use-server-version"
                       type="button"
                       onClick={() => {
                         setNote(conflictSnapshot);
@@ -700,7 +727,7 @@ export default function NotesPage() {
                         cursor: "pointer",
                       }}
                     >
-                      Use server version
+                      {t("notes.conflict.useServer")}
                     </button>
                   </div>
                 </div>
@@ -734,7 +761,7 @@ export default function NotesPage() {
                   setSaved(false);
                   setConflictSnapshot(null);
                 }}
-                placeholder={selectedId ? "" : "Select a note from the list, or create a new one."}
+                placeholder={selectedId ? "" : t("notes.textarea.placeholderNoSelection")}
                 disabled={!selectedId || noteLoading}
                 style={{
                   width: "100%",
@@ -762,9 +789,7 @@ export default function NotesPage() {
                     overflow: "auto",
                   }}
                 >
-                  <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: 10 }}>
-                    Preview (plain text)
-                  </div>
+                  <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: 10 }}>{t("notes.rich.previewPlainText")}</div>
                   <pre
                     style={{
                       margin: 0,
@@ -784,7 +809,7 @@ export default function NotesPage() {
           </div>
 
           <div style={{ padding: 12, borderTop: "1px solid var(--color-border)", color: "var(--color-text-muted)", fontSize: 12 }}>
-            {note ? `id=${note.id}` : selectedId ? `id=${selectedId}` : "Tip: /notes?id=<note_id>"}
+            {note ? `id=${note.id}` : selectedId ? `id=${selectedId}` : t("notes.footer.tip")}
           </div>
         </section>
       </div>

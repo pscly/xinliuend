@@ -23,12 +23,13 @@ export function Page({ titleKey, subtitleKey, children }: { titleKey: MessageKey
 }
 
 export function SkeletonBlocks({ count = 3 }: { count?: number }) {
+  const { t } = useI18n();
   const blocks = Array.from({ length: count }, (_, i) => i);
   return (
     <div className={styles.grid}>
       {blocks.map((i) => (
         <div key={i} className={styles.block}>
-          <div className={styles.blockTitle}>Placeholder</div>
+          <div className={styles.blockTitle}>{t("common.placeholder")}</div>
           <div className={`skeleton ${styles.blockRow}`} style={{ width: "92%" }} />
           <div className={`skeleton ${styles.blockRow}`} style={{ width: "78%" }} />
           <div className={`skeleton ${styles.blockRow}`} style={{ width: "86%" }} />

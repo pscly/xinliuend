@@ -80,8 +80,8 @@ test("search: query + tag across notes(v1) and todos(v1)", async ({ page }) => {
   // 3) Create a note via UI at /notes (click New, get note id from ?id=).
   await page.goto("/notes");
   await expect(page).toHaveURL(/\/notes/);
-  const newButton = page.getByRole("button", { name: /^New$/ });
-  const saveButton = page.getByRole("button", { name: /^Save$/ });
+  const newButton = page.getByTestId("notes-new");
+  const saveButton = page.getByTestId("notes-save");
   const editor = page.locator("textarea");
 
   await expect(newButton).toBeVisible();
@@ -96,7 +96,7 @@ test("search: query + tag across notes(v1) and todos(v1)", async ({ page }) => {
   await editor.fill(["# Seed", `user: ${username}`, `ts: ${Date.now()}`].join("\n"));
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^(Saved|\u5df2\u4fdd\u5b58)$/)).toBeVisible();
 
   // 4) Patch note via browser fetch using CSRF from /api/v1/me.
   const patchNoteResult = await page.evaluate(async ({ noteId, noteTitle, query }) => {
@@ -137,10 +137,10 @@ test("search: query + tag across notes(v1) and todos(v1)", async ({ page }) => {
   // 5) Create a todo list via UI at /todos and capture its list_id.
   await page.goto("/todos");
   await expect(page).toHaveURL(/\/todos/);
-  const todoListSelect = page.getByLabel("Todo list");
+  const todoListSelect = page.getByTestId("todo-list-select");
   await expect(todoListSelect).toBeVisible();
-  await page.getByLabel("New list name").fill(listName);
-  await page.getByRole("button", { name: /^Create list$/ }).click();
+  await page.getByTestId("todo-new-list-name").fill(listName);
+  await page.getByTestId("todo-create-list").click();
 
   const listOption = page.getByRole("option", { name: listName });
   await expect(listOption).toHaveCount(1);
@@ -189,7 +189,7 @@ test("search: query + tag across notes(v1) and todos(v1)", async ({ page }) => {
   await page.goto("/search");
   await expect(page).toHaveURL(/\/search/);
 
-  const searchInput = page.getByPlaceholder("Search notes + todos");
+  const searchInput = page.getByTestId("search-query-input");
   await expect(searchInput).toBeVisible();
 
   const notesQueryRespPromise = page.waitForResponse(

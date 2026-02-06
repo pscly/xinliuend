@@ -32,6 +32,8 @@ export type MessageKey =
   | "notifications.read"
   | "notifications.unread"
   | "notifications.marking"
+  | "notifications.errorLoad"
+  | "notifications.errorMarkRead"
   | "settings.account.title"
   | "settings.account.signedInAs"
   | "settings.account.role"
@@ -68,7 +70,163 @@ export type MessageKey =
   | "ui.theme.system"
   | "ui.theme.light"
   | "ui.theme.dark"
-  | "ui.language";
+  | "ui.language"
+  | "common.loading"
+  | "common.loadingDots"
+  | "common.refresh"
+  | "common.reload"
+  | "common.open"
+  | "common.error"
+  | "common.done"
+  | "common.mark"
+  | "common.new"
+  | "common.create"
+  | "common.creating"
+  | "common.save"
+  | "common.saving"
+  | "common.saved"
+  | "common.apply"
+  | "common.copy"
+  | "common.copied"
+  | "common.placeholder"
+  | "common.tip"
+  | "common.untitled"
+  | "common.empty"
+  | "home.quickLinks.title"
+  | "home.quickLinks.subtitle"
+  | "home.quickLinks.notes.subtitle"
+  | "home.quickLinks.todos.subtitle"
+  | "home.quickLinks.calendar.subtitle"
+  | "home.quickLinks.search.subtitle"
+  | "home.quickLinks.settings.subtitle"
+  | "home.today.title"
+  | "home.today.failedPrefix"
+  | "home.today.noOccurrences"
+  | "home.today.overrideWarning"
+  | "home.today.showingPrefix"
+  | "home.recentNotes.title"
+  | "home.recentNotes.failedPrefix"
+  | "home.recentNotes.empty"
+  | "search.query.label"
+  | "search.query.placeholder"
+  | "search.query.placeholderTagActive"
+  | "search.tag.label"
+  | "search.tag.placeholder"
+  | "search.tag.clear"
+  | "search.tag.modeHint"
+  | "search.active.prefix"
+  | "search.active.tagPrefix"
+  | "search.active.queryPrefix"
+  | "search.tip"
+  | "search.section.notes"
+  | "search.section.todos"
+  | "search.subtitle.error"
+  | "search.empty.notes"
+  | "search.empty.todos"
+  | "search.tag.filterByTagTitlePrefix"
+  | "todos.list.label"
+  | "todos.list.none"
+  | "todos.lists.loadFailedPrefix"
+  | "todos.list.new.label"
+  | "todos.list.new.placeholder"
+  | "todos.list.new.create"
+  | "todos.items.titleFallback"
+  | "todos.items.loading"
+  | "todos.items.countUnit"
+  | "todos.items.loadFailedPrefix"
+  | "todos.item.new.label"
+  | "todos.item.new.placeholder"
+  | "todos.item.new.placeholderNoList"
+  | "todos.item.new.add"
+  | "todos.item.new.adding"
+  | "todos.item.recurring.daily"
+  | "todos.item.recurring.days"
+  | "todos.items.empty"
+  | "todos.item.recurring"
+  | "todos.item.oneOff"
+  | "calendar.range.prefix"
+  | "calendar.range.to"
+  | "calendar.empty"
+  | "calendar.action.titleMarkDone"
+  | "calendar.action.titleMarkUndone"
+  | "calendar.footer.hint"
+  | "notes.untitled"
+  | "notes.sidebar.itemsUnit"
+  | "notes.editor.title"
+  | "notes.editor.noSelection"
+  | "notes.editor.mode.markdown"
+  | "notes.editor.mode.rich"
+  | "notes.editor.previewToggle"
+  | "notes.rich.bold"
+  | "notes.rich.italic"
+  | "notes.rich.link"
+  | "notes.rich.list"
+  | "notes.rich.code"
+  | "notes.rich.codeBlock"
+  | "notes.rich.previewPlainText"
+  | "notes.share.title"
+  | "notes.share.subtitle"
+  | "notes.share.create"
+  | "notes.share.recreate"
+  | "notes.share.copy"
+  | "notes.share.copyFailed"
+  | "notes.conflict.title"
+  | "notes.conflict.subtitle"
+  | "notes.conflict.useServer"
+  | "notes.textarea.placeholderNoSelection"
+  | "notes.footer.tip"
+  | "notes.error.loadNotes"
+  | "notes.error.loadNote"
+  | "notes.error.createNote"
+  | "notes.error.saveNote"
+  | "notes.error.notAuthorizedPrefix"
+  | "notes.error.notAuthorizedGeneric"
+  | "notes.error.createSharePrefix"
+  | "notes.error.createShareGeneric"
+  | "notes.error.shareResponseInvalid"
+  | "notes.error.createShareLink"
+  | "notes.newNoteTemplate"
+  | "notes.link.placeholderText"
+  | "share.header.title"
+  | "share.header.tokenPrefix"
+  | "share.header.openHint"
+  | "share.missingToken.title"
+  | "share.missingToken.subtitle"
+  | "share.note.updatedPrefix"
+  | "share.note.body"
+  | "share.note.attachments"
+  | "share.note.download"
+  | "share.title.fallback"
+  | "share.error.invalidOrRevoked"
+  | "share.error.expired"
+  | "share.error.invalidResponse"
+  | "share.error.failedLoadShare"
+  | "share.error.failedLoadComments"
+  | "share.error.commentsDisabled"
+  | "share.error.captchaRequired"
+  | "share.error.failedPostComment"
+  | "share.error.uploadInvalidResponse"
+  | "share.error.uploadFailed"
+  | "share.error.reportFailed"
+  | "share.comment.sectionTitle"
+  | "share.comment.writeTitle"
+  | "share.comment.field.nameOptional"
+  | "share.comment.field.message"
+  | "share.comment.field.captchaToken"
+  | "share.comment.placeholder.anonymous"
+  | "share.comment.placeholder.message"
+  | "share.comment.attachHint"
+  | "share.comment.post"
+  | "share.comment.posting"
+  | "share.comment.reload"
+  | "share.comment.none"
+  | "share.comment.folded"
+  | "share.comment.report"
+  | "share.comment.reasonPrefix"
+  | "share.upload.sectionTitle"
+  | "share.upload.uploadedTitle"
+  | "share.upload.upload"
+  | "share.upload.uploading";
 
 type Messages = Record<MessageKey, string>;
 
@@ -104,6 +262,8 @@ const zhCN: Messages = {
   "notifications.read": "已读",
   "notifications.unread": "未读",
   "notifications.marking": "标记中…",
+  "notifications.errorLoad": "加载通知失败。",
+  "notifications.errorMarkRead": "标记已读失败。",
   "settings.account.title": "账号",
   "settings.account.signedInAs": "当前用户",
   "settings.account.role": "角色",
@@ -141,6 +301,162 @@ const zhCN: Messages = {
   "ui.theme.light": "浅色",
   "ui.theme.dark": "深色",
   "ui.language": "语言",
+  "common.loading": "加载中…",
+  "common.loadingDots": "加载中...",
+  "common.refresh": "刷新",
+  "common.reload": "重新加载",
+  "common.open": "打开",
+  "common.error": "错误",
+  "common.done": "完成",
+  "common.mark": "标记",
+  "common.new": "新建",
+  "common.create": "创建",
+  "common.creating": "创建中…",
+  "common.save": "保存",
+  "common.saving": "保存中…",
+  "common.saved": "已保存",
+  "common.apply": "应用",
+  "common.copy": "复制",
+  "common.copied": "已复制",
+  "common.placeholder": "占位",
+  "common.tip": "提示",
+  "common.untitled": "(无标题)",
+  "common.empty": "(空)",
+  "home.quickLinks.title": "快捷入口",
+  "home.quickLinks.subtitle": "快速进入",
+  "home.quickLinks.notes.subtitle": "写作、回顾、标签",
+  "home.quickLinks.todos.subtitle": "清单 + 重复",
+  "home.quickLinks.calendar.subtitle": "重复预览",
+  "home.quickLinks.search.subtitle": "笔记 + 待办",
+  "home.quickLinks.settings.subtitle": "账号 + 同步",
+  "home.today.title": "今天（Asia/Shanghai）",
+  "home.today.failedPrefix": "加载今日失败：",
+  "home.today.noOccurrences": "今天没有需要展示的重复事项。",
+  "home.today.overrideWarning": "部分覆盖项加载失败，已尽量展示可用结果。",
+  "home.today.showingPrefix": "仅展示前 10 条：",
+  "home.recentNotes.title": "最近笔记",
+  "home.recentNotes.failedPrefix": "加载笔记失败：",
+  "home.recentNotes.empty": "暂无笔记。",
+  "search.query.label": "搜索",
+  "search.query.placeholder": "搜索笔记 + 待办",
+  "search.query.placeholderTagActive": "（已启用标签过滤）",
+  "search.tag.label": "标签过滤",
+  "search.tag.placeholder": "输入标签（可选）",
+  "search.tag.clear": "清除标签过滤",
+  "search.tag.modeHint": "标签模式会同时对笔记与待办按标签查询。",
+  "search.active.prefix": "当前：",
+  "search.active.tagPrefix": "标签：",
+  "search.active.queryPrefix": "关键词：",
+  "search.tip": "提示：可直接粘贴 URL 参数，例如 ?q=meeting 或 ?tag=work。",
+  "search.section.notes": "笔记",
+  "search.section.todos": "待办",
+  "search.subtitle.error": "错误",
+  "search.empty.notes": "没有匹配的笔记。",
+  "search.empty.todos": "没有匹配的待办。",
+  "search.tag.filterByTagTitlePrefix": "按标签过滤：",
+  "todos.list.label": "待办清单",
+  "todos.list.none": "暂无清单",
+  "todos.lists.loadFailedPrefix": "加载清单失败：",
+  "todos.list.new.label": "新清单名称",
+  "todos.list.new.placeholder": "例如：个人",
+  "todos.list.new.create": "创建清单",
+  "todos.items.titleFallback": "待办事项",
+  "todos.items.loading": "加载待办中…",
+  "todos.items.countUnit": "项",
+  "todos.items.loadFailedPrefix": "加载待办失败：",
+  "todos.item.new.label": "新待办标题",
+  "todos.item.new.placeholder": "例如：喝水",
+  "todos.item.new.placeholderNoList": "请先创建或选择一个清单",
+  "todos.item.new.add": "添加待办",
+  "todos.item.new.adding": "添加中…",
+  "todos.item.recurring.daily": "设为每日重复",
+  "todos.item.recurring.days": "天数",
+  "todos.items.empty": "暂无待办。",
+  "todos.item.recurring": "重复",
+  "todos.item.oneOff": "单次",
+  "calendar.range.prefix": "范围（Asia/Shanghai）：",
+  "calendar.range.to": "至",
+  "calendar.empty": "暂无发生项",
+  "calendar.action.titleMarkDone": "标记为已完成",
+  "calendar.action.titleMarkUndone": "标记为未完成",
+  "calendar.footer.hint": "仅展示重复待办的发生项；只有存在覆盖项时才可删除覆盖。",
+  "notes.untitled": "无标题",
+  "notes.sidebar.itemsUnit": "条",
+  "notes.editor.title": "编辑器",
+  "notes.editor.noSelection": "未选择笔记",
+  "notes.editor.mode.markdown": "Markdown",
+  "notes.editor.mode.rich": "富文本",
+  "notes.editor.previewToggle": "预览",
+  "notes.rich.bold": "加粗",
+  "notes.rich.italic": "斜体",
+  "notes.rich.link": "链接",
+  "notes.rich.list": "列表",
+  "notes.rich.code": "代码",
+  "notes.rich.codeBlock": "代码块",
+  "notes.rich.previewPlainText": "预览（纯文本）",
+  "notes.share.title": "分享",
+  "notes.share.subtitle": "为该笔记创建一个公开链接。",
+  "notes.share.create": "创建分享链接",
+  "notes.share.recreate": "重新生成链接",
+  "notes.share.copy": "复制链接",
+  "notes.share.copyFailed": "复制失败，请手动复制链接。",
+  "notes.conflict.title": "冲突",
+  "notes.conflict.subtitle": "你的保存与服务器上的新版本发生冲突。",
+  "notes.conflict.useServer": "使用服务器版本",
+  "notes.textarea.placeholderNoSelection": "从左侧选择一条笔记，或先新建一条。",
+  "notes.footer.tip": "提示：/notes?id=<note_id>",
+  "notes.error.loadNotes": "加载笔记列表失败。",
+  "notes.error.loadNote": "加载笔记失败。",
+  "notes.error.createNote": "创建笔记失败。",
+  "notes.error.saveNote": "保存笔记失败。",
+  "notes.error.notAuthorizedPrefix": "无权限：",
+  "notes.error.notAuthorizedGeneric": "无权限，请重新登录。",
+  "notes.error.createSharePrefix": "创建分享失败：",
+  "notes.error.createShareGeneric": "创建分享失败。",
+  "notes.error.shareResponseInvalid": "分享创建成功，但返回内容不符合预期。",
+  "notes.error.createShareLink": "创建分享链接失败。",
+  "notes.newNoteTemplate": "# 新笔记\n\n",
+  "notes.link.placeholderText": "文字",
+  "share.header.title": "公开分享",
+  "share.header.tokenPrefix": "令牌：",
+  "share.header.openHint": "打开分享链接以查看笔记。",
+  "share.missingToken.title": "缺少 token",
+  "share.missingToken.subtitle": "此页面需要在 URL 中提供 share token。例如：",
+  "share.note.updatedPrefix": "更新于：",
+  "share.note.body": "正文",
+  "share.note.attachments": "附件",
+  "share.note.download": "下载",
+  "share.title.fallback": "分享的笔记",
+  "share.error.invalidOrRevoked": "该分享链接无效或已被撤销。",
+  "share.error.expired": "该分享链接已过期。",
+  "share.error.invalidResponse": "分享内容返回格式无效。",
+  "share.error.failedLoadShare": "加载分享失败。",
+  "share.error.failedLoadComments": "加载评论失败。",
+  "share.error.commentsDisabled": "该分享已禁用匿名评论。",
+  "share.error.captchaRequired": "需要验证码 token：请粘贴后重试。",
+  "share.error.failedPostComment": "发表评论失败。",
+  "share.error.uploadInvalidResponse": "上传成功但返回内容无效。",
+  "share.error.uploadFailed": "上传失败。",
+  "share.error.reportFailed": "举报失败。",
+  "share.comment.sectionTitle": "评论",
+  "share.comment.writeTitle": "发表评论",
+  "share.comment.field.nameOptional": "称呼（可选）",
+  "share.comment.field.message": "内容",
+  "share.comment.field.captchaToken": "验证码 token（如需要）",
+  "share.comment.placeholder.anonymous": "匿名",
+  "share.comment.placeholder.message": "友善一点：不支持 HTML 渲染。",
+  "share.comment.attachHint": "将附加所选附件到本条评论。",
+  "share.comment.post": "发布评论",
+  "share.comment.posting": "提交中...",
+  "share.comment.reload": "重新加载评论",
+  "share.comment.none": "暂无评论。",
+  "share.comment.folded": "已折叠",
+  "share.comment.report": "举报",
+  "share.comment.reasonPrefix": "原因：",
+  "share.upload.sectionTitle": "上传（可选）",
+  "share.upload.uploadedTitle": "已上传（选择后可在下一条评论中附加）",
+  "share.upload.upload": "上传",
+  "share.upload.uploading": "上传中...",
 };
 
 const en: Messages = {
@@ -175,6 +491,8 @@ const en: Messages = {
   "notifications.read": "Read",
   "notifications.unread": "Unread",
   "notifications.marking": "Marking…",
+  "notifications.errorLoad": "Failed to load notifications.",
+  "notifications.errorMarkRead": "Failed to mark notification read.",
   "settings.account.title": "Account",
   "settings.account.signedInAs": "Signed in as",
   "settings.account.role": "Role",
@@ -212,6 +530,162 @@ const en: Messages = {
   "ui.theme.light": "Light",
   "ui.theme.dark": "Dark",
   "ui.language": "Language",
+  "common.loading": "Loading…",
+  "common.loadingDots": "Loading...",
+  "common.refresh": "Refresh",
+  "common.reload": "Reload",
+  "common.open": "Open",
+  "common.error": "Error",
+  "common.done": "Done",
+  "common.mark": "Mark",
+  "common.new": "New",
+  "common.create": "Create",
+  "common.creating": "Creating…",
+  "common.save": "Save",
+  "common.saving": "Saving…",
+  "common.saved": "Saved",
+  "common.apply": "Apply",
+  "common.copy": "Copy",
+  "common.copied": "Copied",
+  "common.placeholder": "Placeholder",
+  "common.tip": "Tip",
+  "common.untitled": "(Untitled)",
+  "common.empty": "(empty)",
+  "home.quickLinks.title": "Quick links",
+  "home.quickLinks.subtitle": "Jump in",
+  "home.quickLinks.notes.subtitle": "Write, review, tag",
+  "home.quickLinks.todos.subtitle": "Lists + recurring",
+  "home.quickLinks.calendar.subtitle": "Recurring preview",
+  "home.quickLinks.search.subtitle": "Notes + todos",
+  "home.quickLinks.settings.subtitle": "Account + sync",
+  "home.today.title": "Today (Asia/Shanghai)",
+  "home.today.failedPrefix": "Failed to load today: ",
+  "home.today.noOccurrences": "No recurring occurrences for today.",
+  "home.today.overrideWarning": "Some overrides failed to load. Showing best-effort results.",
+  "home.today.showingPrefix": "Showing 10 / ",
+  "home.recentNotes.title": "Recent notes",
+  "home.recentNotes.failedPrefix": "Failed to load notes: ",
+  "home.recentNotes.empty": "No notes yet.",
+  "search.query.label": "Search",
+  "search.query.placeholder": "Search notes + todos",
+  "search.query.placeholderTagActive": "(Tag filter active)",
+  "search.tag.label": "Tag filter",
+  "search.tag.placeholder": "Type tag (optional)",
+  "search.tag.clear": "Clear tag filter",
+  "search.tag.modeHint": "Tag mode uses tag endpoints for both notes and todos.",
+  "search.active.prefix": "Active: ",
+  "search.active.tagPrefix": "Tag: ",
+  "search.active.queryPrefix": "Query: ",
+  "search.tip": "Tip: paste a URL like ?q=meeting or ?tag=work.",
+  "search.section.notes": "Notes",
+  "search.section.todos": "Todos",
+  "search.subtitle.error": "Error",
+  "search.empty.notes": "No matching notes.",
+  "search.empty.todos": "No matching todos.",
+  "search.tag.filterByTagTitlePrefix": "Filter by tag: ",
+  "todos.list.label": "Todo list",
+  "todos.list.none": "No lists",
+  "todos.lists.loadFailedPrefix": "Failed to load lists: ",
+  "todos.list.new.label": "New list name",
+  "todos.list.new.placeholder": "e.g. Personal",
+  "todos.list.new.create": "Create list",
+  "todos.items.titleFallback": "Todo items",
+  "todos.items.loading": "Loading items…",
+  "todos.items.countUnit": "items",
+  "todos.items.loadFailedPrefix": "Failed to load items: ",
+  "todos.item.new.label": "New item title",
+  "todos.item.new.placeholder": "e.g. Drink water",
+  "todos.item.new.placeholderNoList": "Create/select a list first",
+  "todos.item.new.add": "Add item",
+  "todos.item.new.adding": "Adding…",
+  "todos.item.recurring.daily": "Create as daily recurring",
+  "todos.item.recurring.days": "Days",
+  "todos.items.empty": "No items yet.",
+  "todos.item.recurring": "Recurring",
+  "todos.item.oneOff": "One-off",
+  "calendar.range.prefix": "Range (Asia/Shanghai): ",
+  "calendar.range.to": "to",
+  "calendar.empty": "No occurrences",
+  "calendar.action.titleMarkDone": "Mark occurrence done",
+  "calendar.action.titleMarkUndone": "Mark occurrence undone",
+  "calendar.footer.hint": "Showing recurring todo occurrences only. Override deletion only applies when an override exists.",
+  "notes.untitled": "Untitled",
+  "notes.sidebar.itemsUnit": "items",
+  "notes.editor.title": "Editor",
+  "notes.editor.noSelection": "No note selected",
+  "notes.editor.mode.markdown": "Markdown",
+  "notes.editor.mode.rich": "Rich",
+  "notes.editor.previewToggle": "Preview",
+  "notes.rich.bold": "Bold",
+  "notes.rich.italic": "Italic",
+  "notes.rich.link": "Link",
+  "notes.rich.list": "List",
+  "notes.rich.code": "Code",
+  "notes.rich.codeBlock": "Code Block",
+  "notes.rich.previewPlainText": "Preview (plain text)",
+  "notes.share.title": "Share",
+  "notes.share.subtitle": "Create a public link for this note.",
+  "notes.share.create": "Create share link",
+  "notes.share.recreate": "Recreate link",
+  "notes.share.copy": "Copy link",
+  "notes.share.copyFailed": "Copy failed. Please copy the URL manually.",
+  "notes.conflict.title": "Conflict",
+  "notes.conflict.subtitle": "Your save conflicted with a newer server version.",
+  "notes.conflict.useServer": "Use server version",
+  "notes.textarea.placeholderNoSelection": "Select a note from the list, or create a new one.",
+  "notes.footer.tip": "Tip: /notes?id=<note_id>",
+  "notes.error.loadNotes": "Failed to load notes.",
+  "notes.error.loadNote": "Failed to load note.",
+  "notes.error.createNote": "Failed to create note.",
+  "notes.error.saveNote": "Failed to save note.",
+  "notes.error.notAuthorizedPrefix": "Not authorized: ",
+  "notes.error.notAuthorizedGeneric": "Not authorized. Please log in again.",
+  "notes.error.createSharePrefix": "Failed to create share: ",
+  "notes.error.createShareGeneric": "Failed to create share.",
+  "notes.error.shareResponseInvalid": "Share created but response is invalid.",
+  "notes.error.createShareLink": "Failed to create share link.",
+  "notes.newNoteTemplate": "# New note\n\n",
+  "notes.link.placeholderText": "text",
+  "share.header.title": "Public Share",
+  "share.header.tokenPrefix": "Token: ",
+  "share.header.openHint": "Open a share link to view a note.",
+  "share.missingToken.title": "Missing token",
+  "share.missingToken.subtitle": "This page expects a share token in the URL. Example:",
+  "share.note.updatedPrefix": "Updated: ",
+  "share.note.body": "Body",
+  "share.note.attachments": "Attachments",
+  "share.note.download": "Download",
+  "share.title.fallback": "Shared note",
+  "share.error.invalidOrRevoked": "This share link is invalid or has been revoked.",
+  "share.error.expired": "This share link has expired.",
+  "share.error.invalidResponse": "Invalid share response",
+  "share.error.failedLoadShare": "Failed to load share.",
+  "share.error.failedLoadComments": "Failed to load comments.",
+  "share.error.commentsDisabled": "Anonymous comments are disabled for this share.",
+  "share.error.captchaRequired": "Captcha token required. Paste it in the field above and retry.",
+  "share.error.failedPostComment": "Failed to post comment.",
+  "share.error.uploadInvalidResponse": "Upload succeeded but response is invalid.",
+  "share.error.uploadFailed": "Upload failed.",
+  "share.error.reportFailed": "Failed to report comment.",
+  "share.comment.sectionTitle": "Comments",
+  "share.comment.writeTitle": "Write a comment",
+  "share.comment.field.nameOptional": "Name (optional)",
+  "share.comment.field.message": "Message",
+  "share.comment.field.captchaToken": "Captcha token (if required)",
+  "share.comment.placeholder.anonymous": "Anonymous",
+  "share.comment.placeholder.message": "Be kind. No HTML is rendered.",
+  "share.comment.attachHint": "Attaching selected files to this comment.",
+  "share.comment.post": "Post comment",
+  "share.comment.posting": "Posting...",
+  "share.comment.reload": "Reload comments",
+  "share.comment.none": "No comments yet.",
+  "share.comment.folded": "Folded",
+  "share.comment.report": "Report",
+  "share.comment.reasonPrefix": "Reason: ",
+  "share.upload.sectionTitle": "Upload (optional)",
+  "share.upload.uploadedTitle": "Uploaded (select to attach in next comment)",
+  "share.upload.upload": "Upload",
+  "share.upload.uploading": "Uploading...",
 };
 
 export const MESSAGES_BY_LOCALE: Record<AppLocale, Messages> = {

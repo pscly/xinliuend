@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getTodoItems, getTodoLists, upsertTodoItem, upsertTodoList } from "@/features/todo/todoApi";
 import type { LocalDateTimeString, TodoItem, TodoList } from "@/features/todo/types";
 import { Page } from "@/features/ui/Page";
+import { useI18n } from "@/lib/i18n/useI18n";
 
 const TZID = "Asia/Shanghai" as const;
 
@@ -63,10 +64,11 @@ function clampInt(value: number, min: number, max: number): number {
 function normalizeErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
-  return "Unknown error";
+  return "未知错误";
 }
 
 export default function TodosPage() {
+  const { locale, t } = useI18n();
   const [lists, setLists] = useState<TodoList[]>([]);
   const [selectedListId, setSelectedListId] = useState<string>("");
   const [items, setItems] = useState<TodoItem[]>([]);
@@ -160,8 +162,9 @@ export default function TodosPage() {
         >
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <label style={{ display: "grid", gap: 6, minWidth: 220, flex: "1 1 260px" }}>
-              <span style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>Todo list</span>
+              <span style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.list.label")}</span>
               <select
+                data-testid="todo-list-select"
                 value={selectedListId}
                 onChange={(e) => setSelectedListId(e.target.value)}
                 disabled={listsLoading || lists.length === 0}
@@ -174,7 +177,7 @@ export default function TodosPage() {
                   padding: "0 10px",
                 }}
               >
-                {lists.length === 0 ? <option value="">No lists</option> : null}
+                {lists.length === 0 ? <option value="">{t("todos.list.none")}</option> : null}
                 {lists.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name}
@@ -197,12 +200,15 @@ export default function TodosPage() {
                 cursor: listsLoading ? "not-allowed" : "pointer",
               }}
             >
-              {listsLoading ? "Loading…" : "Reload"}
+              {listsLoading ? t("common.loading") : t("common.reload")}
             </button>
           </div>
 
           {listsError ? (
-            <div style={{ color: "var(--danger, #b42318)", fontSize: 12 }}>Failed to load lists: {listsError}</div>
+            <div style={{ color: "var(--danger, #b42318)", fontSize: 12 }}>
+              {t("todos.lists.loadFailedPrefix")}
+              {listsError}
+            </div>
           ) : null}
 
           <form
@@ -227,11 +233,12 @@ export default function TodosPage() {
             style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}
           >
             <label style={{ display: "grid", gap: 6, minWidth: 220, flex: "1 1 260px" }}>
-              <span style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>New list name</span>
+              <span style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.list.new.label")}</span>
               <input
+                data-testid="todo-new-list-name"
                 value={newListName}
                 onChange={(e) => setNewListName(e.target.value)}
-                placeholder="e.g. Personal"
+                placeholder={t("todos.list.new.placeholder")}
                 style={{
                   height: 36,
                   borderRadius: 10,
@@ -243,6 +250,7 @@ export default function TodosPage() {
               />
             </label>
             <button
+              data-testid="todo-create-list"
               type="submit"
               disabled={!canCreateList}
               style={{
@@ -255,7 +263,7 @@ export default function TodosPage() {
                 cursor: canCreateList ? "pointer" : "not-allowed",
               }}
             >
-              {creatingList ? "Creating…" : "Create list"}
+              {creatingList ? t("common.creating") : t("todos.list.new.create")}
             </button>
           </form>
         </section>
@@ -272,8 +280,14 @@ export default function TodosPage() {
         >
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <div style={{ display: "grid", gap: 2 }}>
-              <div style={{ fontWeight: 650, letterSpacing: "-0.01em" }}>{selectedList ? selectedList.name : "Todo items"}</div>
-              <div style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>{itemsLoading ? "Loading items…" : `${items.length} items`}</div>
+              <div style={{ fontWeight: 650, letterSpacing: "-0.01em" }}>{selectedList ? selectedList.name : t("todos.items.titleFallback")}</div>
+              <div style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>
+                {itemsLoading
+                  ? t("todos.items.loading")
+                  : locale === "zh-CN"
+                    ? `${items.length}${t("todos.items.countUnit")}`
+                    : `${items.length} ${t("todos.items.countUnit")}`}
+              </div>
             </div>
             <button
               type="button"
@@ -289,12 +303,15 @@ export default function TodosPage() {
                 cursor: !selectedListId || itemsLoading ? "not-allowed" : "pointer",
               }}
             >
-              Refresh
+              {t("common.refresh")}
             </button>
           </div>
 
           {itemsError ? (
-            <div style={{ color: "var(--danger, #b42318)", fontSize: 12 }}>Failed to load items: {itemsError}</div>
+            <div style={{ color: "var(--danger, #b42318)", fontSize: 12 }}>
+              {t("todos.items.loadFailedPrefix")}
+              {itemsError}
+            </div>
           ) : null}
 
           <form
@@ -339,11 +356,12 @@ export default function TodosPage() {
           >
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
               <label style={{ display: "grid", gap: 6, minWidth: 220, flex: "1 1 360px" }}>
-                <span style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>New item title</span>
+                <span style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.item.new.label")}</span>
                 <input
+                  data-testid="todo-new-item-title"
                   value={newItemTitle}
                   onChange={(e) => setNewItemTitle(e.target.value)}
-                  placeholder={selectedListId ? "e.g. Drink water" : "Create/select a list first"}
+                  placeholder={selectedListId ? t("todos.item.new.placeholder") : t("todos.item.new.placeholderNoList")}
                   disabled={!selectedListId}
                   style={{
                     height: 36,
@@ -356,6 +374,7 @@ export default function TodosPage() {
                 />
               </label>
               <button
+                data-testid="todo-add-item"
                 type="submit"
                 disabled={!canCreateItem}
                 style={{
@@ -368,7 +387,7 @@ export default function TodosPage() {
                   cursor: canCreateItem ? "pointer" : "not-allowed",
                 }}
               >
-                {creatingItem ? "Adding…" : "Add item"}
+                {creatingItem ? t("todos.item.new.adding") : t("todos.item.new.add")}
               </button>
             </div>
 
@@ -383,13 +402,19 @@ export default function TodosPage() {
               }}
             >
               <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
-                <input type="checkbox" checked={recurringDaily} onChange={(e) => setRecurringDaily(e.target.checked)} />
-                Create as daily recurring
+                <input
+                  data-testid="todo-recurring-daily"
+                  type="checkbox"
+                  checked={recurringDaily}
+                  onChange={(e) => setRecurringDaily(e.target.checked)}
+                />
+                {t("todos.item.recurring.daily")}
               </label>
 
               <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
-                <span style={{ color: "var(--muted, rgba(0,0,0,0.6))" }}>Days</span>
+                <span style={{ color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.item.recurring.days")}</span>
                 <input
+                  data-testid="todo-recurring-days"
                   type="number"
                   min={1}
                   max={365}
@@ -429,7 +454,7 @@ export default function TodosPage() {
             }}
           >
             {items.length === 0 ? (
-              <div style={{ padding: 12, fontSize: 13, color: "var(--muted, rgba(0,0,0,0.6))" }}>No items yet.</div>
+              <div style={{ padding: 12, fontSize: 13, color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.items.empty")}</div>
             ) : (
               <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
                 {items.map((it) => (
@@ -449,13 +474,14 @@ export default function TodosPage() {
                       <div style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>
                         {it.is_recurring ? (
                           <span>
-                            Recurring · <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{it.rrule ?? "-"}</code> ·
+                            {t("todos.item.recurring")} ·{" "}
+                            <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{it.rrule ?? "-"}</code> ·
                             <span style={{ marginLeft: 6 }}>
                               dtstart_local <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{toHumanLocalDateTime(it.dtstart_local)}</code>
                             </span>
                           </span>
                         ) : (
-                          <span>One-off</span>
+                          <span>{t("todos.item.oneOff")}</span>
                         )}
                       </div>
                     </div>

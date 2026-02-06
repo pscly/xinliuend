@@ -71,8 +71,8 @@ async function createNote(page: import("@playwright/test").Page, noteBody: strin
   await page.goto("/notes");
   await expect(page).toHaveURL(/\/notes/);
 
-  const newButton = page.getByRole("button", { name: /^New$/ });
-  const saveButton = page.getByRole("button", { name: /^Save$/ });
+  const newButton = page.getByTestId("notes-new");
+  const saveButton = page.getByTestId("notes-save");
   const editor = page.locator("textarea");
 
   await expect(newButton).toBeVisible();
@@ -87,7 +87,7 @@ async function createNote(page: import("@playwright/test").Page, noteBody: strin
   await editor.fill(noteBody);
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^(Saved|\u5df2\u4fdd\u5b58)$/)).toBeVisible();
 
   return noteId;
 }
@@ -170,14 +170,14 @@ test.describe("security regression", () => {
     const anonPage = await anonContext.newPage();
     await anonPage.goto(shareUrlAbs);
 
-    const commentBox = anonPage.getByPlaceholder("Be kind. No HTML is rendered.");
+    const commentBox = anonPage.getByTestId("share-comment-body");
     await expect(commentBox).toBeVisible();
 
     const postCommentRespPromise = anonPage.waitForResponse(
       (resp) => resp.request().method() === "POST" && /\/api\/v1\/public\/shares\/.+\/comments$/.test(resp.url()),
     );
     await commentBox.fill(xss);
-    await anonPage.getByRole("button", { name: /^Post comment$/ }).click();
+    await anonPage.getByTestId("share-post-comment").click();
     const postResp = await postCommentRespPromise;
     expect([200, 201], `post comment status=${postResp.status()}`).toContain(postResp.status());
 
@@ -201,8 +201,8 @@ test.describe("security regression", () => {
     await page.goto("/notes");
     await expect(page).toHaveURL(/\/notes/);
 
-    const newButton = page.getByRole("button", { name: /^New$/ });
-    const richButton = page.getByRole("button", { name: /^Rich$/ });
+    const newButton = page.getByTestId("notes-new");
+    const richButton = page.getByRole("button", { name: /^(Rich|\u5bcc\u6587\u672c)$/ });
     const editor = page.locator("textarea");
     await expect(newButton).toBeVisible();
     await newButton.click();
@@ -215,17 +215,10 @@ test.describe("security regression", () => {
     await expect(richButton).toBeVisible();
     await richButton.click();
 
-    // Robust: prefer label, fallback to any checkbox.
-    let previewCheckbox = page.getByLabel(/^Preview$/);
-    if ((await previewCheckbox.count()) === 0) {
-      previewCheckbox = page.locator('label:has-text("Preview") >> input[type="checkbox"]');
-    }
-    if ((await previewCheckbox.count()) === 0) {
-      previewCheckbox = page.locator('input[type="checkbox"]').first();
-    }
+    const previewCheckbox = page.getByRole("checkbox", { name: /^(Preview|\u9884\u89c8)$/ });
     await previewCheckbox.check();
 
-    const previewHeading = page.getByText("Preview (plain text)", { exact: true });
+    const previewHeading = page.getByText(/^(Preview \(plain text\)|\u9884\u89c8\uff08\u7eaf\u6587\u672c\uff09)$/);
     await expect(previewHeading).toBeVisible();
     const previewPane = previewHeading.locator("..");
     await expect(previewPane.locator("pre")).toContainText(noteBody);

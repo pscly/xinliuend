@@ -24,7 +24,7 @@ function formatTimestamp(iso: string): string {
 }
 
 export default function NotificationsPage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [unreadOnly, setUnreadOnly] = useState<boolean>(false);
 
   const [items, setItems] = useState<Notification[]>([]);
@@ -49,11 +49,11 @@ export default function NotificationsPage() {
       if (runIdRef.current !== runId) return;
       setItems([]);
       setTotal(0);
-      setError(e instanceof Error ? e.message : "Failed to load notifications");
+      setError(e instanceof Error ? e.message : t("notifications.errorLoad"));
     } finally {
       if (runIdRef.current === runId) setLoading(false);
     }
-  }, [unreadOnly]);
+  }, [t, unreadOnly]);
 
   useEffect(() => {
     void load();
@@ -78,7 +78,7 @@ export default function NotificationsPage() {
       });
       window.dispatchEvent(new Event("notifications:changed"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to mark notification read");
+      setError(e instanceof Error ? e.message : t("notifications.errorMarkRead"));
     } finally {
       setMarkingIds((prev) => {
         const next = new Set(prev);
@@ -111,7 +111,12 @@ export default function NotificationsPage() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-              {loading ? "Loading…" : `${visibleItems.length}${total > visibleItems.length ? ` / ${total}` : ""} items`}
+              {loading
+                ? t("common.loading")
+                : (() => {
+                    const base = `${visibleItems.length}${total > visibleItems.length ? ` / ${total}` : ""}`;
+                    return locale === "zh-CN" ? `${base} 条` : `${base} items`;
+                  })()}
             </div>
             <button
               type="button"
