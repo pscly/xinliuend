@@ -1,0 +1,64 @@
+name: Verify
+
+on:
+  workflow_call:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.9.24"
+          enable-cache: true
+
+      - name: Install deps
+        run: uv sync --extra dev --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Test
+        run: uv run pytest -q --cov=flow_backend --cov-report=term-missing --cov-report=xml:coverage.xml
+
+      - name: Web install
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Web build (export)
+        working-directory: web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Coverage gate (core modules)
+        run: >-
+          uv run coverage report --data-file=.coverage
+          --include='src/flow_backend/domain/*,src/flow_backend/services/*,src/flow_backend/repositories/*,src/flow_backend/integrations/*'
+          --fail-under=50
+
+      - name: Upload coverage.xml
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: error

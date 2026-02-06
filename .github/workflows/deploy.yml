@@ -1,7 +1,9 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: ["main"]
   workflow_dispatch:
     inputs:
@@ -40,55 +42,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Verify (lint + tests)
+  guard_manual:
+    name: Guard (manual)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - name: Ensure manual deploy runs on main
+        run: |
+          echo "[guard] ref=${GITHUB_REF} sha=${GITHUB_SHA}"
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            echo "::error::请在 main 分支运行手动部署（当前 ref=${GITHUB_REF}）"
+            exit 1
+          fi
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: web/package-lock.json
+  verify_manual:
+    name: Verify (manual)
+    if: github.event_name == 'workflow_dispatch'
+    needs: guard_manual
+    uses: ./.github/workflows/verify.yml
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "0.9.24"
-          enable-cache: true
-
-      - name: Install deps
-        run: uv sync --extra dev --frozen
-
-      - name: Lint
-        run: uv run ruff check .
-
-      - name: Format check
-        run: uv run ruff format --check .
-
-      - name: Test
-        run: uv run pytest
-
-      - name: Web install
-        working-directory: web
-        run: npm ci --ignore-scripts --no-audit --no-fund
-
-      - name: Web build (export)
-        working-directory: web
-        env:
-          NEXT_TELEMETRY_DISABLED: "1"
-        run: npm run build
-
-  deploy:
-    needs: verify
+  deploy_manual:
+    name: Deploy (manual)
+    if: github.event_name == 'workflow_dispatch'
+    needs: verify_manual
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -104,6 +80,7 @@ jobs:
       DEPLOY_HOST: ${{ matrix.host }}
       DEPLOY_PORT: ${{ matrix.port }}
       APP_DIR: ${{ matrix.app_dir }}
+      DEPLOY_GIT_SHA: ${{ github.sha }}
       DEPLOY_PROFILES: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_profiles || '' }}
       DEPLOY_WIPE_VOLUMES: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.wipe_volumes || 'false' }}
       NODE_IMAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.node_image || '' }}
@@ -127,15 +104,101 @@ jobs:
           echo "[deploy] target=${DEPLOY_NAME} ${DEPLOY_HOST}:${DEPLOY_PORT} dir=${APP_DIR}"
           # 将 APP_DIR 通过 SSH 环境变量传到远端，避免 heredoc 内部变量展开导致的混淆
           ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" \
-            "APP_DIR='${APP_DIR}' DEPLOY_SKIP_GIT='true' DEPLOY_COMPOSE_PROFILES='${DEPLOY_PROFILES}' DEPLOY_WIPE_VOLUMES='${DEPLOY_WIPE_VOLUMES}' NODE_IMAGE='${NODE_IMAGE}' PYTHON_IMAGE='${PYTHON_IMAGE}' NPM_REGISTRY='${NPM_REGISTRY}' PIP_INDEX_URL='${PIP_INDEX_URL}' PIP_TRUSTED_HOST='${PIP_TRUSTED_HOST}' bash -s" <<'EOF'
+            "APP_DIR='${APP_DIR}' DEPLOY_GIT_SHA='${DEPLOY_GIT_SHA}' DEPLOY_SKIP_GIT='true' DEPLOY_COMPOSE_PROFILES='${DEPLOY_PROFILES}' DEPLOY_WIPE_VOLUMES='${DEPLOY_WIPE_VOLUMES}' NODE_IMAGE='${NODE_IMAGE}' PYTHON_IMAGE='${PYTHON_IMAGE}' NPM_REGISTRY='${NPM_REGISTRY}' PIP_INDEX_URL='${PIP_INDEX_URL}' PIP_TRUSTED_HOST='${PIP_TRUSTED_HOST}' bash -s" <<'EOF'
           set -euo pipefail
 
           : "${APP_DIR:?APP_DIR 未设置}"
           cd "$APP_DIR"
 
-          echo "[deploy] sync git main ..."
+          if [[ -n "${DEPLOY_GIT_SHA:-}" ]]; then
+            echo "[deploy] sync git sha=${DEPLOY_GIT_SHA} ..."
+          else
+            echo "[deploy] sync git main ..."
+          fi
           git fetch --all --prune
-          git reset --hard origin/main
+          if [[ -n "${DEPLOY_GIT_SHA:-}" ]]; then
+            git reset --hard "${DEPLOY_GIT_SHA}"
+          else
+            git reset --hard origin/main
+          fi
+
+          if [[ -f "scripts/deploy.sh" ]]; then
+            echo "[deploy] run scripts/deploy.sh ..."
+            bash "scripts/deploy.sh"
+          else
+            echo "[deploy] scripts/deploy.sh not found, fallback to inline compose down -v + up ..."
+            PROFILE_ARGS=""
+            if [[ -n "${DEPLOY_COMPOSE_PROFILES:-}" ]]; then
+              IFS=',' read -r -a _profiles <<< "${DEPLOY_COMPOSE_PROFILES}"
+              for p in "${_profiles[@]}"; do
+                p_trimmed="$(echo "$p" | xargs)"
+                [[ -n "$p_trimmed" ]] && PROFILE_ARGS="${PROFILE_ARGS} --profile ${p_trimmed}"
+              done
+            fi
+            WIPE_VOLUMES="${DEPLOY_WIPE_VOLUMES:-false}"
+            DOWN_ARGS="down --remove-orphans"
+            if [[ "${WIPE_VOLUMES}" == "true" ]]; then
+              DOWN_ARGS="down -v --remove-orphans"
+            fi
+            # shellcheck disable=SC2086
+            docker compose ${PROFILE_ARGS} ${DOWN_ARGS}
+            # shellcheck disable=SC2086
+            docker compose ${PROFILE_ARGS} up -d --build --remove-orphans
+          fi
+          EOF
+
+  deploy_from_ci:
+    name: Deploy (from CI)
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: pscly-cc
+            host: pscly.cc
+            port: 22
+            app_dir: /root/dockers/1auto/xinliuend
+    env:
+      DEPLOY_NAME: ${{ matrix.name }}
+      DEPLOY_HOST: ${{ matrix.host }}
+      DEPLOY_PORT: ${{ matrix.port }}
+      APP_DIR: ${{ matrix.app_dir }}
+      DEPLOY_GIT_SHA: ${{ github.event.workflow_run.head_sha }}
+      DEPLOY_PROFILES: ""
+      DEPLOY_WIPE_VOLUMES: "false"
+      NODE_IMAGE: ""
+      PYTHON_IMAGE: ""
+      NPM_REGISTRY: ""
+      PIP_INDEX_URL: ""
+      PIP_TRUSTED_HOST: ""
+    steps:
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.CI }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${DEPLOY_PORT}" "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        run: |
+          echo "[deploy] sha=${DEPLOY_GIT_SHA}"
+          echo "[deploy] target=${DEPLOY_NAME} ${DEPLOY_HOST}:${DEPLOY_PORT} dir=${APP_DIR}"
+          # 将 APP_DIR 通过 SSH 环境变量传到远端，避免 heredoc 内部变量展开导致的混淆
+          ssh -p "${DEPLOY_PORT}" root@"${DEPLOY_HOST}" \
+            "APP_DIR='${APP_DIR}' DEPLOY_GIT_SHA='${DEPLOY_GIT_SHA}' DEPLOY_SKIP_GIT='true' DEPLOY_COMPOSE_PROFILES='${DEPLOY_PROFILES}' DEPLOY_WIPE_VOLUMES='${DEPLOY_WIPE_VOLUMES}' NODE_IMAGE='${NODE_IMAGE}' PYTHON_IMAGE='${PYTHON_IMAGE}' NPM_REGISTRY='${NPM_REGISTRY}' PIP_INDEX_URL='${PIP_INDEX_URL}' PIP_TRUSTED_HOST='${PIP_TRUSTED_HOST}' bash -s" <<'EOF'
+          set -euo pipefail
+
+          : "${APP_DIR:?APP_DIR 未设置}"
+          cd "$APP_DIR"
+
+          echo "[deploy] sync git sha=${DEPLOY_GIT_SHA} ..."
+          git fetch --all --prune
+          git reset --hard "${DEPLOY_GIT_SHA}"
 
           if [[ -f "scripts/deploy.sh" ]]; then
             echo "[deploy] run scripts/deploy.sh ..."
