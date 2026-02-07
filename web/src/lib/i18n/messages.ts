@@ -105,6 +105,11 @@ export type MessageKey =
   | "ui.theme.system"
   | "ui.theme.light"
   | "ui.theme.dark"
+  | "ui.appearance"
+  | "ui.palette"
+  | "ui.palette.paperInk"
+  | "ui.palette.indigo"
+  | "ui.palette.cyber"
   | "ui.language"
   | "common.loading"
   | "common.loadingDots"
@@ -121,6 +126,8 @@ export type MessageKey =
   | "common.saving"
   | "common.saved"
   | "common.apply"
+  | "common.cancel"
+  | "common.confirm"
   | "common.copy"
   | "common.copied"
   | "common.placeholder"
@@ -370,6 +377,11 @@ const zhCN: Messages = {
   "ui.theme.system": "跟随系统",
   "ui.theme.light": "浅色",
   "ui.theme.dark": "深色",
+  "ui.appearance": "外观",
+  "ui.palette": "配色",
+  "ui.palette.paperInk": "宣纸墨",
+  "ui.palette.indigo": "黛蓝",
+  "ui.palette.cyber": "赛博青",
   "ui.language": "语言",
   "common.loading": "加载中…",
   "common.loadingDots": "加载中...",
@@ -386,6 +398,8 @@ const zhCN: Messages = {
   "common.saving": "保存中…",
   "common.saved": "已保存",
   "common.apply": "应用",
+  "common.cancel": "取消",
+  "common.confirm": "确定",
   "common.copy": "复制",
   "common.copied": "已复制",
   "common.placeholder": "占位",
@@ -634,6 +648,11 @@ const en: Messages = {
   "ui.theme.system": "System",
   "ui.theme.light": "Light",
   "ui.theme.dark": "Dark",
+  "ui.appearance": "Appearance",
+  "ui.palette": "Palette",
+  "ui.palette.paperInk": "Paper Ink",
+  "ui.palette.indigo": "Indigo",
+  "ui.palette.cyber": "Cyber",
   "ui.language": "Language",
   "common.loading": "Loading…",
   "common.loadingDots": "Loading...",
@@ -650,6 +669,8 @@ const en: Messages = {
   "common.saving": "Saving…",
   "common.saved": "Saved",
   "common.apply": "Apply",
+  "common.cancel": "Cancel",
+  "common.confirm": "OK",
   "common.copy": "Copy",
   "common.copied": "Copied",
   "common.placeholder": "Placeholder",

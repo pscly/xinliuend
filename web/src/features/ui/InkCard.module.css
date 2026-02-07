@@ -1,0 +1,118 @@
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  overflow: hidden;
+}
+
+.variantSurface2 {
+  background: color-mix(in srgb, var(--color-surface-2) 62%, transparent);
+}
+
+.elevated {
+  box-shadow: var(--shadow-1);
+}
+
+.interactive {
+  position: relative;
+  transition:
+    transform 160ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.interactive::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background:
+    radial-gradient(
+      52% 60% at 44% 46%,
+      color-mix(in srgb, var(--color-accent) 16%, transparent),
+      transparent 66%
+    ),
+    radial-gradient(
+      60% 70% at 62% 56%,
+      color-mix(in srgb, var(--color-accent-gold) 12%, transparent),
+      transparent 74%
+    );
+  opacity: 0;
+  transform: scale(0.45);
+  filter: blur(16px);
+  transition:
+    opacity 160ms ease,
+    transform 220ms ease;
+  pointer-events: none;
+}
+
+.interactive:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--color-accent-gold) 20%, var(--color-border));
+}
+
+.interactive:active {
+  transform: translateY(0px);
+}
+
+.interactive:active::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.selected {
+  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  box-shadow:
+    0 14px 32px color-mix(in srgb, var(--color-primary) 10%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 12%, transparent);
+}
+
+.header {
+  padding: 14px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.headerText {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 850;
+  color: var(--color-text);
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.body {
+  padding: 14px 14px;
+}
+
+.footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interactive,
+  .interactive::after {
+    transition: none;
+  }
+
+  .interactive:hover {
+    transform: none;
+  }
+}

@@ -11,13 +11,11 @@ export function Page({ titleKey, subtitleKey, children }: { titleKey: MessageKey
   const { t } = useI18n();
   return (
     <div className={styles.page}>
-      <section className={styles.card}>
-        <div className={styles.cardInner}>
-          <h1 className={styles.title}>{t(titleKey)}</h1>
-          {subtitleKey ? <p className={styles.subtitle}>{t(subtitleKey)}</p> : null}
-        </div>
-        {children}
-      </section>
+      <header className={styles.header}>
+        <h1 className={styles.title}>{t(titleKey)}</h1>
+        {subtitleKey ? <p className={styles.subtitle}>{t(subtitleKey)}</p> : null}
+      </header>
+      {children ? <div className={styles.body}>{children}</div> : null}
     </div>
   );
 }

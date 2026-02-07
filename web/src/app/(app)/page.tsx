@@ -12,6 +12,9 @@ import type { LocalDateTimeString, TodoItem, TodoOccurrence } from "@/features/t
 
 import { Page } from "@/features/ui/Page";
 import { useI18n } from "@/lib/i18n/useI18n";
+import { InkButton } from "@/features/ui/InkButton";
+
+import styles from "./HomePage.module.css";
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -234,112 +237,60 @@ export default function HomePage() {
 
   return (
     <Page titleKey="page.home.title" subtitleKey="page.home.subtitle">
-      <div style={{ display: "grid", gap: 16, padding: "16px 16px 20px" }}>
-        <section
-          style={{
-            padding: 14,
-            border: "1px solid var(--color-border)",
-            borderRadius: 14,
-            background: "var(--color-surface)",
-            display: "grid",
-            gap: 12,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>{t("home.quickLinks.title")}</div>
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("home.quickLinks.subtitle")}</div>
+      <div className={styles.content}>
+        <section className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <div className={styles.panelTitle}>{t("home.quickLinks.title")}</div>
+            <div className={styles.panelSubtitle}>{t("home.quickLinks.subtitle")}</div>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gap: 10,
-              gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-            }}
-          >
+
+          <div className={styles.quickLinksGrid}>
             {quickLinks.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                style={{
-                  textDecoration: "none",
-                  color: "var(--color-text)",
-                  borderRadius: 14,
-                  border: "1px solid var(--color-border)",
-                  background: "color-mix(in srgb, var(--color-surface-2) 58%, transparent)",
-                  padding: 12,
-                  display: "grid",
-                  gap: 4,
-                  minHeight: 56,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                  <div style={{ fontWeight: 750, letterSpacing: "-0.01em" }}>{l.title}</div>
-                  <div style={{ fontSize: 12, color: "var(--color-accent)", fontWeight: 700 }}>{t("common.open")}</div>
+              <Link key={l.href} href={l.href} className={styles.quickLink}>
+                <div className={styles.quickLinkTop}>
+                  <div className={styles.quickLinkTitle}>{l.title}</div>
+                  <div className={styles.quickLinkAction}>{t("common.open")}</div>
                 </div>
-                <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{l.subtitle}</div>
+                <div className={styles.quickLinkHint}>{l.subtitle}</div>
               </Link>
             ))}
           </div>
         </section>
 
-        <div
-          style={{
-            display: "grid",
-            gap: 14,
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            alignItems: "start",
-          }}
-        >
-          <section
-            style={{
-              padding: 14,
-              border: "1px solid var(--color-border)",
-              borderRadius: 14,
-              background: "var(--color-surface)",
-              display: "grid",
-              gap: 12,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div className={styles.twoColumn}>
+          <section className={styles.panel}>
+            <div className={styles.panelHeader}>
               <div style={{ display: "grid", gap: 2 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>{t("home.today.title")}</div>
-                <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{shanghaiToday.dateLocal}</div>
+                <div className={styles.panelTitle}>{t("home.today.title")}</div>
+                <div className={styles.panelSubtitle}>{shanghaiToday.dateLocal}</div>
               </div>
-              <button
+              <InkButton
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   void loadToday();
                 }}
                 disabled={todayLoading}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 12,
-                  border: "1px solid var(--color-border)",
-                  background: "transparent",
-                  color: "var(--color-text)",
-                  cursor: todayLoading ? "not-allowed" : "pointer",
-                }}
               >
                 {todayLoading ? t("common.loading") : t("common.refresh")}
-              </button>
+              </InkButton>
             </div>
 
             {todayError ? (
-              <div role="alert" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+              <div role="alert" className={styles.panelSubtitle}>
                 {t("home.today.failedPrefix")}
                 {todayError}
               </div>
             ) : null}
 
-            {todayWarning && !todayError ? (
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.4 }}>{todayWarning}</div>
-            ) : null}
+            {todayWarning && !todayError ? <div className={styles.panelSubtitle}>{todayWarning}</div> : null}
 
             {!todayLoading && !todayError && todayRows.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("home.today.noOccurrences")}</div>
+              <div className={styles.panelSubtitle}>{t("home.today.noOccurrences")}</div>
             ) : null}
 
-            <div style={{ display: "grid", gap: 10 }}>
+            <div className={styles.rows}>
               {todayLoading ? (
                 <>
                   <div className="skeleton" style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }} />
@@ -348,110 +299,57 @@ export default function HomePage() {
                 </>
               ) : (
                 todayRows.map((row) => (
-                  <div
-                    key={row.key}
-                    style={{
-                      border: "1px solid var(--color-border)",
-                      borderRadius: 12,
-                      padding: 12,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      background: row.done ? "color-mix(in srgb, var(--color-accent) 10%, var(--color-surface))" : "transparent",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 10, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, color: "var(--color-text-muted)", flex: "0 0 auto" }}>{row.timeLocal}</div>
+                  <div key={row.key} className={`${styles.row} ${row.done ? styles.rowDone : ""}`}>
+                    <div className={styles.rowLeft}>
+                      <div className={styles.rowTime}>{row.timeLocal}</div>
                       <div
                         title={row.title}
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: "var(--color-text)",
-                          textDecoration: row.done ? "line-through" : "none",
-                          opacity: row.done ? 0.72 : 1,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
+                        className={`${styles.rowTitle} ${row.done ? styles.rowTitleDone : ""}`}
                       >
                         {row.title}
                       </div>
                     </div>
-
-                    {row.done ? (
-                      <div
-                        style={{
-                          flex: "0 0 auto",
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          border: "1px solid color-mix(in srgb, var(--color-accent) 56%, var(--color-border))",
-                          background: "color-mix(in srgb, var(--color-accent) 16%, transparent)",
-                          color: "var(--color-accent)",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          lineHeight: 1,
-                        }}
-                      >
-                        {t("common.done")}
-                      </div>
-                    ) : null}
+                    {row.done ? <div className={styles.donePill}>{t("common.done")}</div> : null}
                   </div>
                 ))
               )}
             </div>
 
             {!todayLoading && !todayError && todayTotal > 10 ? (
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+              <div className={styles.panelSubtitle}>
                 {locale === "zh-CN" ? `仅展示前 10 条，共 ${todayTotal} 条。` : `Showing 10 / ${todayTotal} occurrences.`}
               </div>
             ) : null}
           </section>
 
-          <section
-            style={{
-              padding: 14,
-              border: "1px solid var(--color-border)",
-              borderRadius: 14,
-              background: "var(--color-surface)",
-              display: "grid",
-              gap: 12,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>{t("home.recentNotes.title")}</div>
-              <button
+          <section className={styles.panel}>
+            <div className={styles.panelHeader}>
+              <div className={styles.panelTitle}>{t("home.recentNotes.title")}</div>
+              <InkButton
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   void loadNotes();
                 }}
                 disabled={notesLoading}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 12,
-                  border: "1px solid var(--color-border)",
-                  background: "transparent",
-                  color: "var(--color-text)",
-                  cursor: notesLoading ? "not-allowed" : "pointer",
-                }}
               >
                 {notesLoading ? t("common.loading") : t("common.refresh")}
-              </button>
+              </InkButton>
             </div>
 
             {notesError ? (
-              <div role="alert" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+              <div role="alert" className={styles.panelSubtitle}>
                 {t("home.recentNotes.failedPrefix")}
                 {notesError}
               </div>
             ) : null}
 
             {!notesLoading && !notesError && notes.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("home.recentNotes.empty")}</div>
+              <div className={styles.panelSubtitle}>{t("home.recentNotes.empty")}</div>
             ) : null}
 
-            <div style={{ display: "grid", gap: 10 }}>
+            <div className={styles.rows}>
               {notesLoading ? (
                 <>
                   <div className="skeleton" style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }} />
@@ -463,35 +361,16 @@ export default function HomePage() {
                   <Link
                     key={n.id}
                     href={`/notes?id=${encodeURIComponent(n.id)}`}
-                    style={{
-                      border: "1px solid var(--color-border)",
-                      borderRadius: 12,
-                      padding: 12,
-                      display: "grid",
-                      gap: 6,
-                      textDecoration: "none",
-                      color: "var(--color-text)",
-                      background: "transparent",
-                    }}
+                    className={styles.noteLink}
                   >
-                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                      <div
-                        title={n.title || t("common.untitled")}
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 750,
-                          color: "var(--color-accent)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                    <div className={styles.noteTop}>
+                      <div title={n.title || t("common.untitled")} className={styles.noteTitle}>
                         {n.title || t("common.untitled")}
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--color-text-muted)", flex: "0 0 auto" }}>{n.updated_at.slice(0, 10)}</div>
+                      <div className={styles.noteDate}>{n.updated_at.slice(0, 10)}</div>
                     </div>
                     {n.body_md ? (
-                      <div style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.4 }}>
+                      <div className={styles.noteSnippet}>
                         {n.body_md.trim().replace(/\s+/g, " ").slice(0, 180)}
                         {n.body_md.trim().replace(/\s+/g, " ").length > 180 ? "..." : ""}
                       </div>

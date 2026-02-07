@@ -1,12 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { listNotifications, markNotificationRead } from "@/features/notifications/notificationsApi";
 import type { Notification } from "@/features/notifications/types";
 import { Page } from "@/features/ui/Page";
+import { InkButton, InkLink } from "@/features/ui/InkButton";
 import { useI18n } from "@/lib/i18n/useI18n";
+
+import styles from "./NotificationsPage.module.css";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
@@ -26,7 +28,8 @@ function formatTimestamp(iso: string): string {
 function formatNotificationKind(kind: string): string {
   const k = kind.trim().toLowerCase();
   if (!k) return "-";
-  if (k === "mention") return "提及";
+  // Keep an English anchor ("mention") for test stability + debugging, but still show Chinese.
+  if (k === "mention") return "mention（提及）";
   return kind;
 }
 
@@ -97,27 +100,15 @@ export default function NotificationsPage() {
 
   return (
     <Page titleKey="page.notifications.title" subtitleKey="page.notifications.subtitle">
-      <div style={{ padding: "16px 16px 20px", display: "grid", gap: 14 }}>
-        <section
-          style={{
-            border: "1px solid var(--color-border)",
-            borderRadius: 14,
-            background: "var(--color-surface)",
-            padding: 14,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}>
+      <div className={styles.content}>
+        <section className={styles.toolbar}>
+          <label className={styles.toggleLabel}>
             <input type="checkbox" checked={unreadOnly} onChange={(e) => setUnreadOnly(e.currentTarget.checked)} />
-            <span style={{ fontSize: 13, color: "var(--color-text)" }}>{t("notifications.unreadOnly")}</span>
+            <span>{t("notifications.unreadOnly")}</span>
           </label>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+          <div className={styles.toolbarRight}>
+            <div className={styles.stats}>
               {loading
                 ? t("common.loading")
                 : (() => {
@@ -125,37 +116,29 @@ export default function NotificationsPage() {
                     return locale === "zh-CN" ? `${base} 条` : `${base} items`;
                   })()}
             </div>
-            <button
+            <InkButton
               type="button"
+              size="sm"
+              variant="ghost"
               onClick={() => {
                 void load();
               }}
               disabled={loading}
-              style={{
-                padding: "8px 10px",
-                borderRadius: 12,
-                border: "1px solid var(--color-border)",
-                background: "transparent",
-                color: "var(--color-text)",
-                cursor: loading ? "not-allowed" : "pointer",
-              }}
             >
               {t("notifications.refresh")}
-            </button>
+            </InkButton>
           </div>
         </section>
 
         {error ? (
-          <div role="alert" style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
+          <div role="alert" className={styles.error}>
             {error}
           </div>
         ) : null}
 
-        {!loading && !error && visibleItems.length === 0 ? (
-          <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("notifications.empty")}</div>
-        ) : null}
+        {!loading && !error && visibleItems.length === 0 ? <div className={styles.empty}>{t("notifications.empty")}</div> : null}
 
-        <div style={{ display: "grid", gap: 10 }}>
+        <div className={styles.list}>
           {loading ? (
             <>
               <div className="skeleton" style={{ height: 72, borderRadius: 14, border: "1px solid var(--color-border)" }} />
@@ -174,105 +157,40 @@ export default function NotificationsPage() {
                 <article
                   key={n.id}
                   data-testid="notif-item"
-                  style={{
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 14,
-                    background: isUnread
-                      ? "color-mix(in srgb, var(--color-accent) 10%, var(--color-surface))"
-                      : "color-mix(in srgb, var(--color-surface-2) 52%, transparent)",
-                    padding: 14,
-                    display: "grid",
-                    gap: 10,
-                  }}
+                  className={`${styles.item} ${isUnread ? styles.itemUnread : ""}`}
                 >
-                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                          <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-                          {formatNotificationKind(n.kind)}
-                          </div>
-                        {isUnread ? (
-                          <div
-                            style={{
-                              padding: "6px 10px",
-                              borderRadius: 999,
-                              border: "1px solid color-mix(in srgb, var(--color-accent-gold) 45%, var(--color-border))",
-                              background: "color-mix(in srgb, var(--color-accent-gold) 14%, transparent)",
-                              color: "var(--color-text)",
-                              fontSize: 12,
-                              fontWeight: 750,
-                              lineHeight: 1,
-                            }}
-                          >
-                            {t("notifications.unread")}
-                          </div>
-                        ) : null}
+                  <div className={styles.itemTop}>
+                    <div className={styles.itemLeft}>
+                      <div className={styles.itemLeftTop}>
+                        <div className={styles.kind}>{formatNotificationKind(n.kind)}</div>
+                        {isUnread ? <div className={styles.unreadBadge}>{t("notifications.unread")}</div> : null}
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{formatTimestamp(n.created_at)}</div>
+                      <div className={styles.date}>{formatTimestamp(n.created_at)}</div>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <div className={styles.actions}>
                       {openHref ? (
-                        <Link
-                          href={openHref}
-                          style={{
-                            border: "1px solid var(--color-border)",
-                            borderRadius: "var(--radius-1)",
-                            background: "var(--color-surface)",
-                            color: "var(--color-text)",
-                            padding: "8px 10px",
-                            fontFamily: "var(--font-body)",
-                            textDecoration: "none",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
+                        <InkLink href={openHref} variant="surface" size="sm">
                           {t("notifications.openShare")}
-                        </Link>
+                        </InkLink>
                       ) : null}
-                      <button
+                      <InkButton
                         type="button"
+                        size="sm"
+                        variant={isUnread ? "surface" : "ghost"}
                         onClick={() => {
                           void onMarkRead(n.id);
                         }}
                         disabled={!isUnread || markingIds.has(n.id)}
-                        style={{
-                          border: "1px solid var(--color-border)",
-                          borderRadius: "var(--radius-1)",
-                          background: isUnread ? "var(--color-surface)" : "transparent",
-                          color: isUnread ? "var(--color-text)" : "var(--color-text-muted)",
-                          padding: "8px 10px",
-                          fontFamily: "var(--font-body)",
-                          cursor: !isUnread || markingIds.has(n.id) ? "not-allowed" : "pointer",
-                        }}
                       >
-                        {markingIds.has(n.id)
-                          ? t("notifications.marking")
-                          : isUnread
-                            ? t("notifications.markRead")
-                            : t("notifications.read")}
-                      </button>
+                        {markingIds.has(n.id) ? t("notifications.marking") : isUnread ? t("notifications.markRead") : t("notifications.read")}
+                      </InkButton>
                     </div>
                   </div>
 
                   {n.kind === "mention" && snippet ? (
-                    <div
-                      style={{
-                        border: "1px solid var(--color-border)",
-                        borderRadius: 12,
-                        background: "color-mix(in srgb, var(--color-surface) 86%, transparent)",
-                        padding: 12,
-                        fontFamily:
-                          "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                        fontSize: 12,
-                        lineHeight: 1.6,
-                        color: "var(--color-text)",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {snippet}
+                    <div className={styles.payload}>
+                      <pre className={styles.payloadPre}>{snippet}</pre>
                     </div>
                   ) : null}
                 </article>

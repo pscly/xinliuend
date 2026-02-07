@@ -8,11 +8,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { NotesApiErrorException, createNote, getNote, listNotes, patchNote } from "@/features/notes/notesApi";
 import type { Note } from "@/features/notes/types";
 import { Page } from "@/features/ui/Page";
+import { InkButton } from "@/features/ui/InkButton";
+import { SealFab } from "@/features/ui/SealFab";
+import { ScrollPaperTextarea } from "@/features/ui/ScrollPaperTextarea";
 import { apiFetch } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useI18n } from "@/lib/i18n/useI18n";
 import { cacheGetNote, cacheListNotes, cacheUpsertNote, cacheUpsertNotes } from "@/lib/offline/notesCache";
 import { useOfflineEnabled } from "@/lib/offline/useOfflineEnabled";
+
+import styles from "./NotesPage.module.css";
 
 type ShareCreateResponse = {
   share_id: string;
@@ -406,40 +411,12 @@ export default function NotesPage() {
 
   return (
     <Page titleKey="page.notes.title">
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(220px, 320px) 1fr",
-          minHeight: 560,
-          borderTop: "1px solid var(--color-border)",
-          background: "color-mix(in srgb, var(--color-surface-2) 58%, transparent)",
-        }}
-      >
-        <aside
-          style={{
-            borderRight: "1px solid var(--color-border)",
-            background: "color-mix(in srgb, var(--color-surface) 86%, transparent)",
-            display: "grid",
-            gridTemplateRows: "auto 1fr",
-            minHeight: 0,
-          }}
-          >
-            <div
-              style={{
-                padding: 12,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-              borderBottom: "1px solid var(--color-border)",
-              background: "color-mix(in srgb, var(--color-surface-2) 40%, transparent)",
-            }}
-          >
+      <div className={styles.layout}>
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarHeader}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-                {t("nav.notes")}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+              <div className={styles.kicker}>{t("nav.notes")}</div>
+              <div className={styles.meta}>
                 {notesLoading
                   ? t("common.loading")
                   : locale === "zh-CN"
@@ -447,35 +424,16 @@ export default function NotesPage() {
                     : `${notes.length} ${t("notes.sidebar.itemsUnit")}`}
               </div>
             </div>
-            <button
-              data-testid="notes-new"
-              type="button"
-              onClick={onCreate}
-              disabled={creating}
-              style={{
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-1)",
-                background: "var(--color-surface)",
-                color: "var(--color-text)",
-                padding: "8px 10px",
-                fontFamily: "var(--font-body)",
-                cursor: creating ? "not-allowed" : "pointer",
-              }}
-            >
-              {creating ? t("common.creating") : t("common.new")}
-            </button>
           </div>
 
-          <div style={{ overflowY: "auto", minHeight: 0 }}>
+          <div className={styles.sidebarScroll}>
             {notesError ? (
-              <div style={{ padding: 12, color: "var(--color-text)", fontSize: 13 }}>
-                <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", padding: 10, background: "var(--color-surface-2)" }}>
-                  {notesError}
-                </div>
+              <div className={styles.sidebarErrorWrap}>
+                <div className={styles.sidebarErrorCard}>{notesError}</div>
               </div>
             ) : null}
 
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            <ul className={styles.noteList}>
               {notes.map((n) => {
                 const active = n.id === selectedId;
                 return (
@@ -483,24 +441,10 @@ export default function NotesPage() {
                     <button
                       type="button"
                       onClick={() => selectNote(n.id)}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "10px 12px",
-                        border: "none",
-                        borderBottom: "1px solid var(--color-border)",
-                        background: active ? "color-mix(in srgb, var(--color-accent) 14%, var(--color-surface))" : "transparent",
-                        color: "var(--color-text)",
-                        cursor: "pointer",
-                        fontFamily: "var(--font-body)",
-                      }}
+                      className={`${styles.noteItem} ${active ? styles.noteItemActive : ""}`}
                     >
-                      <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.25, marginBottom: 4 }}>
-                        {noteTitle(n, t("notes.untitled"))}
-                      </div>
-                      <div style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.4 }}>
-                        {noteSnippet(n) || t("common.empty")}
-                      </div>
+                      <div className={styles.noteItemTitle}>{noteTitle(n, t("notes.untitled"))}</div>
+                      <div className={styles.noteItemSnippet}>{noteSnippet(n) || t("common.empty")}</div>
                     </button>
                   </li>
                 );
@@ -509,23 +453,11 @@ export default function NotesPage() {
           </div>
         </aside>
 
-        <section style={{ display: "grid", gridTemplateRows: "auto 1fr auto", minWidth: 0, minHeight: 0 }}>
-          <div
-            style={{
-              padding: 12,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              borderBottom: "1px solid var(--color-border)",
-              background: "color-mix(in srgb, var(--color-surface) 86%, transparent)",
-            }}
-          >
+        <section className={styles.editor}>
+          <div className={styles.editorHeader}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-                {t("notes.editor.title")}
-              </div>
-              <div style={{ fontSize: 13, color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div className={styles.kicker}>{t("notes.editor.title")}</div>
+              <div className={styles.editorHeaderTitle}>
                 {noteLoading
                   ? t("common.loading")
                   : selectedInList
@@ -535,101 +467,87 @@ export default function NotesPage() {
                       : t("notes.editor.noSelection")}
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <button
+
+            <div className={styles.editorHeaderActions}>
+              <div className={styles.modeGroup}>
+                <InkButton
                   type="button"
+                  size="sm"
+                  pill
+                  variant={editorMode === "markdown" ? "surface" : "ghost"}
                   onClick={() => setEditorMode("markdown")}
-                  style={{
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-1)",
-                    background: editorMode === "markdown" ? "color-mix(in srgb, var(--color-accent) 14%, var(--color-surface))" : "var(--color-surface)",
-                    color: "var(--color-text)",
-                    padding: "6px 10px",
-                    fontFamily: "var(--font-body)",
-                    cursor: "pointer",
-                  }}
                 >
                   {t("notes.editor.mode.markdown")}
-                </button>
-                <button
+                </InkButton>
+                <InkButton
                   type="button"
+                  size="sm"
+                  pill
+                  variant={editorMode === "rich" ? "surface" : "ghost"}
                   onClick={() => setEditorMode("rich")}
-                  style={{
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-1)",
-                    background: editorMode === "rich" ? "color-mix(in srgb, var(--color-accent) 14%, var(--color-surface))" : "var(--color-surface)",
-                    color: "var(--color-text)",
-                    padding: "6px 10px",
-                    fontFamily: "var(--font-body)",
-                    cursor: "pointer",
-                  }}
                 >
                   {t("notes.editor.mode.rich")}
-                </button>
+                </InkButton>
               </div>
 
-              {saved ? <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("common.saved")}</span> : null}
-              <button
+              {saved ? <span className={styles.savedHint}>{t("common.saved")}</span> : null}
+
+              <InkButton
                 data-testid="notes-save"
                 type="button"
                 onClick={onSave}
                 disabled={!note || saving || !isDirty}
-                style={{
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-1)",
-                  background: note && isDirty ? "var(--color-accent)" : "var(--color-surface)",
-                  color: note && isDirty ? "var(--color-accent-contrast)" : "var(--color-text-muted)",
-                  padding: "8px 12px",
-                  fontFamily: "var(--font-body)",
-                  cursor: !note || saving || !isDirty ? "not-allowed" : "pointer",
-                }}
+                variant={note && isDirty ? "primary" : "surface"}
               >
                 {saving ? t("common.saving") : t("common.save")}
-              </button>
+              </InkButton>
             </div>
           </div>
 
-          <div style={{ padding: 12, minHeight: 0, display: "grid", gridTemplateRows: "auto 1fr", gap: 10 }}>
-            <div style={{ display: "grid", gap: 10 }}>
+          <div className={styles.editorBody}>
+            <div className={styles.topCards}>
               {editorMode === "rich" ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-1)",
-                    padding: 10,
-                    background: "color-mix(in srgb, var(--color-surface-2) 52%, transparent)",
-                  }}
-                >
-                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
-                    <button type="button" disabled={!canEdit} onClick={() => insertPrefixAtLine("# ")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                <div className={styles.toolbar}>
+                  <div className={styles.toolbarButtons}>
+                    <InkButton type="button" size="sm" disabled={!canEdit} onClick={() => insertPrefixAtLine("# ")}>
                       H1
-                    </button>
-                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("**", "**", "加粗文字")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                    </InkButton>
+                    <InkButton
+                      type="button"
+                      size="sm"
+                      disabled={!canEdit}
+                      onClick={() => insertWrap("**", "**", "加粗文字")}
+                    >
                       {t("notes.rich.bold")}
-                    </button>
-                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("*", "*", "斜体文字")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                    </InkButton>
+                    <InkButton
+                      type="button"
+                      size="sm"
+                      disabled={!canEdit}
+                      onClick={() => insertWrap("*", "*", "斜体文字")}
+                    >
                       {t("notes.rich.italic")}
-                    </button>
-                    <button type="button" disabled={!canEdit} onClick={insertLink} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                    </InkButton>
+                    <InkButton type="button" size="sm" disabled={!canEdit} onClick={insertLink}>
                       {t("notes.rich.link")}
-                    </button>
-                    <button type="button" disabled={!canEdit} onClick={() => insertPrefixAtLine("- ")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                    </InkButton>
+                    <InkButton type="button" size="sm" disabled={!canEdit} onClick={() => insertPrefixAtLine("- ")}>
                       {t("notes.rich.list")}
-                    </button>
-                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("`", "`", "代码")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                    </InkButton>
+                    <InkButton type="button" size="sm" disabled={!canEdit} onClick={() => insertWrap("`", "`", "代码")}>
                       {t("notes.rich.code")}
-                    </button>
-                    <button type="button" disabled={!canEdit} onClick={() => insertWrap("```\n", "\n```", "代码\n")} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", background: "var(--color-surface)", color: "var(--color-text)", padding: "6px 10px", fontFamily: "var(--font-body)", cursor: canEdit ? "pointer" : "not-allowed" }}>
+                    </InkButton>
+                    <InkButton
+                      type="button"
+                      size="sm"
+                      disabled={!canEdit}
+                      onClick={() => insertWrap("```\n", "\n```", "代码\n")}
+                    >
                       {t("notes.rich.codeBlock")}
-                    </button>
+                    </InkButton>
                   </div>
 
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--color-text-muted)", cursor: "pointer", userSelect: "none" }}>
+                  <label className={styles.previewToggle}>
                     <input type="checkbox" checked={showPreview} onChange={(e) => setShowPreview(e.target.checked)} />
                     {t("notes.editor.previewToggle")}
                   </label>
@@ -637,90 +555,37 @@ export default function NotesPage() {
               ) : null}
 
               {selectedId ? (
-                <div
-                  style={{
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-1)",
-                    padding: 10,
-                    background: "color-mix(in srgb, var(--color-surface-2) 52%, transparent)",
-                    display: "grid",
-                    gap: 10,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                <div className={styles.shareCard}>
+                  <div className={styles.shareHeader}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-                        {t("notes.share.title")}
-                      </div>
-                      <div style={{ fontSize: 13, color: "var(--color-text)", marginTop: 4 }}>
-                        {t("notes.share.subtitle")}
-                      </div>
+                      <div className={styles.kicker}>{t("notes.share.title")}</div>
+                      <div className={styles.shareSubtitle}>{t("notes.share.subtitle")}</div>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      <button
+                    <div className={styles.shareActions}>
+                      <InkButton
                         data-testid="create-share"
                         type="button"
+                        size="sm"
                         onClick={onCreateShare}
                         disabled={!selectedId || shareCreating}
-                        style={{
-                          border: "1px solid var(--color-border)",
-                          borderRadius: "var(--radius-1)",
-                          background: "var(--color-surface)",
-                          color: "var(--color-text)",
-                          padding: "8px 10px",
-                          fontFamily: "var(--font-body)",
-                          cursor: !selectedId || shareCreating ? "not-allowed" : "pointer",
-                        }}
                       >
-                        {shareCreating
-                          ? t("common.creating")
-                          : shareUrl
-                            ? t("notes.share.recreate")
-                            : t("notes.share.create")}
-                      </button>
+                        {shareCreating ? t("common.creating") : shareUrl ? t("notes.share.recreate") : t("notes.share.create")}
+                      </InkButton>
                       {shareUrl ? (
-                        <button
-                          type="button"
-                          onClick={onOpenShareUrl}
-                          style={{
-                            border: "1px solid var(--color-border)",
-                            borderRadius: "var(--radius-1)",
-                            background: "var(--color-surface)",
-                            color: "var(--color-text)",
-                            padding: "8px 10px",
-                            fontFamily: "var(--font-body)",
-                            cursor: "pointer",
-                          }}
-                        >
+                        <InkButton type="button" size="sm" onClick={onOpenShareUrl}>
                           {t("common.open")}
-                        </button>
+                        </InkButton>
                       ) : null}
                       {shareUrl ? (
-                        <button
-                          type="button"
-                          onClick={onCopyShareUrl}
-                          style={{
-                            border: "1px solid var(--color-border)",
-                            borderRadius: "var(--radius-1)",
-                            background: "var(--color-surface)",
-                            color: "var(--color-text)",
-                            padding: "8px 10px",
-                            fontFamily: "var(--font-body)",
-                            cursor: "pointer",
-                          }}
-                        >
+                        <InkButton type="button" size="sm" onClick={onCopyShareUrl}>
                           {shareCopied ? t("common.copied") : t("notes.share.copy")}
-                        </button>
+                        </InkButton>
                       ) : null}
                     </div>
                   </div>
 
-                  {shareError ? (
-                    <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", padding: 10, background: "var(--color-surface)", fontSize: 13 }}>
-                      {shareError}
-                    </div>
-                  ) : null}
+                  {shareError ? <div className={styles.messageCard}>{shareError}</div> : null}
 
                   {shareUrl ? (
                     <input
@@ -729,33 +594,23 @@ export default function NotesPage() {
                       readOnly
                       value={shareUrl}
                       onFocus={(e) => e.currentTarget.select()}
-                      style={{
-                        width: "100%",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "var(--radius-1)",
-                        background: "var(--color-surface)",
-                        color: "var(--color-text)",
-                        padding: "10px 12px",
-                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                        fontSize: 12,
-                      }}
+                      className={styles.shareUrl}
                     />
                   ) : null}
                 </div>
               ) : null}
 
               {conflictSnapshot ? (
-                <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", padding: 10, background: "color-mix(in srgb, var(--color-accent-gold) 14%, var(--color-surface-2))" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <div className={styles.conflictCard}>
+                  <div className={styles.conflictHeader}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-                        {t("notes.conflict.title")}
-                      </div>
-                      <div style={{ fontSize: 13, color: "var(--color-text)", marginTop: 4 }}>{t("notes.conflict.subtitle")}</div>
+                      <div className={styles.kicker}>{t("notes.conflict.title")}</div>
+                      <div className={styles.shareSubtitle}>{t("notes.conflict.subtitle")}</div>
                     </div>
-                    <button
+                    <InkButton
                       data-testid="notes-use-server-version"
                       type="button"
+                      size="sm"
                       onClick={() => {
                         setNote(conflictSnapshot);
                         setEditorBody(conflictSnapshot.body_md);
@@ -763,43 +618,19 @@ export default function NotesPage() {
                         setSaved(false);
                         setActionError(null);
                       }}
-                      style={{
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "var(--radius-1)",
-                        background: "var(--color-surface)",
-                        color: "var(--color-text)",
-                        padding: "8px 10px",
-                        fontFamily: "var(--font-body)",
-                        cursor: "pointer",
-                      }}
                     >
                       {t("notes.conflict.useServer")}
-                    </button>
+                    </InkButton>
                   </div>
                 </div>
               ) : null}
 
-              {noteError ? (
-                <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", padding: 10, background: "var(--color-surface-2)", fontSize: 13 }}>
-                  {noteError}
-                </div>
-              ) : null}
-              {actionError ? (
-                <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-1)", padding: 10, background: "var(--color-surface-2)", fontSize: 13 }}>
-                  {actionError}
-                </div>
-              ) : null}
+              {noteError ? <div className={styles.messageCard}>{noteError}</div> : null}
+              {actionError ? <div className={styles.messageCard}>{actionError}</div> : null}
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: editorMode === "rich" && showPreview ? "1fr 1fr" : "1fr",
-                gap: 12,
-                minHeight: 0,
-              }}
-            >
-              <textarea
+            <div className={`${styles.split} ${editorMode === "rich" && showPreview ? styles.splitTwo : styles.splitOne}`}>
+              <ScrollPaperTextarea
                 ref={textareaRef}
                 value={editorBody}
                 onChange={(e) => {
@@ -809,56 +640,31 @@ export default function NotesPage() {
                 }}
                 placeholder={selectedId ? "" : t("notes.textarea.placeholderNoSelection")}
                 disabled={!selectedId || noteLoading}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  minHeight: 360,
-                  resize: "none",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-1)",
-                  background: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  padding: 12,
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                  fontSize: 13,
-                  lineHeight: 1.6,
-                }}
+                className={styles.textarea}
               />
 
               {editorMode === "rich" && showPreview ? (
-                <div
-                  style={{
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-1)",
-                    background: "color-mix(in srgb, var(--color-surface-2) 46%, transparent)",
-                    padding: 12,
-                    overflow: "auto",
-                  }}
-                >
-                  <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)", marginBottom: 10 }}>{t("notes.rich.previewPlainText")}</div>
-                  <pre
-                    style={{
-                      margin: 0,
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                      fontSize: 13,
-                      lineHeight: 1.6,
-                      color: "var(--color-text)",
-                    }}
-                  >
-                    {editorBody}
-                  </pre>
+                <div className={styles.previewPane}>
+                  <div className={styles.previewHeading}>{t("notes.rich.previewPlainText")}</div>
+                  <pre className={styles.previewPre}>{editorBody}</pre>
                 </div>
               ) : null}
             </div>
           </div>
 
-          <div style={{ padding: 12, borderTop: "1px solid var(--color-border)", color: "var(--color-text-muted)", fontSize: 12 }}>
-            {note ? `id=${note.id}` : selectedId ? `id=${selectedId}` : t("notes.footer.tip")}
-          </div>
+          <div className={styles.footer}>{note ? `id=${note.id}` : selectedId ? `id=${selectedId}` : t("notes.footer.tip")}</div>
         </section>
       </div>
+
+      <SealFab
+        data-testid="notes-new"
+        type="button"
+        glyph="记"
+        hint={creating ? t("common.creating") : t("common.new")}
+        onClick={onCreate}
+        disabled={creating}
+        aria-label={t("common.new")}
+      />
     </Page>
   );
 }

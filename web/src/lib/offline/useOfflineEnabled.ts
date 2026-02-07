@@ -14,8 +14,7 @@ export function useOfflineEnabled(): {
   });
 
   useEffect(() => {
-    // Hydrate on mount (and keep in sync with storage/custom events).
-    setOfflineEnabledState(getOfflineEnabled());
+    // Keep in sync with storage/custom events.
     return subscribeOfflineEnabled(() => {
       setOfflineEnabledState(getOfflineEnabled());
     });
@@ -28,4 +27,3 @@ export function useOfflineEnabled(): {
 
   return { offlineEnabled, updateOfflineEnabled };
 }
-

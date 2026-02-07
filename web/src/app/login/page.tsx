@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n/useI18n";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { useTheme } from "@/lib/theme/ThemeProvider";
-import { nextThemePreference } from "@/lib/theme/theme";
+import { nextThemePalette, nextThemePreference, type ThemePalette } from "@/lib/theme/theme";
 import { useAuth } from "@/lib/auth/useAuth";
 import { RedirectIfAuthenticated } from "@/lib/auth/guards";
 
@@ -21,6 +21,12 @@ function themeLabelKey(preference: "system" | "light" | "dark") {
   return "ui.theme.system";
 }
 
+function paletteLabelKey(palette: ThemePalette) {
+  if (palette === "indigo") return "ui.palette.indigo";
+  if (palette === "cyber") return "ui.palette.cyber";
+  return "ui.palette.paperInk";
+}
+
 function validateUsername(username: string): MessageKey | null {
   const v = username.trim();
   if (v.length < 1 || v.length > 64) return "auth.username.error";
@@ -31,7 +37,7 @@ function validateUsername(username: string): MessageKey | null {
 export default function LoginPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { preference, setPreference } = useTheme();
+  const { palette, preference, setPalette, setPreference } = useTheme();
   const { login } = useAuth();
 
   const [username, setUsername] = useState("");
@@ -86,6 +92,16 @@ export default function LoginPage() {
             >
               <span className={styles.pillLabel}>{t("ui.theme")}</span>
               <span className={styles.pillValue}>{t(themeLabelKey(preference))}</span>
+            </button>
+
+            <button
+              type="button"
+              className={styles.pill}
+              onClick={() => setPalette(nextThemePalette(palette))}
+              aria-label={`${t("ui.palette")}: ${t(paletteLabelKey(palette))}`}
+            >
+              <span className={styles.pillLabel}>{t("ui.palette")}</span>
+              <span className={styles.pillValue}>{t(paletteLabelKey(palette))}</span>
             </button>
           </div>
         </header>

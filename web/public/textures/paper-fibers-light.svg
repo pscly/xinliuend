@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" viewBox="0 0 280 280">
+  <rect width="280" height="280" fill="transparent"/>
+  <g stroke="rgba(0,0,0,0.018)" stroke-width="1">
+    <path d="M14 0 V280"/>
+    <path d="M38 0 V280"/>
+    <path d="M62 0 V280"/>
+    <path d="M94 0 V280"/>
+    <path d="M126 0 V280"/>
+    <path d="M158 0 V280"/>
+    <path d="M190 0 V280"/>
+    <path d="M222 0 V280"/>
+    <path d="M246 0 V280"/>
+    <path d="M270 0 V280"/>
+  </g>
+
+  <g stroke="rgba(0,0,0,0.012)" stroke-width="1">
+    <path d="M0 22 H280"/>
+    <path d="M0 86 H280"/>
+    <path d="M0 142 H280"/>
+    <path d="M0 198 H280"/>
+    <path d="M0 254 H280"/>
+  </g>
+</svg>
+

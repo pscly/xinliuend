@@ -8,7 +8,11 @@ import type { Note, NoteList } from "@/features/notes/types";
 import { getTodoItems } from "@/features/todo/todoApi";
 import type { TodoItem, TodoItemsResponse } from "@/features/todo/types";
 import { Page } from "@/features/ui/Page";
+import { InkButton } from "@/features/ui/InkButton";
+import { InkTextField } from "@/features/ui/InkField";
 import { useI18n } from "@/lib/i18n/useI18n";
+
+import styles from "./SearchPage.module.css";
 
 function normalizeQuery(v: string): string {
   return v.trim().replace(/\s+/g, " ");
@@ -49,33 +53,17 @@ function ChipButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "6px 10px",
-        borderRadius: 999,
-        border: "1px solid var(--color-border)",
-        background: "var(--color-surface)",
-        color: "var(--color-text)",
-        cursor: "pointer",
-        lineHeight: 1,
-      }}
-    >
-      <span style={{ fontSize: 13 }}>{label}</span>
-    </button>
+    <InkButton type="button" size="sm" pill title={title} onClick={onClick}>
+      {label}
+    </InkButton>
   );
 }
 
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>{title}</div>
-      {subtitle ? <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{subtitle}</div> : null}
+    <div className={styles.sectionTitle}>
+      <div className={styles.sectionTitleMain}>{title}</div>
+      {subtitle ? <div className={styles.sectionTitleSub}>{subtitle}</div> : null}
     </div>
   );
 }
@@ -220,43 +208,22 @@ export default function SearchPage() {
 
   return (
     <Page titleKey="page.search.title">
-      <div style={{ display: "grid", gap: 16, padding: "16px 16px 20px" }}>
-        <div
-          style={{
-            display: "grid",
-            gap: 12,
-            padding: 14,
-            border: "1px solid var(--color-border)",
-            borderRadius: 14,
-            background: "var(--color-surface)",
-          }}
-        >
-          <div style={{ display: "grid", gap: 10 }}>
-            <label style={{ display: "grid", gap: 6 }}>
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("search.query.label")}</div>
-              <input
-                data-testid="search-query-input"
-                value={queryDraft}
-                onChange={(e) => setQueryDraft(e.target.value)}
-                placeholder={normalizedTag ? t("search.query.placeholderTagActive") : t("search.query.placeholder")}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 12,
-                  border: "1px solid var(--color-border)",
-                  background: "transparent",
-                  color: "var(--color-text)",
-                  outline: "none",
-                }}
-              />
-            </label>
+      <div className={styles.content}>
+        <div className={styles.filters}>
+          <div className={styles.filtersGrid}>
+            <InkTextField
+              label={t("search.query.label")}
+              data-testid="search-query-input"
+              value={queryDraft}
+              onChange={(e) => setQueryDraft(e.target.value)}
+              placeholder={normalizedTag ? t("search.query.placeholderTagActive") : t("search.query.placeholder")}
+            />
 
-            <div style={{ display: "grid", gap: 6 }}>
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("search.tag.label")}</div>
-              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-                {normalizedTag ? (
-                  <ChipButton label={`#${normalizedTag}  x`} title={t("search.tag.clear")} onClick={onClearTag} />
-                ) : null}
+            <div className={styles.filtersGrid}>
+              <div className={styles.fieldLabel}>{t("search.tag.label")}</div>
+              <div className={styles.tagRow}>
+                {normalizedTag ? <ChipButton label={`#${normalizedTag}  x`} title={t("search.tag.clear")} onClick={onClearTag} /> : null}
+
                 <input
                   data-testid="search-tag-input"
                   value={tagDraft}
@@ -268,62 +235,30 @@ export default function SearchPage() {
                       onApplyTag();
                     }
                   }}
-                  style={{
-                    flex: "1 1 220px",
-                    minWidth: 160,
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    border: "1px solid var(--color-border)",
-                    background: "transparent",
-                    color: "var(--color-text)",
-                    outline: "none",
-                  }}
+                  className={`${styles.input} ${styles.tagInputGrow}`}
                 />
-                <button
-                  data-testid="search-apply-tag"
-                  type="button"
-                  onClick={onApplyTag}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    border: "1px solid var(--color-border)",
-                    background: "transparent",
-                    color: "var(--color-text)",
-                    cursor: "pointer",
-                  }}
-                >
+
+                <InkButton data-testid="search-apply-tag" type="button" onClick={onApplyTag} variant="ghost">
                   {t("common.apply")}
-                </button>
+                </InkButton>
               </div>
-              {normalizedTag ? (
-                <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-                  {t("search.tag.modeHint")}
-                </div>
-              ) : null}
+
+              {normalizedTag ? <div className={styles.hint}>{t("search.tag.modeHint")}</div> : null}
             </div>
           </div>
 
           {activeLabel ? (
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+            <div className={styles.hint}>
               {t("search.active.prefix")}
               {activeLabel}
             </div>
           ) : (
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-              {t("search.tip")}
-            </div>
+            <div className={styles.hint}>{t("search.tip")}</div>
           )}
         </div>
 
-        <div style={{ display: "grid", gap: 14 }}>
-          <div
-            style={{
-              padding: 14,
-              border: "1px solid var(--color-border)",
-              borderRadius: 14,
-              background: "var(--color-surface)",
-            }}
-          >
+        <div className={styles.sections}>
+          <div className={styles.panel}>
             <SectionTitle
               title={t("search.section.notes")}
               subtitle={
@@ -336,13 +271,9 @@ export default function SearchPage() {
                       : `${notes.length}${notesTotal ? ` / ${notesTotal}` : ""}`
               }
             />
-            {notesError ? (
-              <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>{notesError}</div>
-            ) : null}
-            {!notesLoading && !notesError && notes.length === 0 ? (
-              <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>{t("search.empty.notes")}</div>
-            ) : null}
-            <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            {notesError ? <div className={styles.sectionMsg}>{notesError}</div> : null}
+            {!notesLoading && !notesError && notes.length === 0 ? <div className={styles.sectionMsg}>{t("search.empty.notes")}</div> : null}
+            <div className={styles.results}>
               {notesLoading
                 ? skeletonKeys.map((k) => (
                     <div
@@ -352,36 +283,16 @@ export default function SearchPage() {
                     />
                   ))
                 : notes.map((n) => (
-                    <div
-                      key={n.id}
-                      style={{
-                        border: "1px solid var(--color-border)",
-                        borderRadius: 12,
-                        padding: 12,
-                        display: "grid",
-                        gap: 8,
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                        <Link
-                          href={`/notes?id=${encodeURIComponent(n.id)}`}
-                          style={{
-                            color: "var(--color-accent)",
-                            fontWeight: 700,
-                            textDecoration: "none",
-                            fontSize: 14,
-                            lineHeight: 1.2,
-                          }}
-                        >
+                    <div key={n.id} className={styles.resultCard}>
+                      <div className={styles.cardTop}>
+                        <Link href={`/notes?id=${encodeURIComponent(n.id)}`} className={styles.noteLink}>
                           {n.title || t("common.untitled")}
                         </Link>
-                        <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{n.updated_at.slice(0, 10)}</div>
+                        <div className={styles.date}>{n.updated_at.slice(0, 10)}</div>
                       </div>
-                      {n.body_md ? (
-                        <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{notePreview(n.body_md)}</div>
-                      ) : null}
+                      {n.body_md ? <div className={styles.preview}>{notePreview(n.body_md)}</div> : null}
                       {n.tags.length ? (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        <div className={styles.chips}>
                           {n.tags.slice(0, 10).map((tag) => (
                             <ChipButton key={tag} label={`#${tag}`} title={`${t("search.tag.filterByTagTitlePrefix")}${tag}`} onClick={() => onPickTag(tag)} />
                           ))}
@@ -392,14 +303,7 @@ export default function SearchPage() {
             </div>
           </div>
 
-          <div
-            style={{
-              padding: 14,
-              border: "1px solid var(--color-border)",
-              borderRadius: 14,
-              background: "var(--color-surface)",
-            }}
-          >
+          <div className={styles.panel}>
             <SectionTitle
               title={t("search.section.todos")}
               subtitle={
@@ -412,13 +316,9 @@ export default function SearchPage() {
                       : String(todos.length)
               }
             />
-            {todosError ? (
-              <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>{todosError}</div>
-            ) : null}
-            {!todosLoading && !todosError && todos.length === 0 ? (
-              <div style={{ marginTop: 10, color: "var(--color-text-muted)", fontSize: 13 }}>{t("search.empty.todos")}</div>
-            ) : null}
-            <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            {todosError ? <div className={styles.sectionMsg}>{todosError}</div> : null}
+            {!todosLoading && !todosError && todos.length === 0 ? <div className={styles.sectionMsg}>{t("search.empty.todos")}</div> : null}
+            <div className={styles.results}>
               {todosLoading
                 ? skeletonKeys.map((k) => (
                     <div
@@ -428,25 +328,14 @@ export default function SearchPage() {
                     />
                   ))
                 : todos.map((it) => (
-                    <div
-                      key={it.id}
-                      style={{
-                        border: "1px solid var(--color-border)",
-                        borderRadius: 12,
-                        padding: 12,
-                        display: "grid",
-                        gap: 8,
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text)" }}>{it.title}</div>
-                        <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{it.updated_at.slice(0, 10)}</div>
+                    <div key={it.id} className={styles.resultCard}>
+                      <div className={styles.cardTop}>
+                        <div className={styles.todoTitle}>{it.title}</div>
+                        <div className={styles.date}>{it.updated_at.slice(0, 10)}</div>
                       </div>
-                      {it.note ? (
-                        <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{notePreview(it.note, 160)}</div>
-                      ) : null}
+                      {it.note ? <div className={styles.preview}>{notePreview(it.note, 160)}</div> : null}
                       {it.tags.length ? (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        <div className={styles.chips}>
                           {it.tags.slice(0, 10).map((tag) => (
                             <ChipButton key={`${it.id}:${tag}`} label={`#${tag}`} title={`${t("search.tag.filterByTagTitlePrefix")}${tag}`} onClick={() => onPickTag(tag)} />
                           ))}

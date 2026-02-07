@@ -4,158 +4,229 @@
     Chinese-friendly serif-first stacks.
     We do not load webfonts here; these are graceful fallbacks.
   */
-  --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif SC",
-    "Source Han Serif SC", "Songti SC", SimSun, serif;
-  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif SC",
+  /*
+    NOTE: `web/src/app/layout.tsx` uses `next/font` to set `--font-body` and
+    `--font-display` on <body>. These variables here are fallbacks (and serve
+    as design documentation) in case the font classes are removed.
+  */
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans SC",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue",
+    Arial, sans-serif;
+  --font-display: "Kaiti SC", KaiTi, "STKaiti", "Noto Serif SC",
     "Source Han Serif SC", "Songti SC", SimSun, serif;
 
   /* Layout */
   --page-max: 1100px;
   --radius-1: 12px;
-  --radius-2: 18px;
-  --shadow-1: 0 12px 40px rgba(10, 11, 13, 0.08);
+  --radius-2: 14px;
+  --shadow-1: 0 14px 44px rgba(10, 10, 12, 0.12);
 
-  /* Guofeng Qinglu palette (light baseline) */
-  --qinglu-paper: #fbfaf5;
-  --qinglu-paper-2: #fffdf8;
-  --qinglu-stone: #f1efe7;
-  --qinglu-ink: #15110f;
-  --qinglu-ink-2: #4f4a44;
-  --qinglu-jade: #1f7f6c;
-  --qinglu-azurite: #1f6c78;
-  --qinglu-gold: #c7a34a;
+  /*
+    调色板常量（对齐 Android：xinliu_android/core/designsystem/.../ColorSchemes.kt）
+    - 白天：宣纸与墨
+    - 黑夜：漆器与流光
+  */
+  --paper-bg: #f7f8f4; /* 草白 */
+  --paper-surface: #fdfbf3; /* 米宣纸 */
+  --ink-text: #383431; /* 焦茶 */
+  --ink-muted: #878885; /* 雅灰 */
 
-  /* Light theme tokens */
-  --color-bg: var(--qinglu-paper);
-  --color-surface: var(--qinglu-paper-2);
-  --color-surface-2: var(--qinglu-stone);
-  --color-text: var(--qinglu-ink);
-  --color-text-muted: var(--qinglu-ink-2);
-  --color-border: rgba(21, 17, 15, 0.14);
-  --color-accent: var(--qinglu-jade);
-  --color-accent-contrast: #fffaf0;
+  --vermilion: #ff4c39; /* 朱砂 */
+  --indigo: #305169; /* 黛蓝 */
+  --gold: #f2be45; /* 赤金 */
+  --neon-cyan: #00e5bc; /* 荧光青 */
+
+  --night-bg: #18191b; /* 墨灰 */
+  --night-surface: #22252a; /* 玄青 */
+  --night-text: #e0e0e0; /* 银灰 */
+  --night-outline: #6d6e6e;
+
+  /* Light theme (default): paper ink */
+  --color-bg: var(--paper-bg);
+  --color-surface: var(--paper-surface);
+  --color-surface-2: color-mix(in srgb, var(--paper-surface) 88%, var(--ink-text) 12%);
+  --color-text: var(--ink-text);
+  --color-text-muted: var(--ink-muted);
+  --color-border: color-mix(in srgb, var(--ink-text) 18%, transparent);
+
+  --color-primary: var(--vermilion);
+  --color-on-primary: #ffffff;
+  --color-secondary: var(--indigo);
+  --color-on-secondary: #ffffff;
+
+  /* Legacy aliases (used across existing components) */
+  --color-accent: var(--color-primary);
+  --color-accent-contrast: var(--color-on-primary);
+  --color-accent-2: var(--color-secondary);
+  --color-accent-gold: var(--gold);
+
+  /* Seal (印章) should always remain vermilion */
+  --color-seal: var(--vermilion);
+  --color-on-seal: #ffffff;
+
   --color-danger: #b42318;
 
-  /* Optional extras; components may ignore these. */
-  --color-accent-2: var(--qinglu-azurite);
-  --color-accent-gold: var(--qinglu-gold);
+  /* Background layers (paper + ink washes) */
+  --bg-paper-grain: url("/textures/paper-grain-light.svg");
+  --bg-paper-fibers: url("/textures/paper-fibers-light.svg");
+  --bg-wash-1: radial-gradient(1100px 560px at 16% -18%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 62%);
+  --bg-wash-2: radial-gradient(900px 640px at 92% 0%, color-mix(in srgb, var(--color-secondary) 10%, transparent), transparent 64%);
+  --bg-wash-3: radial-gradient(900px 700px at 72% 116%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 60%);
 
-  /* Background layers (paper + qinglu washes) */
-  --bg-paper-grain: radial-gradient(circle at 16% 22%, rgba(21, 17, 15, 0.05) 0 1px, transparent 1px)
-    0 0 / 36px 36px;
-  --bg-paper-fibers: repeating-linear-gradient(
-    0deg,
-    rgba(21, 17, 15, 0.012) 0px,
-    rgba(21, 17, 15, 0.012) 1px,
-    transparent 1px,
-    transparent 8px
-  );
-  --bg-wash-1: radial-gradient(1100px 560px at 18% -18%, rgba(31, 127, 108, 0.18), transparent 60%);
-  --bg-wash-2: radial-gradient(900px 640px at 92% 0%, rgba(31, 108, 120, 0.14), transparent 62%);
-  --bg-wash-3: radial-gradient(900px 700px at 72% 115%, rgba(199, 163, 74, 0.10), transparent 58%);
-
-  --skeleton-1: rgba(21, 17, 15, 0.07);
-  --skeleton-2: rgba(21, 17, 15, 0.13);
+  --skeleton-1: color-mix(in srgb, var(--color-text) 10%, transparent);
+  --skeleton-2: color-mix(in srgb, var(--color-text) 16%, transparent);
   color-scheme: light;
+}
+
+/* Light palette overrides */
+html[data-palette="indigo"] {
+  --color-primary: var(--indigo);
+  --color-on-primary: #ffffff;
+  --color-secondary: var(--vermilion);
+  --color-on-secondary: #ffffff;
+}
+
+html[data-palette="cyber"] {
+  --color-primary: var(--neon-cyan);
+  --color-on-primary: #0b1f1a;
+  --color-secondary: var(--vermilion);
+  --color-on-secondary: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Night Qinglu: ink-black with green/azurite undertones and subtle gold. */
-    --color-bg: #06110f;
-    --color-surface: #081715;
-    --color-surface-2: #0c211d;
-    --color-text: #e7f4ee;
-    --color-text-muted: #a6c8bb;
-    --color-border: rgba(231, 244, 238, 0.14);
-    --color-accent: #3cc7a7;
-    --color-accent-contrast: #05100e;
+    --color-bg: var(--night-bg);
+    --color-surface: var(--night-surface);
+    --color-surface-2: color-mix(in srgb, var(--night-surface) 86%, #000000 14%);
+    --color-text: var(--night-text);
+    --color-text-muted: color-mix(in srgb, var(--night-text) 72%, var(--night-outline));
+    --color-border: color-mix(in srgb, var(--night-text) 18%, transparent);
     --color-danger: #ff7875;
 
-    --color-accent-2: #37b7c2;
-    --color-accent-gold: #d7b65a;
+    /* Night defaults to PAPER_INK behavior */
+    --color-primary: var(--gold);
+    --color-on-primary: #1e1300;
+    --color-secondary: var(--vermilion);
+    --color-on-secondary: #ffffff;
 
-    --bg-paper-grain: radial-gradient(circle at 18% 20%, rgba(231, 244, 238, 0.032) 0 1px, transparent 1px)
-      0 0 / 40px 40px;
-    --bg-paper-fibers: repeating-linear-gradient(
-      0deg,
-      rgba(231, 244, 238, 0.016) 0px,
-      rgba(231, 244, 238, 0.016) 1px,
-      transparent 1px,
-      transparent 9px
-    );
-    --bg-wash-1: radial-gradient(1200px 620px at 14% -22%, rgba(60, 199, 167, 0.14), transparent 62%);
-    --bg-wash-2: radial-gradient(980px 740px at 94% 4%, rgba(55, 183, 194, 0.10), transparent 64%);
-    --bg-wash-3: radial-gradient(920px 760px at 78% 122%, rgba(215, 182, 90, 0.06), transparent 60%);
+    /* Legacy aliases */
+    --color-accent: var(--color-primary);
+    --color-accent-contrast: var(--color-on-primary);
+    --color-accent-2: var(--color-secondary);
+    --color-accent-gold: var(--gold);
 
-    --skeleton-1: rgba(231, 244, 238, 0.06);
-    --skeleton-2: rgba(231, 244, 238, 0.11);
+    --bg-paper-grain: url("/textures/paper-grain-dark.svg");
+    --bg-paper-fibers: url("/textures/paper-fibers-dark.svg");
+    --bg-wash-1: radial-gradient(1200px 620px at 14% -22%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 64%);
+    --bg-wash-2: radial-gradient(980px 740px at 94% 4%, color-mix(in srgb, var(--color-secondary) 10%, transparent), transparent 66%);
+    --bg-wash-3: radial-gradient(920px 760px at 78% 122%, color-mix(in srgb, var(--gold) 8%, transparent), transparent 62%);
+
+    --skeleton-1: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --skeleton-2: color-mix(in srgb, var(--color-text) 14%, transparent);
     color-scheme: dark;
+  }
+
+  html[data-palette="indigo"] {
+    --color-primary: var(--indigo);
+    --color-on-primary: #ffffff;
+    --color-secondary: var(--gold);
+    --color-on-secondary: #1e1300;
+  }
+
+  html[data-palette="cyber"] {
+    --color-primary: var(--neon-cyan);
+    --color-on-primary: #0b1f1a;
+    --color-secondary: var(--gold);
+    --color-on-secondary: #1e1300;
   }
 }
 
 html[data-theme="light"] {
-  --color-bg: var(--qinglu-paper);
-  --color-surface: var(--qinglu-paper-2);
-  --color-surface-2: var(--qinglu-stone);
-  --color-text: var(--qinglu-ink);
-  --color-text-muted: var(--qinglu-ink-2);
-  --color-border: rgba(21, 17, 15, 0.14);
-  --color-accent: var(--qinglu-jade);
-  --color-accent-contrast: #fffaf0;
-  --color-danger: #b42318;
+  --color-bg: var(--paper-bg);
+  --color-surface: var(--paper-surface);
+  --color-surface-2: color-mix(in srgb, var(--paper-surface) 88%, var(--ink-text) 12%);
+  --color-text: var(--ink-text);
+  --color-text-muted: var(--ink-muted);
+  --color-border: color-mix(in srgb, var(--ink-text) 18%, transparent);
 
-  --color-accent-2: var(--qinglu-azurite);
-  --color-accent-gold: var(--qinglu-gold);
+  --color-primary: var(--vermilion);
+  --color-on-primary: #ffffff;
+  --color-secondary: var(--indigo);
+  --color-on-secondary: #ffffff;
 
-  --bg-paper-grain: radial-gradient(circle at 16% 22%, rgba(21, 17, 15, 0.05) 0 1px, transparent 1px)
-    0 0 / 36px 36px;
-  --bg-paper-fibers: repeating-linear-gradient(
-    0deg,
-    rgba(21, 17, 15, 0.012) 0px,
-    rgba(21, 17, 15, 0.012) 1px,
-    transparent 1px,
-    transparent 8px
-  );
-  --bg-wash-1: radial-gradient(1100px 560px at 18% -18%, rgba(31, 127, 108, 0.18), transparent 60%);
-  --bg-wash-2: radial-gradient(900px 640px at 92% 0%, rgba(31, 108, 120, 0.14), transparent 62%);
-  --bg-wash-3: radial-gradient(900px 700px at 72% 115%, rgba(199, 163, 74, 0.10), transparent 58%);
+  --color-accent: var(--color-primary);
+  --color-accent-contrast: var(--color-on-primary);
+  --color-accent-2: var(--color-secondary);
+  --color-accent-gold: var(--gold);
 
-  --skeleton-1: rgba(21, 17, 15, 0.07);
-  --skeleton-2: rgba(21, 17, 15, 0.13);
+  --bg-paper-grain: url("/textures/paper-grain-light.svg");
+  --bg-paper-fibers: url("/textures/paper-fibers-light.svg");
+  --bg-wash-1: radial-gradient(1100px 560px at 16% -18%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 62%);
+  --bg-wash-2: radial-gradient(900px 640px at 92% 0%, color-mix(in srgb, var(--color-secondary) 10%, transparent), transparent 64%);
+  --bg-wash-3: radial-gradient(900px 700px at 72% 116%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 60%);
+
+  --skeleton-1: color-mix(in srgb, var(--color-text) 10%, transparent);
+  --skeleton-2: color-mix(in srgb, var(--color-text) 16%, transparent);
   color-scheme: light;
 }
 
 html[data-theme="dark"] {
-  --color-bg: #06110f;
-  --color-surface: #081715;
-  --color-surface-2: #0c211d;
-  --color-text: #e7f4ee;
-  --color-text-muted: #a6c8bb;
-  --color-border: rgba(231, 244, 238, 0.14);
-  --color-accent: #3cc7a7;
-  --color-accent-contrast: #05100e;
+  --color-bg: var(--night-bg);
+  --color-surface: var(--night-surface);
+  --color-surface-2: color-mix(in srgb, var(--night-surface) 86%, #000000 14%);
+  --color-text: var(--night-text);
+  --color-text-muted: color-mix(in srgb, var(--night-text) 72%, var(--night-outline));
+  --color-border: color-mix(in srgb, var(--night-text) 18%, transparent);
   --color-danger: #ff7875;
 
-  --color-accent-2: #37b7c2;
-  --color-accent-gold: #d7b65a;
+  /* Night defaults to PAPER_INK behavior */
+  --color-primary: var(--gold);
+  --color-on-primary: #1e1300;
+  --color-secondary: var(--vermilion);
+  --color-on-secondary: #ffffff;
 
-  --bg-paper-grain: radial-gradient(circle at 18% 20%, rgba(231, 244, 238, 0.032) 0 1px, transparent 1px)
-    0 0 / 40px 40px;
-  --bg-paper-fibers: repeating-linear-gradient(
-    0deg,
-    rgba(231, 244, 238, 0.016) 0px,
-    rgba(231, 244, 238, 0.016) 1px,
-    transparent 1px,
-    transparent 9px
-  );
-  --bg-wash-1: radial-gradient(1200px 620px at 14% -22%, rgba(60, 199, 167, 0.14), transparent 62%);
-  --bg-wash-2: radial-gradient(980px 740px at 94% 4%, rgba(55, 183, 194, 0.10), transparent 64%);
-  --bg-wash-3: radial-gradient(920px 760px at 78% 122%, rgba(215, 182, 90, 0.06), transparent 60%);
+  --color-accent: var(--color-primary);
+  --color-accent-contrast: var(--color-on-primary);
+  --color-accent-2: var(--color-secondary);
+  --color-accent-gold: var(--gold);
 
-  --skeleton-1: rgba(231, 244, 238, 0.06);
-  --skeleton-2: rgba(231, 244, 238, 0.11);
+  --bg-paper-grain: url("/textures/paper-grain-dark.svg");
+  --bg-paper-fibers: url("/textures/paper-fibers-dark.svg");
+  --bg-wash-1: radial-gradient(1200px 620px at 14% -22%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 64%);
+  --bg-wash-2: radial-gradient(980px 740px at 94% 4%, color-mix(in srgb, var(--color-secondary) 10%, transparent), transparent 66%);
+  --bg-wash-3: radial-gradient(920px 760px at 78% 122%, color-mix(in srgb, var(--gold) 8%, transparent), transparent 62%);
+
+  --skeleton-1: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --skeleton-2: color-mix(in srgb, var(--color-text) 14%, transparent);
   color-scheme: dark;
+}
+
+html[data-theme="light"][data-palette="indigo"] {
+  --color-primary: var(--indigo);
+  --color-on-primary: #ffffff;
+  --color-secondary: var(--vermilion);
+  --color-on-secondary: #ffffff;
+}
+
+html[data-theme="light"][data-palette="cyber"] {
+  --color-primary: var(--neon-cyan);
+  --color-on-primary: #0b1f1a;
+  --color-secondary: var(--vermilion);
+  --color-on-secondary: #ffffff;
+}
+
+html[data-theme="dark"][data-palette="indigo"] {
+  --color-primary: var(--indigo);
+  --color-on-primary: #ffffff;
+  --color-secondary: var(--gold);
+  --color-on-secondary: #1e1300;
+}
+
+html[data-theme="dark"][data-palette="cyber"] {
+  --color-primary: var(--neon-cyan);
+  --color-on-primary: #0b1f1a;
+  --color-secondary: var(--gold);
+  --color-on-secondary: #1e1300;
 }
 
 html,
@@ -168,8 +239,11 @@ body {
 body {
   margin: 0;
   color: var(--color-text);
-  background: var(--bg-paper-grain), var(--bg-paper-fibers), var(--bg-wash-1), var(--bg-wash-2),
-    var(--bg-wash-3), var(--color-bg);
+  background-image: var(--bg-paper-grain), var(--bg-paper-fibers), var(--bg-wash-1), var(--bg-wash-2),
+    var(--bg-wash-3);
+  background-color: var(--color-bg);
+  background-repeat: repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-size: 420px 420px, 920px 920px, auto, auto, auto;
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -177,6 +251,13 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 a {

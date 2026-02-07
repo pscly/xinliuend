@@ -113,8 +113,9 @@ test("设置页：Memos 迁移预览与确认执行", async ({ page }) => {
 
   await expect(applyBtn).toBeEnabled();
 
-  page.on("dialog", (d) => d.accept());
   await applyBtn.click();
+  const confirmOk = page.getByTestId("ink-confirm-ok");
+  await expect(confirmOk).toBeVisible();
+  await confirmOk.click();
   await expect(page.getByText("执行结果")).toBeVisible();
 });
-

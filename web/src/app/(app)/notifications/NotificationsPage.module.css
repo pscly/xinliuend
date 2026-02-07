@@ -1,0 +1,139 @@
+.content {
+  display: grid;
+  gap: 14px;
+}
+
+.toolbar {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stats {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.error {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  background: color-mix(in srgb, var(--color-surface-2) 54%, transparent);
+}
+
+.itemUnread {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+}
+
+.itemTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.itemLeft {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.itemLeftTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kind {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.unreadBadge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-accent-gold) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent-gold) 12%, transparent);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.date {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.payload {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.payloadPre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text);
+}

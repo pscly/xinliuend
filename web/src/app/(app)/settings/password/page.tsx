@@ -1,14 +1,28 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 
+import { InkButton, InkLink } from "@/features/ui/InkButton";
+import { InkCard, InkCardBody, InkCardFooter, InkCardHeader } from "@/features/ui/InkCard";
+import { InkTextField } from "@/features/ui/InkField";
 import { Page } from "@/features/ui/Page";
 import { apiFetch } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useI18n } from "@/lib/i18n/useI18n";
 
+import styles from "./SettingsPasswordPage.module.css";
+
 type ChangePasswordResponse = { ok: boolean; csrf_token?: string };
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function extractErrorMessage(v: unknown): string | null {
+  if (!isRecord(v)) return null;
+  const msg = v.message ?? v.detail;
+  return typeof msg === "string" && msg.trim() ? msg.trim() : null;
+}
 
 export default function SettingsPasswordPage() {
   const { t } = useI18n();
@@ -55,12 +69,7 @@ export default function SettingsPasswordPage() {
       const json = (await res.json().catch(() => null)) as unknown;
 
       if (!res.ok) {
-        const message =
-          typeof (json as any)?.message === "string"
-            ? ((json as any).message as string)
-            : typeof (json as any)?.detail === "string"
-              ? ((json as any).detail as string)
-              : null;
+        const message = extractErrorMessage(json);
 
         if (res.status === 401) {
           setError(t("settings.password.errorInvalidCurrent"));
@@ -102,150 +111,50 @@ export default function SettingsPasswordPage() {
 
   return (
     <Page titleKey="page.settings.password.title" subtitleKey="page.settings.password.subtitle">
-      <div style={{ padding: "16px 16px 20px", display: "grid", gap: 14 }}>
-        <section
-          style={{
-            borderTop: "1px solid var(--color-border)",
-            paddingTop: 14,
-            display: "grid",
-            gap: 10,
-          }}
-        >
-          <div style={{ fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>
-            {t("settings.password.form.title")}
-          </div>
+      <div className={styles.content}>
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>{t("settings.password.form.title")}</div>
 
-          <div
-            style={{
-              border: "1px solid var(--color-border)",
-              borderRadius: 14,
-              background: "var(--color-surface)",
-              padding: 14,
-              display: "grid",
-              gap: 12,
-            }}
-          >
-            <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("settings.password.current")}</span>
-              <input
+          <InkCard>
+            <InkCardHeader title={t("settings.password.form.title")} subtitle={t("settings.password.hint")} />
+            <InkCardBody className={styles.cardBody}>
+              <InkTextField
                 type="password"
+                autoComplete="current-password"
+                label={t("settings.password.current")}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                autoComplete="current-password"
-                style={{
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  background: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  fontFamily: "var(--font-body)",
-                }}
               />
-            </label>
 
-            <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("settings.password.new")}</span>
-              <input
+              <InkTextField
                 type="password"
+                autoComplete="new-password"
+                label={t("settings.password.new")}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                autoComplete="new-password"
-                style={{
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  background: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  fontFamily: "var(--font-body)",
-                }}
               />
-            </label>
 
-            <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{t("settings.password.confirm")}</span>
-              <input
+              <InkTextField
                 type="password"
+                autoComplete="new-password"
+                label={t("settings.password.confirm")}
                 value={newPassword2}
                 onChange={(e) => setNewPassword2(e.target.value)}
-                autoComplete="new-password"
-                style={{
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  background: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  fontFamily: "var(--font-body)",
-                }}
               />
-            </label>
 
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.5 }}>
-              {t("settings.password.hint")}
-            </div>
+              {error ? <div className={styles.error}>{error}</div> : null}
+              {success ? <div className={styles.success}>{success}</div> : null}
+            </InkCardBody>
 
-            {error ? (
-              <div
-                style={{
-                  border: "1px solid rgba(239, 68, 68, 0.35)",
-                  background: "rgba(239, 68, 68, 0.12)",
-                  color: "rgba(254, 202, 202, 1)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  fontSize: 13,
-                }}
-              >
-                {error}
-              </div>
-            ) : null}
-
-            {success ? (
-              <div
-                style={{
-                  border: "1px solid rgba(16, 185, 129, 0.35)",
-                  background: "rgba(16, 185, 129, 0.12)",
-                  color: "rgba(167, 243, 208, 1)",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  fontSize: 13,
-                }}
-              >
-                {success}
-              </div>
-            ) : null}
-
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-              <Link
-                href="/settings"
-                style={{
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-1)",
-                  background: "transparent",
-                  color: "var(--color-text)",
-                  padding: "8px 10px",
-                  fontFamily: "var(--font-body)",
-                  textDecoration: "none",
-                }}
-              >
+            <InkCardFooter className={styles.cardFooter}>
+              <InkLink href="/settings" variant="ghost" size="sm">
                 {t("settings.password.back")}
-              </Link>
-              <button
-                type="button"
-                disabled={!canSubmit}
-                onClick={submit}
-                style={{
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-1)",
-                  background: canSubmit ? "var(--color-surface)" : "transparent",
-                  color: "var(--color-text)",
-                  padding: "8px 10px",
-                  fontFamily: "var(--font-body)",
-                  opacity: canSubmit ? 1 : 0.6,
-                }}
-              >
+              </InkLink>
+              <InkButton type="button" size="sm" variant="primary" disabled={!canSubmit} onClick={submit}>
                 {submitting ? t("settings.password.submitting") : t("settings.password.submit")}
-              </button>
-            </div>
-          </div>
+              </InkButton>
+            </InkCardFooter>
+          </InkCard>
         </section>
       </div>
     </Page>

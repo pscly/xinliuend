@@ -1,23 +1,17 @@
 .page {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
-.card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2);
-  background: color-mix(in srgb, var(--color-surface) 84%, transparent);
-  box-shadow: var(--shadow-1);
-  overflow: hidden;
-}
-
-.cardInner {
-  padding: 18px 18px;
+.header {
+  padding: 2px 2px;
+  display: grid;
+  gap: 8px;
 }
 
 .title {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 28px;
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin: 0;
@@ -29,13 +23,16 @@
   line-height: 1.6;
 }
 
+.body {
+  display: grid;
+  gap: 14px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 14px;
-  padding: 18px;
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface-2) 58%, transparent);
+  padding: 6px 0 0;
 }
 
 .block {
@@ -67,7 +64,7 @@
 
 @media (max-width: 560px) {
   .title {
-    font-size: 26px;
+    font-size: 24px;
   }
 
   .block {

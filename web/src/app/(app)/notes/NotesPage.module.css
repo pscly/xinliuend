@@ -1,0 +1,309 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  min-height: 560px;
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-2) 62%, transparent);
+}
+
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
+.sidebarHeader {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-2) 42%, transparent);
+}
+
+.kicker {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.sidebarScroll {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.sidebarErrorWrap {
+  padding: 12px;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.sidebarErrorCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 10px;
+  background: color-mix(in srgb, var(--color-surface-2) 70%, transparent);
+}
+
+.noteList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.noteItem {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.noteItem:hover {
+  background: color-mix(in srgb, var(--color-surface-2) 50%, transparent);
+}
+
+.noteItemActive {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+}
+
+.noteItemTitle {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+
+.noteItemSnippet {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.editor {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.editorHeader {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+}
+
+.editorHeaderTitle {
+  font-size: 13px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editorHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.modeGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.savedHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.editorBody {
+  padding: 12px;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+}
+
+.topCards {
+  display: grid;
+  gap: 10px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 10px;
+  background: color-mix(in srgb, var(--color-surface-2) 54%, transparent);
+}
+
+.toolbarButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.previewToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.shareCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 10px;
+  background: color-mix(in srgb, var(--color-surface-2) 54%, transparent);
+  display: grid;
+  gap: 10px;
+}
+
+.shareHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.shareSubtitle {
+  font-size: 13px;
+  color: var(--color-text);
+  margin-top: 4px;
+}
+
+.shareActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.messageCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 10px;
+  background: color-mix(in srgb, var(--color-surface-2) 66%, transparent);
+  font-size: 13px;
+}
+
+.conflictCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 10px;
+  background: color-mix(in srgb, var(--color-accent-gold) 12%, var(--color-surface-2));
+}
+
+.conflictHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.split {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+.splitOne {
+  grid-template-columns: 1fr;
+}
+
+.splitTwo {
+  grid-template-columns: 1fr 1fr;
+}
+
+.textarea {
+  min-height: 360px;
+}
+
+.previewPane {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-surface-2) 56%, transparent);
+  padding: 12px;
+  overflow: auto;
+}
+
+.previewHeading {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+
+.previewPre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.footer {
+  padding: 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.shareUrl {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  color: var(--color-text);
+  padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  outline: none;
+}
+
+@media (max-width: 920px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+}

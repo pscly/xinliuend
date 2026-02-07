@@ -1,0 +1,240 @@
+.content {
+  display: grid;
+  gap: 16px;
+}
+
+.panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.panelTitle {
+  font-size: 15px;
+  font-weight: 850;
+  color: var(--color-text);
+}
+
+.panelSubtitle {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.quickLinksGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.quickLink {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-2) 58%, transparent);
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+  min-height: 56px;
+  transition:
+    transform 160ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.quickLink::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background:
+    radial-gradient(
+      56% 60% at 44% 42%,
+      color-mix(in srgb, var(--color-accent) 14%, transparent),
+      transparent 66%
+    ),
+    radial-gradient(
+      60% 70% at 64% 56%,
+      color-mix(in srgb, var(--color-accent-gold) 12%, transparent),
+      transparent 74%
+    );
+  opacity: 0;
+  transform: scale(0.4);
+  filter: blur(14px);
+  transition:
+    opacity 160ms ease,
+    transform 220ms ease;
+  pointer-events: none;
+}
+
+.quickLink:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--color-accent-gold) 22%, var(--color-border));
+  background: color-mix(in srgb, var(--color-surface-2) 66%, transparent);
+}
+
+.quickLink:active {
+  transform: translateY(0px);
+}
+
+.quickLink:active::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.quickLinkTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.quickLinkTitle {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+.quickLinkAction {
+  font-size: 12px;
+  color: var(--color-accent);
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.quickLinkHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.twoColumn {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: start;
+}
+
+.rows {
+  display: grid;
+  gap: 10px;
+}
+
+.row {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: transparent;
+}
+
+.rowDone {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+}
+
+.rowLeft {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rowTime {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex: 0 0 auto;
+}
+
+.rowTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowTitleDone {
+  text-decoration: line-through;
+  opacity: 0.72;
+}
+
+.donePill {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 56%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.noteLink {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+  background: transparent;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.noteLink:hover {
+  background: color-mix(in srgb, var(--color-surface-2) 54%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-gold) 18%, var(--color-border));
+}
+
+.noteTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.noteTitle {
+  font-size: 14px;
+  font-weight: 850;
+  color: var(--color-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.noteDate {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex: 0 0 auto;
+}
+
+.noteSnippet {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quickLink,
+  .quickLink::after {
+    transition: none;
+  }
+
+  .quickLink:hover {
+    transform: none;
+  }
+}

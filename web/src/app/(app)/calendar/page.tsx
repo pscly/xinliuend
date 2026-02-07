@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Page } from "@/features/ui/Page";
+import { InkButton } from "@/features/ui/InkButton";
 import { useI18n } from "@/lib/i18n/useI18n";
 import type { AppLocale } from "@/lib/i18n/locales";
 
@@ -14,6 +15,8 @@ import {
 } from "@/features/todo/todoApi";
 import { expandRruleToLocalIds } from "@/features/todo/recurrence";
 import type { LocalDateTimeString, TodoItem, TodoOccurrence } from "@/features/todo/types";
+
+import styles from "./CalendarPage.module.css";
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -248,93 +251,47 @@ export default function CalendarPage() {
 
   return (
     <Page titleKey="page.calendar.title">
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 13, opacity: 0.8 }}>
-              {t("calendar.range.prefix")} <code>{range.from}</code> {t("calendar.range.to")} <code>{range.to}</code>
-            </div>
-            <button
-              type="button"
+      <div className={styles.content}>
+        <div className={styles.topBar}>
+          <div className={styles.rangeText}>
+            {t("calendar.range.prefix")} <code>{range.from}</code> {t("calendar.range.to")} <code>{range.to}</code>
+          </div>
+          <InkButton
+            type="button"
+            size="sm"
+            variant="ghost"
             onClick={() => {
               void load();
             }}
             disabled={loading}
-            style={{
-              padding: "8px 10px",
-              borderRadius: 10,
-              border: "1px solid var(--border-color, rgba(120,120,120,0.25))",
-              background: "var(--card-bg, transparent)",
-              cursor: loading ? "not-allowed" : "pointer",
-              }}
-            >
-              {loading ? t("common.loadingDots") : t("common.refresh")}
-            </button>
-          </div>
+          >
+            {loading ? t("common.loadingDots") : t("common.refresh")}
+          </InkButton>
+        </div>
 
         {error ? (
-          <div
-            role="alert"
-            style={{
-              padding: 10,
-              borderRadius: 10,
-              border: "1px solid rgba(220, 40, 40, 0.35)",
-              background: "rgba(220, 40, 40, 0.06)",
-              color: "rgba(220, 40, 40, 0.95)",
-              fontSize: 13,
-            }}
-          >
+          <div role="alert" className={styles.error}>
             {error}
           </div>
         ) : null}
 
-        <div
-          style={{
-            display: "grid",
-            gap: 12,
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          }}
-        >
+        <div className={styles.grid}>
           {buckets.map((b) => (
-            <section
-              key={b.dateLocal}
-              style={{
-                borderRadius: 12,
-                border: "1px solid var(--border-color, rgba(120,120,120,0.25))",
-                padding: 10,
-                minHeight: 120,
-                overflow: "hidden",
-              }}
-            >
-              <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.9, marginBottom: 8 }}>{b.label}</div>
+            <section key={b.dateLocal} className={styles.bucket}>
+              <div className={styles.bucketTitle}>{b.label}</div>
               {b.rows.length === 0 ? (
-                <div style={{ fontSize: 12, opacity: 0.55 }}>{t("calendar.empty")}</div>
+                <div className={styles.bucketEmpty}>{t("calendar.empty")}</div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className={styles.bucketRows}>
                   {b.rows.map((row) => {
                     const busy = Boolean(busyByKey[row.key]);
+                    const titleClassName = row.done ? `${styles.title} ${styles.titleDone}` : styles.title;
+                    const buttonClassName = row.done ? `${styles.markButton} ${styles.markButtonDone}` : styles.markButton;
                     return (
-                      <div
-                        key={row.key}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 10,
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, opacity: 0.7, flex: "0 0 auto" }}>{row.timeLocal}</div>
-                          <div
-                            title={row.title}
-                            style={{
-                              fontSize: 13,
-                              textDecoration: row.done ? "line-through" : "none",
-                              opacity: row.done ? 0.6 : 1,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
+                      <div key={row.key} className={styles.row}>
+                        <div className={styles.rowLeft}>
+                          <div className={styles.time}>{row.timeLocal}</div>
+                          <div title={row.title} className={titleClassName}>
                             {row.title}
                           </div>
                         </div>
@@ -344,16 +301,7 @@ export default function CalendarPage() {
                             void onToggle(row);
                           }}
                           disabled={busy}
-                          style={{
-                            padding: "6px 10px",
-                            borderRadius: 999,
-                            border: "1px solid var(--border-color, rgba(120,120,120,0.25))",
-                            background: row.done ? "rgba(60, 180, 80, 0.12)" : "transparent",
-                            color: row.done ? "rgba(60, 180, 80, 0.95)" : "inherit",
-                            cursor: busy ? "not-allowed" : "pointer",
-                            fontSize: 12,
-                            flex: "0 0 auto",
-                          }}
+                          className={buttonClassName}
                           title={row.done ? t("calendar.action.titleMarkUndone") : t("calendar.action.titleMarkDone")}
                         >
                           {busy ? "..." : row.done ? t("common.done") : t("common.mark")}
@@ -367,7 +315,7 @@ export default function CalendarPage() {
           ))}
         </div>
 
-        <div data-testid="calendar-hint" style={{ fontSize: 12, opacity: 0.6 }}>
+        <div data-testid="calendar-hint" className={styles.hint}>
           {t("calendar.footer.hint")}
         </div>
       </div>

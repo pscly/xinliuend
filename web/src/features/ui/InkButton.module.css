@@ -1,0 +1,156 @@
+.button {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  transition:
+    transform 140ms ease,
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease;
+}
+
+.button::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background:
+    radial-gradient(
+      48% 56% at 44% 46%,
+      color-mix(in srgb, var(--color-accent) 22%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      60% 70% at 58% 54%,
+      color-mix(in srgb, var(--color-accent-gold) 18%, transparent),
+      transparent 72%
+    );
+  opacity: 0;
+  transform: scale(0.35);
+  filter: blur(14px);
+  transition:
+    opacity 160ms ease,
+    transform 220ms ease;
+  pointer-events: none;
+}
+
+.button:hover {
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-border));
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0px);
+}
+
+.button:active::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.button:disabled,
+.button[data-disabled="1"] {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
+.button:disabled::after,
+.button[data-disabled="1"]::after {
+  opacity: 0;
+  transform: scale(0.35);
+}
+
+.sizeSm {
+  height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.sizeMd {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.variantSurface {
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  border-color: var(--color-border);
+}
+
+.variantSurface:hover {
+  border-color: color-mix(in srgb, var(--color-accent-gold) 22%, var(--color-border));
+}
+
+.variantGhost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text);
+}
+
+.variantGhost:hover {
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-gold) 18%, var(--color-border));
+}
+
+.variantPrimary {
+  background:
+    radial-gradient(
+      150% 140% at 20% 14%,
+      color-mix(in srgb, var(--color-primary) 58%, transparent),
+      transparent 66%
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-primary) 34%, transparent),
+      transparent 62%
+    ),
+    var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 72%, var(--color-border));
+  color: var(--color-on-primary);
+  box-shadow:
+    0 10px 26px color-mix(in srgb, var(--color-primary) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 16%, transparent);
+}
+
+.variantPrimary:hover {
+  border-color: color-mix(in srgb, var(--color-accent-gold) 26%, var(--color-primary));
+}
+
+.pill {
+  border-radius: 999px;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.value {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .button::after {
+    transition: none;
+  }
+
+  .button:hover {
+    transform: none;
+  }
+}
+

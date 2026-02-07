@@ -5,7 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getTodoItems, getTodoLists, upsertTodoItem, upsertTodoList } from "@/features/todo/todoApi";
 import type { LocalDateTimeString, TodoItem, TodoList } from "@/features/todo/types";
 import { Page } from "@/features/ui/Page";
+import { InkButton } from "@/features/ui/InkButton";
+import { InkSelectField, InkTextField } from "@/features/ui/InkField";
 import { useI18n } from "@/lib/i18n/useI18n";
+
+import styles from "./TodosPage.module.css";
 
 const TZID = "Asia/Shanghai" as const;
 
@@ -152,75 +156,39 @@ export default function TodosPage() {
 
   return (
     <Page titleKey="page.todos.title">
-      <div
-        style={{
-          display: "grid",
-          gap: 12,
-          padding: "0 16px 16px",
-        }}
-      >
-        <section
-          style={{
-            border: "1px solid var(--border, rgba(0,0,0,0.12))",
-            borderRadius: 14,
-            background: "var(--surface-1, rgba(0,0,0,0.02))",
-            padding: 12,
-            display: "grid",
-            gap: 10,
-          }}
-        >
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <label style={{ display: "grid", gap: 6, minWidth: 220, flex: "1 1 260px" }}>
-              <span style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.list.label")}</span>
-              <select
-                data-testid="todo-list-select"
-                value={selectedListId}
-                onChange={(e) => setSelectedListId(e.target.value)}
-                disabled={listsLoading || lists.length === 0}
-                style={{
-                  height: 36,
-                  borderRadius: 10,
-                  border: "1px solid var(--border, rgba(0,0,0,0.18))",
-                  background: "var(--surface-0, transparent)",
-                  color: "var(--text-1, inherit)",
-                  padding: "0 10px",
-                }}
-              >
-                {lists.length === 0 ? <option value="">{t("todos.list.none")}</option> : null}
-                {lists.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <button
-              type="button"
-              onClick={() => void refreshLists()}
-              disabled={listsLoading}
-              style={{
-                height: 36,
-                padding: "0 12px",
-                borderRadius: 10,
-                border: "1px solid var(--border, rgba(0,0,0,0.18))",
-                background: "var(--surface-0, transparent)",
-                color: "var(--text-1, inherit)",
-                cursor: listsLoading ? "not-allowed" : "pointer",
-              }}
+      <div className={styles.content}>
+        <section className={styles.panel}>
+          <div className={styles.row}>
+            <InkSelectField
+              className={styles.grow}
+              label={t("todos.list.label")}
+              data-testid="todo-list-select"
+              value={selectedListId}
+              onChange={(e) => setSelectedListId(e.target.value)}
+              disabled={listsLoading || lists.length === 0}
             >
+              {lists.length === 0 ? <option value="">{t("todos.list.none")}</option> : null}
+              {lists.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </InkSelectField>
+
+            <InkButton type="button" variant="ghost" onClick={() => void refreshLists()} disabled={listsLoading}>
               {listsLoading ? t("common.loading") : t("common.reload")}
-            </button>
+            </InkButton>
           </div>
 
           {listsError ? (
-            <div style={{ color: "var(--danger, #b42318)", fontSize: 12 }}>
+            <div className={styles.error}>
               {t("todos.lists.loadFailedPrefix")}
               {listsError}
             </div>
           ) : null}
 
           <form
+            className={`${styles.row} ${styles.rowEnd}`}
             onSubmit={(e) => {
               e.preventDefault();
               if (!canCreateList) return;
@@ -239,58 +207,27 @@ export default function TodosPage() {
                 }
               })();
             }}
-            style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}
           >
-            <label style={{ display: "grid", gap: 6, minWidth: 220, flex: "1 1 260px" }}>
-              <span style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.list.new.label")}</span>
-              <input
-                data-testid="todo-new-list-name"
-                value={newListName}
-                onChange={(e) => setNewListName(e.target.value)}
-                placeholder={t("todos.list.new.placeholder")}
-                style={{
-                  height: 36,
-                  borderRadius: 10,
-                  border: "1px solid var(--border, rgba(0,0,0,0.18))",
-                  background: "var(--surface-0, transparent)",
-                  color: "var(--text-1, inherit)",
-                  padding: "0 10px",
-                }}
-              />
-            </label>
-            <button
-              data-testid="todo-create-list"
-              type="submit"
-              disabled={!canCreateList}
-              style={{
-                height: 36,
-                padding: "0 14px",
-                borderRadius: 10,
-                border: "1px solid var(--border, rgba(0,0,0,0.18))",
-                background: "var(--accent, #111)",
-                color: "var(--accent-contrast, #fff)",
-                cursor: canCreateList ? "pointer" : "not-allowed",
-              }}
-            >
+            <InkTextField
+              className={styles.grow}
+              label={t("todos.list.new.label")}
+              data-testid="todo-new-list-name"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              placeholder={t("todos.list.new.placeholder")}
+            />
+
+            <InkButton data-testid="todo-create-list" type="submit" variant="primary" disabled={!canCreateList}>
               {creatingList ? t("common.creating") : t("todos.list.new.create")}
-            </button>
+            </InkButton>
           </form>
         </section>
 
-        <section
-          style={{
-            border: "1px solid var(--border, rgba(0,0,0,0.12))",
-            borderRadius: 14,
-            background: "var(--surface-1, rgba(0,0,0,0.02))",
-            padding: 12,
-            display: "grid",
-            gap: 10,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <section className={styles.panel}>
+          <div className={styles.panelHeader}>
             <div style={{ display: "grid", gap: 2 }}>
-              <div style={{ fontWeight: 650, letterSpacing: "-0.01em" }}>{selectedList ? selectedList.name : t("todos.items.titleFallback")}</div>
-              <div style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>
+              <div className={styles.panelTitle}>{selectedList ? selectedList.name : t("todos.items.titleFallback")}</div>
+              <div className={styles.panelMeta}>
                 {itemsLoading
                   ? t("todos.items.loading")
                   : locale === "zh-CN"
@@ -298,32 +235,27 @@ export default function TodosPage() {
                     : `${items.length} ${t("todos.items.countUnit")}`}
               </div>
             </div>
-            <button
+
+            <InkButton
               type="button"
+              size="sm"
+              variant="ghost"
               onClick={() => (selectedListId ? void refreshItems(selectedListId) : undefined)}
               disabled={!selectedListId || itemsLoading}
-              style={{
-                height: 32,
-                padding: "0 12px",
-                borderRadius: 10,
-                border: "1px solid var(--border, rgba(0,0,0,0.18))",
-                background: "var(--surface-0, transparent)",
-                color: "var(--text-1, inherit)",
-                cursor: !selectedListId || itemsLoading ? "not-allowed" : "pointer",
-              }}
             >
               {t("common.refresh")}
-            </button>
+            </InkButton>
           </div>
 
           {itemsError ? (
-            <div style={{ color: "var(--danger, #b42318)", fontSize: 12 }}>
+            <div className={styles.error}>
               {t("todos.items.loadFailedPrefix")}
               {itemsError}
             </div>
           ) : null}
 
           <form
+            className={styles.form}
             onSubmit={(e) => {
               e.preventDefault();
               if (!canCreateItem) return;
@@ -361,56 +293,25 @@ export default function TodosPage() {
                 }
               })();
             }}
-            style={{ display: "grid", gap: 10 }}
           >
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end" }}>
-              <label style={{ display: "grid", gap: 6, minWidth: 220, flex: "1 1 360px" }}>
-                <span style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.item.new.label")}</span>
-                <input
-                  data-testid="todo-new-item-title"
-                  value={newItemTitle}
-                  onChange={(e) => setNewItemTitle(e.target.value)}
-                  placeholder={selectedListId ? t("todos.item.new.placeholder") : t("todos.item.new.placeholderNoList")}
-                  disabled={!selectedListId}
-                  style={{
-                    height: 36,
-                    borderRadius: 10,
-                    border: "1px solid var(--border, rgba(0,0,0,0.18))",
-                    background: "var(--surface-0, transparent)",
-                    color: "var(--text-1, inherit)",
-                    padding: "0 10px",
-                  }}
-                />
-              </label>
-              <button
-                data-testid="todo-add-item"
-                type="submit"
-                disabled={!canCreateItem}
-                style={{
-                  height: 36,
-                  padding: "0 14px",
-                  borderRadius: 10,
-                  border: "1px solid var(--border, rgba(0,0,0,0.18))",
-                  background: "var(--accent, #111)",
-                  color: "var(--accent-contrast, #fff)",
-                  cursor: canCreateItem ? "pointer" : "not-allowed",
-                }}
-              >
+            <div className={`${styles.row} ${styles.rowEnd}`}>
+              <InkTextField
+                className={styles.grow}
+                label={t("todos.item.new.label")}
+                data-testid="todo-new-item-title"
+                value={newItemTitle}
+                onChange={(e) => setNewItemTitle(e.target.value)}
+                placeholder={selectedListId ? t("todos.item.new.placeholder") : t("todos.item.new.placeholderNoList")}
+                disabled={!selectedListId}
+              />
+
+              <InkButton data-testid="todo-add-item" type="submit" variant="primary" disabled={!canCreateItem}>
                 {creatingItem ? t("todos.item.new.adding") : t("todos.item.new.add")}
-              </button>
+              </InkButton>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-                alignItems: "center",
-                borderTop: "1px dashed var(--border, rgba(0,0,0,0.18))",
-                paddingTop: 10,
-              }}
-            >
-              <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+            <div className={styles.recurringRow}>
+              <label className={styles.checkLabel}>
                 <input
                   data-testid="todo-recurring-daily"
                   type="checkbox"
@@ -420,8 +321,8 @@ export default function TodosPage() {
                 {t("todos.item.recurring.daily")}
               </label>
 
-              <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
-                <span style={{ color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.item.recurring.days")}</span>
+              <label className={styles.checkLabel}>
+                <span className={`${styles.muted}`}>{t("todos.item.recurring.days")}</span>
                 <input
                   data-testid="todo-recurring-days"
                   type="number"
@@ -430,63 +331,37 @@ export default function TodosPage() {
                   value={recurringDays}
                   onChange={(e) => setRecurringDays(clampInt(Number(e.target.value), 1, 365))}
                   disabled={!recurringDaily}
-                  style={{
-                    width: 84,
-                    height: 32,
-                    borderRadius: 10,
-                    border: "1px solid var(--border, rgba(0,0,0,0.18))",
-                    background: "var(--surface-0, transparent)",
-                    color: "var(--text-1, inherit)",
-                    padding: "0 10px",
-                  }}
+                  className={styles.smallNumber}
                 />
               </label>
 
-              <div style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>
-                重复规则： <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{`FREQ=DAILY;COUNT=${clampInt(recurringDays, 1, 365)}`}</code>
+              <div className={styles.panelMeta}>
+                重复规则： <code className={styles.mono}>{`FREQ=DAILY;COUNT=${clampInt(recurringDays, 1, 365)}`}</code>
                 <span style={{ marginLeft: 10 }}>
-                  起始时间： <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{formatLocalDateTimeString19(new Date())}</code>
+                  起始时间： <code className={styles.mono}>{formatLocalDateTimeString19(new Date())}</code>
                 </span>
                 <span style={{ marginLeft: 10 }}>
-                  时区： <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{TZID}</code>
+                  时区： <code className={styles.mono}>{TZID}</code>
                 </span>
               </div>
             </div>
           </form>
 
-          <div
-            style={{
-              border: "1px solid var(--border, rgba(0,0,0,0.12))",
-              borderRadius: 12,
-              overflow: "hidden",
-              background: "var(--surface-0, transparent)",
-            }}
-          >
+          <div className={styles.itemsBox}>
             {items.length === 0 ? (
-              <div style={{ padding: 12, fontSize: 13, color: "var(--muted, rgba(0,0,0,0.6))" }}>{t("todos.items.empty")}</div>
+              <div className={styles.empty}>{t("todos.items.empty")}</div>
             ) : (
-              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              <ul className={styles.itemsList}>
                 {items.map((it) => (
-                  <li
-                    key={it.id}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto",
-                      gap: 10,
-                      padding: "10px 12px",
-                      borderTop: "1px solid var(--border, rgba(0,0,0,0.10))",
-                      alignItems: "start",
-                    }}
-                  >
-                    <div style={{ display: "grid", gap: 2 }}>
-                      <div style={{ fontSize: 14, lineHeight: 1.35 }}>{it.title}</div>
-                      <div style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))" }}>
+                  <li key={it.id} className={styles.itemRow}>
+                    <div className={styles.itemMain}>
+                      <div className={styles.itemTitle}>{it.title}</div>
+                      <div className={styles.itemSub}>
                         {it.is_recurring ? (
                           <span>
-                            {t("todos.item.recurring")} ·{" "}
-                            <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{it.rrule ?? "-"}</code> ·
+                            {t("todos.item.recurring")} · <code className={styles.mono}>{it.rrule ?? "-"}</code> ·
                             <span style={{ marginLeft: 6 }}>
-                              起始时间 <code style={{ fontFamily: "var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace)" }}>{toHumanLocalDateTime(it.dtstart_local)}</code>
+                              起始时间 <code className={styles.mono}>{toHumanLocalDateTime(it.dtstart_local)}</code>
                             </span>
                           </span>
                         ) : (
@@ -495,9 +370,7 @@ export default function TodosPage() {
                       </div>
                     </div>
 
-                    <div style={{ fontSize: 12, color: "var(--muted, rgba(0,0,0,0.6))", textAlign: "right" }}>
-                      {formatTodoStatus(it.status)}
-                    </div>
+                    <div className={styles.itemStatus}>{formatTodoStatus(it.status)}</div>
                   </li>
                 ))}
               </ul>

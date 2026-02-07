@@ -9,10 +9,16 @@ export const TOKENS = {
   "colors.text": "var(--color-text)",
   "colors.textMuted": "var(--color-text-muted)",
   "colors.border": "var(--color-border)",
+  "colors.primary": "var(--color-primary)",
+  "colors.onPrimary": "var(--color-on-primary)",
+  "colors.secondary": "var(--color-secondary)",
+  "colors.onSecondary": "var(--color-on-secondary)",
   "colors.accent": "var(--color-accent)",
   "colors.accentContrast": "var(--color-accent-contrast)",
   "colors.accent2": "var(--color-accent-2)",
   "colors.accentGold": "var(--color-accent-gold)",
+  "colors.seal": "var(--color-seal)",
+  "colors.onSeal": "var(--color-on-seal)",
 } as const satisfies Record<string, CssVarRef>;
 
 export type TokenKey = keyof typeof TOKENS;

@@ -1,0 +1,148 @@
+.content {
+  display: grid;
+  gap: 16px;
+}
+
+.filters {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+}
+
+.filtersGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.tagRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.tagInputGrow {
+  min-width: 220px;
+  flex: 1 1 320px;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  color: var(--color-text);
+  outline: none;
+}
+
+.input:focus {
+  border-color: color-mix(in srgb, var(--color-accent) 58%, var(--color-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent-gold) 14%, transparent);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.sections {
+  display: grid;
+  gap: 14px;
+}
+
+.panel {
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitleMain {
+  font-size: 15px;
+  font-weight: 850;
+  color: var(--color-text);
+}
+
+.sectionTitleSub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.sectionMsg {
+  margin-top: 10px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.results {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.resultCard {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+
+.cardTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.noteLink {
+  color: var(--color-accent);
+  font-weight: 800;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.date {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex: 0 0 auto;
+}
+
+.todoTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.preview {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
