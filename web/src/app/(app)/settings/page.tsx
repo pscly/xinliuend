@@ -10,6 +10,7 @@ import { useInkDialog } from "@/features/ui/dialogs/useInkDialog";
 import { Page } from "@/features/ui/Page";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useI18n } from "@/lib/i18n/useI18n";
+import { useMemosFeedEnabled } from "@/lib/memos/useMemosFeedEnabled";
 import { resetOfflineDb } from "@/lib/offline/db";
 import { useOfflineEnabled } from "@/lib/offline/useOfflineEnabled";
 import type { SyncStatus } from "@/lib/offline/syncEngine";
@@ -22,6 +23,7 @@ export default function SettingsPage() {
   const { locale, t } = useI18n();
   const { confirm } = useInkDialog();
   const { offlineEnabled, updateOfflineEnabled } = useOfflineEnabled();
+  const { memosFeedEnabled, updateMemosFeedEnabled } = useMemosFeedEnabled();
 
   const [preview, setPreview] = useState<MemosMigrationResponse | null>(null);
   const [applied, setApplied] = useState<MemosMigrationResponse | null>(null);
@@ -218,6 +220,28 @@ export default function SettingsPage() {
                 </div>
               ) : null}
             </InkCardBody>
+          </InkCard>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>{t("settings.memosFeed.title")}</div>
+
+          <InkCard>
+            <InkCardHeader
+              title={t("settings.memosFeed.cardTitle")}
+              subtitle={t("settings.memosFeed.subtitle")}
+              right={
+                <label className={styles.toggle}>
+                  <input
+                    data-testid="settings-memos-feed-enabled"
+                    type="checkbox"
+                    checked={memosFeedEnabled}
+                    onChange={(e) => updateMemosFeedEnabled(e.currentTarget.checked)}
+                  />
+                  <span>{t("settings.memosFeed.toggleLabel")}</span>
+                </label>
+              }
+            />
           </InkCard>
         </section>
 

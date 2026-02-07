@@ -75,6 +75,10 @@ export type MessageKey =
   | "settings.offline.actions.syncNow"
   | "settings.offline.actions.clearCache"
   | "settings.offline.confirmClearCache"
+  | "settings.memosFeed.title"
+  | "settings.memosFeed.cardTitle"
+  | "settings.memosFeed.subtitle"
+  | "settings.memosFeed.toggleLabel"
   | "settings.admin.title"
   | "settings.admin.subtitle"
   | "settings.admin.openAppAdmin"
@@ -148,6 +152,10 @@ export type MessageKey =
   | "home.today.showingPrefix"
   | "home.recentNotes.title"
   | "home.recentNotes.failedPrefix"
+  | "home.recentNotes.toggleMemos"
+  | "home.recentNotes.memosFailedPrefix"
+  | "home.recentNotes.source.local"
+  | "home.recentNotes.source.memos"
   | "home.recentNotes.empty"
   | "search.query.label"
   | "search.query.placeholder"
@@ -347,6 +355,10 @@ const zhCN: Messages = {
   "settings.offline.actions.syncNow": "立即同步",
   "settings.offline.actions.clearCache": "清空本地缓存",
   "settings.offline.confirmClearCache": "确定要清空本地缓存吗？这不会删除服务端数据。",
+  "settings.memosFeed.title": "笔记来源",
+  "settings.memosFeed.cardTitle": "主页显示 Memos 笔记",
+  "settings.memosFeed.subtitle": "开启后首页“最近笔记”会合并展示 Memos 远端笔记。",
+  "settings.memosFeed.toggleLabel": "启用 Memos 来源笔记",
   "settings.admin.title": "管理",
   "settings.admin.subtitle": "管理入口（仅管理员可见）。",
   "settings.admin.openAppAdmin": "打开应用管理区",
@@ -420,6 +432,10 @@ const zhCN: Messages = {
   "home.today.showingPrefix": "仅展示前 10 条：",
   "home.recentNotes.title": "最近笔记",
   "home.recentNotes.failedPrefix": "加载笔记失败：",
+  "home.recentNotes.toggleMemos": "查看 Memos",
+  "home.recentNotes.memosFailedPrefix": "加载 Memos 失败：",
+  "home.recentNotes.source.local": "本地",
+  "home.recentNotes.source.memos": "Memos",
   "home.recentNotes.empty": "暂无笔记。",
   "search.query.label": "搜索",
   "search.query.placeholder": "搜索笔记 + 待办",
@@ -618,6 +634,10 @@ const en: Messages = {
   "settings.offline.actions.syncNow": "Sync now",
   "settings.offline.actions.clearCache": "Clear offline cache",
   "settings.offline.confirmClearCache": "Clear offline cache? This does not delete server data.",
+  "settings.memosFeed.title": "Note sources",
+  "settings.memosFeed.cardTitle": "Show Memos notes on Home",
+  "settings.memosFeed.subtitle": "When enabled, Home > Recent notes merges remote Memos notes.",
+  "settings.memosFeed.toggleLabel": "Enable Memos source notes",
   "settings.admin.title": "Admin",
   "settings.admin.subtitle": "Admin entry points.",
   "settings.admin.openAppAdmin": "Open app admin",
@@ -691,6 +711,10 @@ const en: Messages = {
   "home.today.showingPrefix": "Showing 10 / ",
   "home.recentNotes.title": "Recent notes",
   "home.recentNotes.failedPrefix": "Failed to load notes: ",
+  "home.recentNotes.toggleMemos": "Show Memos",
+  "home.recentNotes.memosFailedPrefix": "Failed to load Memos: ",
+  "home.recentNotes.source.local": "Local",
+  "home.recentNotes.source.memos": "Memos",
   "home.recentNotes.empty": "No notes yet.",
   "search.query.label": "Search",
   "search.query.placeholder": "Search notes + todos",

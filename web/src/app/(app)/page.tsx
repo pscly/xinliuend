@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { listMemosNotes } from "@/features/memos/memosNotesApi";
 import { listNotes } from "@/features/notes/notesApi";
 import type { Note } from "@/features/notes/types";
 
@@ -12,6 +13,7 @@ import type { LocalDateTimeString, TodoItem, TodoOccurrence } from "@/features/t
 
 import { Page } from "@/features/ui/Page";
 import { useI18n } from "@/lib/i18n/useI18n";
+import { useMemosFeedEnabled } from "@/lib/memos/useMemosFeedEnabled";
 import { InkButton } from "@/features/ui/InkButton";
 
 import styles from "./HomePage.module.css";
@@ -90,8 +92,53 @@ type TodayOccurrenceRow = {
   done: boolean;
 };
 
+type HomeRecentNoteItem = {
+  id: string;
+  title: string;
+  body_md: string;
+  updated_at: string;
+  source: "local" | "memos";
+  linkedLocalNoteId: string | null;
+};
+
+function normalizeUpdatedAt(value: string | null | undefined): string {
+  if (!value) return "1970-01-01T00:00:00+00:00";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "1970-01-01T00:00:00+00:00";
+  return d.toISOString();
+}
+
+function mergeHomeRecentNotes(localItems: Note[], memosItems: Awaited<ReturnType<typeof listMemosNotes>>["items"]): HomeRecentNoteItem[] {
+  const locals: HomeRecentNoteItem[] = localItems.map((n) => ({
+    id: n.id,
+    title: n.title,
+    body_md: n.body_md,
+    updated_at: normalizeUpdatedAt(n.updated_at),
+    source: "local",
+    linkedLocalNoteId: n.id,
+  }));
+
+  const memos: HomeRecentNoteItem[] = memosItems.map((m) => ({
+    id: `memos:${m.remote_id}`,
+    title: m.title,
+    body_md: m.body_md,
+    updated_at: normalizeUpdatedAt(m.updated_at),
+    source: "memos",
+    linkedLocalNoteId: m.linked_local_note_id,
+  }));
+
+  return [...locals, ...memos]
+    .sort((a, b) => {
+      const diff = Date.parse(b.updated_at) - Date.parse(a.updated_at);
+      if (diff !== 0) return diff;
+      return a.id.localeCompare(b.id);
+    })
+    .slice(0, 5);
+}
+
 export default function HomePage() {
   const { locale, t } = useI18n();
+  const { memosFeedEnabled, updateMemosFeedEnabled } = useMemosFeedEnabled();
   const [initialNowMs] = useState(() => Date.now());
   const shanghaiToday = useMemo(() => buildShanghaiTodayRange(initialNowMs), [initialNowMs]);
 
@@ -101,9 +148,10 @@ export default function HomePage() {
   const [todayError, setTodayError] = useState<string | null>(null);
   const [todayWarning, setTodayWarning] = useState<string | null>(null);
 
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<HomeRecentNoteItem[]>([]);
   const [notesLoading, setNotesLoading] = useState<boolean>(true);
   const [notesError, setNotesError] = useState<string | null>(null);
+  const [memosNotesError, setMemosNotesError] = useState<string | null>(null);
 
   const todayRunIdRef = useRef<number>(0);
   const notesRunIdRef = useRef<number>(0);
@@ -199,11 +247,27 @@ export default function HomePage() {
     const runId = ++notesRunIdRef.current;
     setNotesLoading(true);
     setNotesError(null);
+    setMemosNotesError(null);
 
     try {
-      const res = await listNotes({ limit: 5, offset: 0 });
+      const localPromise = listNotes({ limit: 20, offset: 0 });
+      const memosPromise = memosFeedEnabled ? listMemosNotes({ limit: 20, offset: 0 }) : null;
+
+      const localRes = await localPromise;
+      let memosItems: Awaited<ReturnType<typeof listMemosNotes>>["items"] = [];
+      if (memosPromise) {
+        try {
+          const memosRes = await memosPromise;
+          memosItems = memosRes.items;
+        } catch (memosErr: unknown) {
+          if (notesRunIdRef.current !== runId) return;
+          setMemosNotesError(normalizeErrorMessage(memosErr));
+        }
+      }
+
       if (notesRunIdRef.current !== runId) return;
-      setNotes(res.items);
+
+      setNotes(mergeHomeRecentNotes(localRes.items, memosItems));
     } catch (err: unknown) {
       if (notesRunIdRef.current !== runId) return;
       setNotes([]);
@@ -213,7 +277,7 @@ export default function HomePage() {
         setNotesLoading(false);
       }
     }
-  }, []);
+  }, [memosFeedEnabled]);
 
   useEffect(() => {
     void loadToday();
@@ -325,23 +389,41 @@ export default function HomePage() {
           <section className={styles.panel}>
             <div className={styles.panelHeader}>
               <div className={styles.panelTitle}>{t("home.recentNotes.title")}</div>
-              <InkButton
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  void loadNotes();
-                }}
-                disabled={notesLoading}
-              >
-                {notesLoading ? t("common.loading") : t("common.refresh")}
-              </InkButton>
+              <div className={styles.panelHeaderRight}>
+                <label className={styles.toggle}>
+                  <input
+                    data-testid="home-memos-feed-enabled"
+                    type="checkbox"
+                    checked={memosFeedEnabled}
+                    onChange={(e) => updateMemosFeedEnabled(e.currentTarget.checked)}
+                  />
+                  <span>{t("home.recentNotes.toggleMemos")}</span>
+                </label>
+                <InkButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    void loadNotes();
+                  }}
+                  disabled={notesLoading}
+                >
+                  {notesLoading ? t("common.loading") : t("common.refresh")}
+                </InkButton>
+              </div>
             </div>
 
             {notesError ? (
               <div role="alert" className={styles.panelSubtitle}>
                 {t("home.recentNotes.failedPrefix")}
                 {notesError}
+              </div>
+            ) : null}
+
+            {memosFeedEnabled && memosNotesError && !notesError ? (
+              <div role="alert" className={styles.panelSubtitle}>
+                {t("home.recentNotes.memosFailedPrefix")}
+                {memosNotesError}
               </div>
             ) : null}
 
@@ -357,26 +439,55 @@ export default function HomePage() {
                   <div className="skeleton" style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }} />
                 </>
               ) : (
-                notes.map((n) => (
-                  <Link
-                    key={n.id}
-                    href={`/notes?id=${encodeURIComponent(n.id)}`}
-                    className={styles.noteLink}
-                  >
-                    <div className={styles.noteTop}>
-                      <div title={n.title || t("common.untitled")} className={styles.noteTitle}>
-                        {n.title || t("common.untitled")}
+                notes.map((n) => {
+                  const title = n.title || t("common.untitled");
+                  const snippet = n.body_md.trim().replace(/\s+/g, " ");
+                  const content = (
+                    <>
+                      <div className={styles.noteTop}>
+                        <div title={title} className={styles.noteTitle}>
+                          {title}
+                        </div>
+                        <div className={styles.noteMeta}>
+                          <span
+                            className={`${styles.sourceBadge} ${
+                              n.source === "memos" ? styles.sourceBadgeMemos : ""
+                            }`}
+                          >
+                            {n.source === "memos"
+                              ? t("home.recentNotes.source.memos")
+                              : t("home.recentNotes.source.local")}
+                          </span>
+                          <div className={styles.noteDate}>{n.updated_at.slice(0, 10)}</div>
+                        </div>
                       </div>
-                      <div className={styles.noteDate}>{n.updated_at.slice(0, 10)}</div>
+                      {snippet ? (
+                        <div className={styles.noteSnippet}>
+                          {snippet.slice(0, 180)}
+                          {snippet.length > 180 ? "..." : ""}
+                        </div>
+                      ) : null}
+                    </>
+                  );
+
+                  if (n.linkedLocalNoteId) {
+                    return (
+                      <Link
+                        key={n.id}
+                        href={`/notes?id=${encodeURIComponent(n.linkedLocalNoteId)}`}
+                        className={styles.noteLink}
+                      >
+                        {content}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <div key={n.id} className={styles.noteLink}>
+                      {content}
                     </div>
-                    {n.body_md ? (
-                      <div className={styles.noteSnippet}>
-                        {n.body_md.trim().replace(/\s+/g, " ").slice(0, 180)}
-                        {n.body_md.trim().replace(/\s+/g, " ").length > 180 ? "..." : ""}
-                      </div>
-                    ) : null}
-                  </Link>
-                ))
+                  );
+                })
               )}
             </div>
           </section>

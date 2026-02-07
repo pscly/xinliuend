@@ -41,3 +41,22 @@ async def test_v1_openapi_documents_x_request_id_header_parameter_for_login() ->
             and cast(str, p.get("name")).lower() == "x-request-id"
             for p in params
         )
+
+
+@pytest.mark.anyio
+async def test_v1_openapi_contains_memos_notes_endpoint() -> None:
+    async with _make_async_client() as client:
+        r = await client.get("/openapi.json")
+        assert r.status_code == 200
+
+        data = cast(dict[str, object], r.json())
+        paths_obj = data.get("paths", {})
+        assert isinstance(paths_obj, dict)
+        paths = cast(dict[str, object], paths_obj)
+
+        memos_notes_path_obj = paths.get("/api/v1/memos/notes")
+        assert isinstance(memos_notes_path_obj, dict)
+        memos_notes_path = cast(dict[str, object], memos_notes_path_obj)
+
+        get_op = memos_notes_path.get("get")
+        assert isinstance(get_op, dict)

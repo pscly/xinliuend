@@ -12,7 +12,7 @@ from sqlmodel import select
 
 from flow_backend.config import settings
 from flow_backend.db import reset_engine_cache, session_scope
-from flow_backend.integrations.memos_notes_api import MemosMemo, sha256_hex
+from flow_backend.integrations.memos_notes_api import MemosMemo, MemosNotesError, sha256_hex
 from flow_backend.main import app
 from flow_backend.models import User, utc_now
 from flow_backend.models_notes import Note, NoteRemote, NoteRevision
@@ -348,6 +348,149 @@ async def test_memos_migration_router_preview_and_apply(tmp_path: Path) -> None:
                 data2 = r2.json()
                 assert data2["kind"] == "apply"
                 assert data2["summary"]["created_local"] == 1
+        finally:
+            app.dependency_overrides.pop(get_memos_notes_api, None)
+    finally:
+        settings.database_url = old_db
+
+
+@pytest.mark.anyio
+async def test_memos_notes_router_list_and_linked_local_note(tmp_path: Path) -> None:
+    old_db = settings.database_url
+    try:
+        settings.database_url = f"sqlite:///{tmp_path / 'test-memos-notes-router-list.db'}"
+        reset_engine_cache()
+        _alembic_upgrade_head()
+
+        api = FakeMemosAPI(
+            memos={
+                "1": MemosMemo(
+                    remote_id="memos/1",
+                    content="标题一\n正文一",
+                    updated_at_ms=1700000000000,
+                    deleted=False,
+                ),
+                "2": MemosMemo(
+                    remote_id="memos/2",
+                    content="标题二\n正文二",
+                    updated_at_ms=1700000001000,
+                    deleted=False,
+                ),
+                "3": MemosMemo(
+                    remote_id="memos/3",
+                    content="标题三\n正文三",
+                    updated_at_ms=1700000002000,
+                    deleted=True,
+                ),
+            }
+        )
+
+        async with session_scope() as session:
+            user = User(username="u1", password_hash="x", memos_token="tok", is_active=True)
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+            assert user.id is not None
+            user_id = int(user.id)
+
+            note_id = str(uuid.uuid4())
+            session.add(
+                Note(
+                    id=note_id,
+                    user_id=user_id,
+                    title="本地标题",
+                    body_md="本地正文",
+                    client_updated_at_ms=100,
+                    updated_at=utc_now(),
+                )
+            )
+            session.add(
+                NoteRemote(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    note_id=note_id,
+                    provider="memos",
+                    remote_id="1",
+                    remote_sha256_hex=sha256_hex("正文一"),
+                )
+            )
+            await session.commit()
+
+        async def _override_memos_api() -> FakeMemosAPI:
+            return api
+
+        app.dependency_overrides[get_memos_notes_api] = _override_memos_api
+        try:
+            async with _make_async_client() as client:
+                r = await client.get(
+                    "/api/v1/memos/notes?limit=10&offset=0",
+                    headers={"Authorization": "Bearer tok"},
+                )
+                assert r.status_code == 200
+                payload = r.json()
+                assert payload["total"] == 2
+                assert len(payload["items"]) == 2
+
+                # 按 updated_at_ms 倒序：memos/2 在前。
+                assert payload["items"][0]["remote_id"] == "memos/2"
+
+                item_1 = next(x for x in payload["items"] if x["remote_id"] == "memos/1")
+                assert item_1["source"] == "memos"
+                assert item_1["linked_local_note_id"] is not None
+                assert item_1["title"] == "标题一"
+                assert item_1["updated_at"] is not None
+
+                r2 = await client.get(
+                    "/api/v1/memos/notes?limit=10&offset=0&include_deleted=true",
+                    headers={"Authorization": "Bearer tok"},
+                )
+                assert r2.status_code == 200
+                payload2 = r2.json()
+                assert payload2["total"] == 3
+        finally:
+            app.dependency_overrides.pop(get_memos_notes_api, None)
+    finally:
+        settings.database_url = old_db
+
+
+@pytest.mark.anyio
+async def test_memos_notes_router_returns_502_when_memos_unavailable(tmp_path: Path) -> None:
+    old_db = settings.database_url
+    try:
+        settings.database_url = f"sqlite:///{tmp_path / 'test-memos-notes-router-502.db'}"
+        reset_engine_cache()
+        _alembic_upgrade_head()
+
+        async with session_scope() as session:
+            user = User(username="u1", password_hash="x", memos_token="tok", is_active=True)
+            session.add(user)
+            await session.commit()
+
+        class BrokenMemosAPI:
+            async def list_memos(self) -> list[MemosMemo]:
+                raise MemosNotesError("mock list failed")
+
+            async def create_memo(self, *, content: str) -> MemosMemo:  # noqa: ARG002
+                raise AssertionError("not used")
+
+            async def update_memo(self, *, remote_id: str, content: str) -> MemosMemo:  # noqa: ARG002
+                raise AssertionError("not used")
+
+            async def delete_memo(self, *, remote_id: str) -> None:  # noqa: ARG002
+                raise AssertionError("not used")
+
+        async def _override_memos_api() -> BrokenMemosAPI:
+            return BrokenMemosAPI()
+
+        app.dependency_overrides[get_memos_notes_api] = _override_memos_api
+        try:
+            async with _make_async_client() as client:
+                r = await client.get(
+                    "/api/v1/memos/notes",
+                    headers={"Authorization": "Bearer tok"},
+                )
+                assert r.status_code == 502
+                assert "Memos 接口调用失败" in r.text
         finally:
             app.dependency_overrides.pop(get_memos_notes_api, None)
     finally:
