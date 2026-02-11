@@ -171,6 +171,13 @@
   gap: 10px;
 }
 
+/* Desktop: app name already appears in the top app bar; keep only the mark in the sidebar header. */
+@media (min-width: 961px) {
+  .drawerBrand .brandName {
+    display: none;
+  }
+}
+
 .drawerUser {
   display: grid;
   gap: 2px;
