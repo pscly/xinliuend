@@ -141,9 +141,18 @@ export default function NotificationsPage() {
         <div className={styles.list}>
           {loading ? (
             <>
-              <div className="skeleton" style={{ height: 72, borderRadius: 14, border: "1px solid var(--color-border)" }} />
-              <div className="skeleton" style={{ height: 72, borderRadius: 14, border: "1px solid var(--color-border)" }} />
-              <div className="skeleton" style={{ height: 72, borderRadius: 14, border: "1px solid var(--color-border)" }} />
+              <div
+                className="skeleton"
+                style={{ height: 72, borderRadius: "var(--radius-2)", border: "1px solid var(--color-border)" }}
+              />
+              <div
+                className="skeleton"
+                style={{ height: 72, borderRadius: "var(--radius-2)", border: "1px solid var(--color-border)" }}
+              />
+              <div
+                className="skeleton"
+                style={{ height: 72, borderRadius: "var(--radius-2)", border: "1px solid var(--color-border)" }}
+              />
             </>
           ) : (
             visibleItems.map((n) => {

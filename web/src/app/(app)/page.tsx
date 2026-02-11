@@ -357,9 +357,18 @@ export default function HomePage() {
             <div className={styles.rows}>
               {todayLoading ? (
                 <>
-                  <div className="skeleton" style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }} />
-                  <div className="skeleton" style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }} />
-                  <div className="skeleton" style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }} />
+                  <div
+                    className="skeleton"
+                    style={{ height: 44, borderRadius: "var(--radius-1)", border: "1px solid var(--color-border)" }}
+                  />
+                  <div
+                    className="skeleton"
+                    style={{ height: 44, borderRadius: "var(--radius-1)", border: "1px solid var(--color-border)" }}
+                  />
+                  <div
+                    className="skeleton"
+                    style={{ height: 44, borderRadius: "var(--radius-1)", border: "1px solid var(--color-border)" }}
+                  />
                 </>
               ) : (
                 todayRows.map((row) => (
@@ -434,9 +443,18 @@ export default function HomePage() {
             <div className={styles.rows}>
               {notesLoading ? (
                 <>
-                  <div className="skeleton" style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }} />
-                  <div className="skeleton" style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }} />
-                  <div className="skeleton" style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }} />
+                  <div
+                    className="skeleton"
+                    style={{ height: 44, borderRadius: "var(--radius-1)", border: "1px solid var(--color-border)" }}
+                  />
+                  <div
+                    className="skeleton"
+                    style={{ height: 44, borderRadius: "var(--radius-1)", border: "1px solid var(--color-border)" }}
+                  />
+                  <div
+                    className="skeleton"
+                    style={{ height: 44, borderRadius: "var(--radius-1)", border: "1px solid var(--color-border)" }}
+                  />
                 </>
               ) : (
                 notes.map((n) => {

@@ -279,7 +279,7 @@ export default function SearchPage() {
                     <div
                       key={`notes-skeleton-${k}`}
                       className="skeleton"
-                      style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }}
+                      style={{ height: 44, borderRadius: "var(--radius-1)", border: "1px solid var(--color-border)" }}
                     />
                   ))
                 : notes.map((n) => (
@@ -324,7 +324,7 @@ export default function SearchPage() {
                     <div
                       key={`todos-skeleton-${k}`}
                       className="skeleton"
-                      style={{ height: 44, borderRadius: 12, border: "1px solid var(--color-border)" }}
+                      style={{ height: 44, borderRadius: "var(--radius-1)", border: "1px solid var(--color-border)" }}
                     />
                   ))
                 : todos.map((it) => (

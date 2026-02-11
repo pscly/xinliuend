@@ -477,7 +477,7 @@ export default function ShareClient() {
     const input: CSSProperties = {
       width: "100%",
       border: "1px solid var(--color-border)",
-      borderRadius: 12,
+      borderRadius: "var(--radius-1)",
       padding: "10px 12px",
       background: "var(--color-surface)",
       color: "var(--color-text)",
@@ -559,7 +559,7 @@ export default function ShareClient() {
               style={{
                 margin: "12px 0 0",
                 padding: 12,
-                borderRadius: 12,
+                 borderRadius: "var(--radius-1)",
                 border: "1px solid var(--color-border)",
                 background: "var(--color-surface-2)",
                 overflowX: "auto",
@@ -599,7 +599,7 @@ export default function ShareClient() {
                 style={{
                   marginTop: 12,
                   padding: 12,
-                  borderRadius: 12,
+                  borderRadius: "var(--radius-1)",
                   border: "1px solid rgba(199, 72, 74, 0.45)",
                   background: "rgba(199, 72, 74, 0.10)",
                 }}
@@ -636,7 +636,7 @@ export default function ShareClient() {
                     style={{
                       margin: 0,
                       padding: 14,
-                      borderRadius: 14,
+                 borderRadius: "var(--radius-2)",
                       border: "1px solid var(--color-border)",
                       background: "var(--color-surface-2)",
                       whiteSpace: "pre-wrap",
@@ -668,7 +668,7 @@ export default function ShareClient() {
                           key={a.id}
                           style={{
                             border: "1px solid var(--color-border)",
-                            borderRadius: 14,
+                             borderRadius: "var(--radius-2)",
                             background: "var(--color-surface)",
                             padding: 12,
                             display: "flex",
@@ -720,7 +720,7 @@ export default function ShareClient() {
                 style={{
                   marginTop: 12,
                   padding: 12,
-                  borderRadius: 12,
+                   borderRadius: "var(--radius-1)",
                   border: "1px solid var(--color-border)",
                   background: "var(--color-surface-2)",
                   color: "var(--color-text-muted)",
@@ -736,7 +736,7 @@ export default function ShareClient() {
                 style={{
                   marginTop: 12,
                   padding: 12,
-                  borderRadius: 12,
+                   borderRadius: "var(--radius-1)",
                   border: "1px solid rgba(199, 163, 74, 0.40)",
                   background: "rgba(199, 163, 74, 0.10)",
                   lineHeight: 1.6,
@@ -796,7 +796,7 @@ export default function ShareClient() {
                     style={{
                       marginTop: 10,
                       padding: 10,
-                      borderRadius: 12,
+                       borderRadius: "var(--radius-1)",
                       border: "1px solid rgba(199, 72, 74, 0.45)",
                       background: "rgba(199, 72, 74, 0.10)",
                     }}
@@ -823,7 +823,7 @@ export default function ShareClient() {
                               justifyContent: "space-between",
                               gap: 12,
                               border: "1px solid var(--color-border)",
-                              borderRadius: 14,
+                               borderRadius: "var(--radius-2)",
                               padding: 10,
                               background: "var(--color-surface-2)",
                             }}
@@ -923,7 +923,7 @@ export default function ShareClient() {
                     <div
                       style={{
                         padding: 10,
-                        borderRadius: 12,
+                         borderRadius: "var(--radius-1)",
                         border: "1px solid rgba(199, 72, 74, 0.45)",
                         background: "rgba(199, 72, 74, 0.10)",
                       }}
@@ -961,7 +961,7 @@ export default function ShareClient() {
                   style={{
                     marginTop: 10,
                     padding: 12,
-                    borderRadius: 12,
+                     borderRadius: "var(--radius-1)",
                     border: "1px solid rgba(199, 72, 74, 0.45)",
                     background: "rgba(199, 72, 74, 0.10)",
                   }}
@@ -1028,7 +1028,7 @@ export default function ShareClient() {
                           style={{
                             margin: "10px 0 0",
                             padding: 12,
-                            borderRadius: 14,
+                           borderRadius: "var(--radius-2)",
                             border: "1px solid var(--color-border)",
                             background: "var(--color-surface-2)",
                             whiteSpace: "pre-wrap",
