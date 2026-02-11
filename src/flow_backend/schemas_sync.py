@@ -7,10 +7,18 @@ from pydantic import BaseModel, Field
 
 from flow_backend.schemas_settings import SettingOut
 from flow_backend.schemas_todo import TodoItemOut
+from flow_backend.v2.schemas.collections import CollectionItem as CollectionItemOut
 from flow_backend.v2.schemas.notes import Note as NoteOut
 
 
-SyncResource = Literal["note", "user_setting", "todo_list", "todo_item", "todo_occurrence"]
+SyncResource = Literal[
+    "note",
+    "user_setting",
+    "todo_list",
+    "todo_item",
+    "todo_occurrence",
+    "collection_item",
+]
 SyncOp = Literal["upsert", "delete"]
 
 
@@ -78,6 +86,7 @@ class SyncChanges(BaseModel):
     todo_lists: list[SyncTodoListOut] = Field(default_factory=list)
     todo_items: list[TodoItemOut] = Field(default_factory=list)
     todo_occurrences: list[SyncTodoOccurrenceOut] = Field(default_factory=list)
+    collection_items: list[CollectionItemOut] = Field(default_factory=list)
 
 
 class SyncPullResponse(BaseModel):

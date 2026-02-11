@@ -166,6 +166,7 @@ async def test_v1_sync_pull_shape_with_auth(tmp_path: Path):
         assert changes.get("user_settings") == []
         assert changes.get("todo_lists") == []
         assert changes.get("todo_occurrences") == []
+        assert changes.get("collection_items") == []
 
 
 @pytest.mark.anyio

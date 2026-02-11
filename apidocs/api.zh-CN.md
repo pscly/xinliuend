@@ -991,12 +991,15 @@ Query：
     "user_settings": [],
     "todo_lists": [],
     "todo_items": [],
-    "todo_occurrences": []
+    "todo_occurrences": [],
+    "collection_items": []
   }
 }
 ```
 
-说明：changes 中包含软删除对象（通过 `deleted_at` 判断）。
+说明：changes 中包含软删除对象（通过 `deleted_at` 判断 tombstone）。
+
+补充：`changes.collection_items`（数组；元素形状与 `CollectionItem` 一致；包含 tombstone：`deleted_at`）。该字段总是存在（允许为空数组）。
 
 #### POST /api/v1/sync/push
 
@@ -1021,6 +1024,7 @@ Query：
 - `note`
 - `user_setting`
 - `todo_list`
+- `collection_item`
 - `todo_item`
 - `todo_occurrence`
 

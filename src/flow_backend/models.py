@@ -193,7 +193,12 @@ class SyncEvent(SQLModel, table=True):
 
 
 # Import notes models so Alembic sees them via `flow_backend.models`.
-from . import models_notes as _models_notes  # noqa: E402,F401  # type: ignore
+from . import models_notes as _models_notes  # noqa: E402,F401  # type: ignore  # pyright: ignore
 
 # Import notifications models so Alembic sees them via `flow_backend.models`.
-from . import models_notifications as _models_notifications  # noqa: E402,F401  # type: ignore
+from . import models_notifications as _models_notifications  # noqa: E402,F401  # type: ignore  # pyright: ignore
+
+# Import collections models so Alembic sees them via `flow_backend.models`.
+from . import models_collections as _models_collections  # noqa: E402,F401  # type: ignore  # pyright: ignore
+
+_ = (_models_notes, _models_notifications, _models_collections)

@@ -37,6 +37,9 @@ from flow_backend.schemas_common import HealthResponse
 from flow_backend.v2.routers.attachments import (
     router as v2_attachments_router,
 )  # pyright: ignore[reportMissingTypeStubs]
+from flow_backend.v2.routers.collections import (
+    router as v2_collections_router,
+)  # pyright: ignore[reportMissingTypeStubs]
 from flow_backend.v2.routers.notes import router as v2_notes_router  # pyright: ignore[reportMissingTypeStubs]
 from flow_backend.v2.routers.notifications import (
     router as v2_notifications_router,
@@ -215,6 +218,7 @@ app.include_router(admin.router, include_in_schema=False)
 # v2 核心能力并入 v1（统一对外路径：/api/v1）。
 # 注意：不要 include v2 的 todo/sync 路由，避免与 v1 冲突；统一 sync 将在 v1 层实现。
 app.include_router(v2_notes_router, prefix=settings.api_prefix)
+app.include_router(v2_collections_router, prefix=settings.api_prefix)
 app.include_router(v2_attachments_router, prefix=settings.api_prefix)
 app.include_router(v2_shares_router, prefix=settings.api_prefix)
 app.include_router(v2_public_router, prefix=settings.api_prefix)
@@ -244,7 +248,7 @@ if settings.environment.strip().lower() != "production":
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     include_in_schema=False,
 )
-async def _v1_fallback_not_found(path: str) -> None:  # noqa: ARG001
+async def _v1_fallback_not_found(_path: str) -> None:
     # Without this, a frontend SPA/static mount at `/` would catch unknown
     # `/api/v1/*` paths and return HTML instead of FastAPI's default JSON 404.
     raise HTTPException(status_code=404, detail="Not Found")
@@ -255,9 +259,13 @@ async def _v1_fallback_not_found(path: str) -> None:  # noqa: ARG001
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     include_in_schema=False,
 )
-async def _v2_removed_fallback(path: str) -> None:  # noqa: ARG001
+async def _v2_removed_fallback(_path: str) -> None:
     # /api/v2 已移除；显式返回 JSON 404，避免被静态站点 mount 吞掉返回 HTML。
     raise HTTPException(status_code=404, detail="Not Found")
+
+
+# FastAPI 的装饰器在运行时完成路由注册，静态分析可能误报 unused。
+_FALLBACK_API_HANDLERS = (_v1_fallback_not_found, _v2_removed_fallback)
 
 
 _STATIC_DIR = Path(__file__).resolve().parent / "static"

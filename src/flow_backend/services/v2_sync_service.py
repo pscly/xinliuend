@@ -16,6 +16,7 @@ from flow_backend.domain.sync_planner import (
     validate_payload_for_resource,
 )
 from flow_backend.models import TodoItem, TodoItemOccurrence, TodoList, UserSetting, utc_now
+from flow_backend.models_collections import CollectionItem
 from flow_backend.models_notes import Note
 from flow_backend.repositories import note_revisions_repo, v2_sync_repo
 from flow_backend.services.notes_tags_service import set_note_tags
@@ -101,6 +102,23 @@ def _serialize_occurrence(row: TodoItemOccurrence) -> dict[str, object]:
     }
 
 
+def _serialize_collection_item(row: CollectionItem) -> dict[str, object]:
+    return {
+        "id": row.id,
+        "item_type": row.item_type,
+        "parent_id": row.parent_id,
+        "name": row.name,
+        "color": row.color,
+        "ref_type": row.ref_type,
+        "ref_id": row.ref_id,
+        "sort_order": row.sort_order,
+        "client_updated_at_ms": row.client_updated_at_ms,
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+        "deleted_at": row.deleted_at,
+    }
+
+
 def _validate_recurring_fields(
     is_recurring: bool, rrule: str | None, dtstart_local: str | None
 ) -> str | None:
@@ -153,8 +171,9 @@ async def push(
             "user_setting": 0,
             "todo_list": 1,
             "note": 1,
-            "todo_item": 2,
-            "todo_occurrence": 3,
+            "collection_item": 2,
+            "todo_item": 3,
+            "todo_occurrence": 4,
         }
         for raw in sorted(
             mutations, key=lambda r: resource_order.get(str(r.get("resource") or ""), 99)
@@ -172,6 +191,7 @@ async def push(
                 "todo_list",
                 "todo_item",
                 "todo_occurrence",
+                "collection_item",
             }:
                 rejected.append(
                     {"resource": resource, "entity_id": entity_id, "reason": "invalid resource"}
@@ -210,7 +230,6 @@ async def push(
                     row = UserSetting(
                         user_id=user_id,
                         key=entity_id,
-                        value_json={},
                         client_updated_at_ms=0,
                     )
 
@@ -219,7 +238,11 @@ async def push(
                 if op == "delete":
                     row.deleted_at = utc_now()
                 else:
-                    value_obj = dict((data or {}).get("value_json") or {})
+                    value_raw = (data or {}).get("value_json")
+                    value_obj: dict[str, Any] = {}
+                    if isinstance(value_raw, dict):
+                        for k, v in value_raw.items():
+                            value_obj[str(k)] = v
                     row.value_json = value_obj
                     row.deleted_at = None
 
@@ -385,6 +408,175 @@ async def push(
                     record_sync_event(session, user_id, "note", entity_id, "upsert")
                     applied.append({"resource": resource, "entity_id": entity_id})
                     continue
+
+            if resource == "collection_item":
+                server_item3 = await v2_sync_repo.get_collection_item(
+                    session, user_id=user_id, item_id=entity_id, include_deleted=True
+                )
+                if server_item3 is not None and incoming_ms < int(
+                    server_item3.client_updated_at_ms or 0
+                ):
+                    rejected.append(
+                        {
+                            "resource": resource,
+                            "entity_id": entity_id,
+                            "reason": "conflict",
+                            "server": _serialize_collection_item(server_item3),
+                        }
+                    )
+                    continue
+
+                if op == "delete":
+                    if server_item3 is None:
+                        applied.append({"resource": resource, "entity_id": entity_id})
+                        continue
+                    server_item3.deleted_at = utc_now()
+                    server_item3.updated_at = utc_now()
+                    server_item3.client_updated_at_ms = incoming_ms
+                    session.add(server_item3)
+                    record_sync_event(session, user_id, "collection_item", entity_id, "delete")
+                    applied.append({"resource": resource, "entity_id": entity_id})
+                    continue
+
+                payload5 = dict(data or {})
+
+                item_type_in = str(payload5.get("item_type") or "").strip()
+                if not item_type_in:
+                    rejected.append(
+                        {
+                            "resource": resource,
+                            "entity_id": entity_id,
+                            "reason": "missing item_type",
+                        }
+                    )
+                    continue
+                if item_type_in not in {"folder", "note_ref"}:
+                    rejected.append(
+                        {
+                            "resource": resource,
+                            "entity_id": entity_id,
+                            "reason": "invalid item_type",
+                        }
+                    )
+                    continue
+
+                def _norm_str_or_none(v: object | None) -> str | None:
+                    if v is None:
+                        return None
+                    s = str(v).strip()
+                    return s or None
+
+                parent_id_in: str | None = None
+                if "parent_id" in payload5:
+                    parent_id_in = _norm_str_or_none(payload5.get("parent_id"))
+                else:
+                    parent_id_in = server_item3.parent_id if server_item3 is not None else None
+
+                sort_order_in: int
+                if "sort_order" in payload5:
+                    sort_order_in = _parse_int(payload5.get("sort_order"))
+                else:
+                    sort_order_in = server_item3.sort_order if server_item3 is not None else 0
+
+                color_in: str | None
+                if "color" in payload5:
+                    color_in = _norm_str_or_none(payload5.get("color"))
+                else:
+                    color_in = server_item3.color if server_item3 is not None else None
+
+                name_in: str
+                if "name" in payload5:
+                    name_in = str(payload5.get("name") or "").strip()
+                else:
+                    name_in = server_item3.name if server_item3 is not None else ""
+
+                ref_type_in: str | None
+                if "ref_type" in payload5:
+                    ref_type_in = _norm_str_or_none(payload5.get("ref_type"))
+                else:
+                    ref_type_in = server_item3.ref_type if server_item3 is not None else None
+
+                ref_id_in: str | None
+                if "ref_id" in payload5:
+                    ref_id_in = _norm_str_or_none(payload5.get("ref_id"))
+                else:
+                    ref_id_in = server_item3.ref_id if server_item3 is not None else None
+
+                if item_type_in == "folder":
+                    if not name_in:
+                        rejected.append(
+                            {
+                                "resource": resource,
+                                "entity_id": entity_id,
+                                "reason": "name is required",
+                            }
+                        )
+                        continue
+                    if ref_type_in is not None or ref_id_in is not None:
+                        rejected.append(
+                            {
+                                "resource": resource,
+                                "entity_id": entity_id,
+                                "reason": "ref_type/ref_id must be None for folder",
+                            }
+                        )
+                        continue
+                else:
+                    if ref_type_in is None or ref_id_in is None:
+                        rejected.append(
+                            {
+                                "resource": resource,
+                                "entity_id": entity_id,
+                                "reason": "ref_type and ref_id are required for note_ref",
+                            }
+                        )
+                        continue
+                    if ref_type_in not in {"flow_note", "memos_memo"}:
+                        rejected.append(
+                            {
+                                "resource": resource,
+                                "entity_id": entity_id,
+                                "reason": "invalid ref_type",
+                            }
+                        )
+                        continue
+
+                item3 = server_item3
+                if item3 is None:
+                    item3 = CollectionItem(
+                        id=entity_id,
+                        user_id=user_id,
+                        item_type=item_type_in,
+                        parent_id=parent_id_in,
+                        name=name_in,
+                        color=color_in,
+                        ref_type=ref_type_in,
+                        ref_id=ref_id_in,
+                        sort_order=sort_order_in,
+                        client_updated_at_ms=0,
+                    )
+
+                item3.item_type = item_type_in
+                item3.parent_id = parent_id_in
+                item3.sort_order = sort_order_in
+                item3.color = color_in
+
+                if item_type_in == "folder":
+                    item3.name = name_in
+                    item3.ref_type = None
+                    item3.ref_id = None
+                else:
+                    item3.name = name_in
+                    item3.ref_type = ref_type_in
+                    item3.ref_id = ref_id_in
+
+                item3.client_updated_at_ms = incoming_ms
+                item3.updated_at = utc_now()
+                item3.deleted_at = None
+                session.add(item3)
+                record_sync_event(session, user_id, "collection_item", entity_id, "upsert")
+                applied.append({"resource": resource, "entity_id": entity_id})
+                continue
 
             if resource == "todo_item":
                 server_item = await v2_sync_repo.get_todo_item(
@@ -780,6 +972,7 @@ async def pull(
     list_ids: set[str] = set()
     todo_ids: set[str] = set()
     occ_ids: set[str] = set()
+    collection_item_ids: set[str] = set()
     for e in events:
         next_cursor = max(next_cursor, _parse_int(e.id))
         if e.resource == "note":
@@ -792,6 +985,8 @@ async def pull(
             todo_ids.add(e.entity_id)
         elif e.resource == "todo_occurrence":
             occ_ids.add(e.entity_id)
+        elif e.resource == "collection_item":
+            collection_item_ids.add(e.entity_id)
 
     notes: list[dict[str, object]] = []
     for nid in sorted(note_ids):
@@ -848,6 +1043,15 @@ async def pull(
             continue
         todo_occurrences.append(_serialize_occurrence(o))
 
+    collection_items: list[dict[str, object]] = []
+    for cid in sorted(collection_item_ids):
+        c = await v2_sync_repo.get_collection_item(
+            session, user_id=user_id, item_id=cid, include_deleted=True
+        )
+        if c is None:
+            continue
+        collection_items.append(_serialize_collection_item(c))
+
     return {
         "cursor": cursor,
         "next_cursor": next_cursor,
@@ -858,5 +1062,6 @@ async def pull(
             "todo_lists": todo_lists,
             "todo_items": todo_items,
             "todo_occurrences": todo_occurrences,
+            "collection_items": collection_items,
         },
     }

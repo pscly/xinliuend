@@ -7,6 +7,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from flow_backend.models import SyncEvent, TodoItem, TodoItemOccurrence, TodoList, UserSetting
+from flow_backend.models_collections import CollectionItem
 from flow_backend.models_notes import Note
 
 
@@ -25,6 +26,21 @@ async def get_todo_item(
     stmt = select(TodoItem).where(TodoItem.user_id == user_id).where(TodoItem.id == item_id)
     if not include_deleted:
         stmt = stmt.where(cast(ColumnElement[object], cast(object, TodoItem.deleted_at)).is_(None))
+    return (await session.exec(stmt)).first()
+
+
+async def get_collection_item(
+    session: AsyncSession, *, user_id: int, item_id: str, include_deleted: bool
+) -> CollectionItem | None:
+    stmt = (
+        select(CollectionItem)
+        .where(CollectionItem.user_id == user_id)
+        .where(CollectionItem.id == item_id)
+    )
+    if not include_deleted:
+        stmt = stmt.where(
+            cast(ColumnElement[object], cast(object, CollectionItem.deleted_at)).is_(None)
+        )
     return (await session.exec(stmt)).first()
 
 
