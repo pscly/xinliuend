@@ -2,7 +2,9 @@
   display: grid;
   grid-template-columns: minmax(220px, 320px) 1fr;
   min-height: 560px;
-  border-top: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  overflow: hidden;
   background: color-mix(in srgb, var(--color-surface-2) 62%, transparent);
 }
 
@@ -26,8 +28,7 @@
 
 .kicker {
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--color-text-muted);
 }
 
@@ -81,6 +82,11 @@
 
 .noteItemActive {
   background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--color-accent) 56%, transparent);
+}
+
+.noteItemActive .noteItemTitle {
+  color: var(--color-text);
 }
 
 .noteItemTitle {
@@ -262,8 +268,7 @@
 
 .previewHeading {
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--color-text-muted);
   margin-bottom: 10px;
 }
