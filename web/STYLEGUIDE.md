@@ -23,7 +23,7 @@ Source of truth: `web/src/app/globals.css`.
 
 - `--page-max`: max content width (currently 1100px).
 - `--radius-1`: default radius for controls/pills (currently 12px).
-- `--radius-2`: larger radius for cards/panels (currently 18px).
+- `--radius-2`: larger radius for cards/panels (currently 14px).
 - `--shadow-1`: primary elevation shadow (use sparingly).
 
 ### Core Colors (use these in components)
@@ -34,7 +34,7 @@ Source of truth: `web/src/app/globals.css`.
 - `--color-text`: main text.
 - `--color-text-muted`: secondary text.
 - `--color-border`: hairline borders and dividers.
-- `--color-accent`: primary accent (jade in day, brighter jade in night).
+- `--color-accent`: primary accent (jade in day, moonlit jade in night by default).
 - `--color-accent-contrast`: text/icon color when placed on `--color-accent`.
 
 Optional accents (use intentionally, not everywhere):
