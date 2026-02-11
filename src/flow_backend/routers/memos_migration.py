@@ -181,7 +181,9 @@ async def list_memos_notes(
         )
 
     if truncated_count > 0:
-        warnings.append(f"{truncated_count} 条 Memos 内容过长，已截断为 {_MEMO_CONTENT_MAX_LEN} 字符。")
+        warnings.append(
+            f"{truncated_count} 条 Memos 内容过长，已截断为 {_MEMO_CONTENT_MAX_LEN} 字符。"
+        )
 
     return MemosNoteListResponse(
         items=items,
