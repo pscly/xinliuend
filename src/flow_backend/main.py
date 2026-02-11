@@ -248,9 +248,10 @@ if settings.environment.strip().lower() != "production":
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     include_in_schema=False,
 )
-async def _v1_fallback_not_found(_path: str) -> None:
+async def _v1_fallback_not_found(path: str) -> None:
     # Without this, a frontend SPA/static mount at `/` would catch unknown
     # `/api/v1/*` paths and return HTML instead of FastAPI's default JSON 404.
+    _ = path
     raise HTTPException(status_code=404, detail="Not Found")
 
 
@@ -259,8 +260,9 @@ async def _v1_fallback_not_found(_path: str) -> None:
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     include_in_schema=False,
 )
-async def _v2_removed_fallback(_path: str) -> None:
+async def _v2_removed_fallback(path: str) -> None:
     # /api/v2 已移除；显式返回 JSON 404，避免被静态站点 mount 吞掉返回 HTML。
+    _ = path
     raise HTTPException(status_code=404, detail="Not Found")
 
 
