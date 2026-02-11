@@ -19,7 +19,7 @@
 
 .error {
   padding: 10px;
-  border-radius: 12px;
+  border-radius: var(--radius-1);
   border: 1px solid color-mix(in srgb, var(--color-danger) 55%, transparent);
   background: color-mix(in srgb, var(--color-danger) 10%, transparent);
   color: var(--color-danger);
@@ -33,7 +33,7 @@
 }
 
 .bucket {
-  border-radius: 14px;
+  border-radius: var(--radius-2);
   border: 1px solid var(--color-border);
   padding: 10px;
   min-height: 120px;
