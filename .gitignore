@@ -48,3 +48,11 @@ data/
  
 
 test
+
+# OhMyOpenCode local session state (plans / notepads)
+.sisyphus/plans/
+.sisyphus/notepads/
+
+# Local scratch files that should not be tracked
+plan.md
+web/src/features/shell/shellActions.ts
