@@ -24,7 +24,7 @@
 .brandMark {
   width: 34px;
   height: 34px;
-  border-radius: 12px;
+  border-radius: var(--radius-1);
   border: 1px solid color-mix(in srgb, var(--color-border) 70%, var(--color-accent-gold) 30%);
   display: block;
   flex-shrink: 0;
@@ -38,7 +38,7 @@
 .brandName {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   font-size: 18px;
 }
 
@@ -106,7 +106,7 @@
   font-family: var(--font-display);
   font-size: 30px;
   line-height: 1.15;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
@@ -132,8 +132,7 @@
 .label {
   font-size: 13px;
   color: var(--color-text-muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .input {
