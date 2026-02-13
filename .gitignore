@@ -45,6 +45,7 @@ data/
 # OhMyOpenCode local session state
 .sisyphus/boulder.json
 .sisyphus/drafts/
+.sisyphus/evidence/
  
 
 test
