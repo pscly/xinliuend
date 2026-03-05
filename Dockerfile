@@ -57,7 +57,7 @@ ENV PIP_INDEX_URL=${PIP_INDEX_URL} \
     UV_HTTP_TIMEOUT=60 \
     UV_CONCURRENT_DOWNLOADS=16
 
-RUN pip install --no-cache-dir -i "${PIP_INDEX_URL}" --trusted-host "${PIP_TRUSTED_HOST}" uv==0.9.24 \
+RUN pip install --no-cache-dir --timeout 600 --retries 5 -i "${PIP_INDEX_URL}" --trusted-host "${PIP_TRUSTED_HOST}" uv==0.9.24 \
     && rm -rf /root/.cache/pip
 
 # pydantic-settings 读取 .env 时，若文件不存在可能导致启动/迁移报错；这里放一个空文件兜底
