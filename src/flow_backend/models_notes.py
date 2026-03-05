@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import Column, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Column, Text, UniqueConstraint
 from sqlalchemy.types import JSON as SAJSON
 from sqlmodel import Field, SQLModel
 
@@ -16,7 +16,7 @@ class TenantRowBase(SQLModel):
     # Keep this module standalone to avoid import cycles. Mirrors flow_backend.models.TenantRow.
     user_id: int = Field(index=True, foreign_key="users.id")
 
-    client_updated_at_ms: int = Field(default=0, index=True)
+    client_updated_at_ms: int = Field(default=0, index=True, nullable=False, sa_type=BigInteger)
     updated_at: datetime = Field(default_factory=utc_now, index=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=utc_now, index=True)
