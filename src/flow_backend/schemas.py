@@ -60,3 +60,30 @@ class ChangePasswordResponse(BaseModel):
 class ApiResponse(BaseModel):
     code: int = 200
     data: dict
+
+
+class MemosCredentialStatusResponse(BaseModel):
+    memos_base_url: str
+    has_token: bool
+    token_preview: str | None = None
+    memos_user_id: int | None = None
+    can_auto_issue_token: bool
+
+
+class MemosCredentialTokenRequest(BaseModel):
+    memos_token: str = Field(min_length=1, max_length=8192)
+    memos_user_id: int | None = Field(default=None, ge=0)
+
+
+class MemosCredentialIssueTokenRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=72)
+
+
+class MemosCredentialUpdateResponse(BaseModel):
+    ok: bool = True
+    token: str
+    server_url: str
+    memos_user_id: int
+    memos_username: str
+    token_preview: str
+    csrf_token: str | None = None

@@ -27,11 +27,18 @@ from flow_backend.models import User, UserDevice, UserDeviceIP
 from flow_backend.password_crypto import decrypt_password, encrypt_password
 from flow_backend.rate_limiting import build_ip_key, enforce_rate_limit
 from flow_backend.security import hash_password
+from flow_backend.services.memos_credentials import (
+    clear_memos_credential,
+    save_memos_credential,
+    token_preview,
+    validate_memos_token_for_user,
+)
 
 router = APIRouter(tags=["admin"])
 
 _BASE_DIR = Path(__file__).resolve().parents[1]
 templates = Jinja2Templates(directory=str(_BASE_DIR / "templates"))
+templates.env.globals["token_preview"] = token_preview
 
 
 def _admin_redirect(msg: str | None = None, err: str | None = None) -> RedirectResponse:
@@ -431,32 +438,45 @@ async def set_token(
     if not user:
         return _redirect_to_next(next_url, err="用户不存在")
 
+    action = str(form.get("action") or "update").strip().lower()
+    if action == "clear":
+        try:
+            await clear_memos_credential(session=session, user_id=user_id)
+        except HTTPException as e:
+            return _redirect_to_next(next_url, err=str(e.detail))
+        return _redirect_to_next(next_url, msg="已清空 Token")
+
     token = str(form.get("memos_token") or "").strip()
+    if not token:
+        return _redirect_to_next(
+            next_url, err="更新 Token 需要粘贴新 Token；如需清空请点击明确的清空按钮"
+        )
+
     memos_id_s = str(form.get("memos_id") or "").strip()
+    memos_id: int | None = None
     if memos_id_s:
         if not memos_id_s.isdigit():
-            return _admin_redirect(err="Memos 用户 ID 必须是数字（或留空）")
-        user.memos_id = int(memos_id_s)
-    else:
-        user.memos_id = None
-
-    if token:
-        existing_token = (
-            await session.exec(
-                select(User).where((User.memos_token == token) & (User.id != user_id))
-            )
-        ).first()
-        if existing_token:
-            return _admin_redirect(err="Token 已被其它用户占用")
-    user.memos_token = token or None
+            return _redirect_to_next(next_url, err="Memos 用户 ID 必须是数字（或留空）")
+        memos_id = int(memos_id_s)
 
     try:
-        session.add(user)
-        await session.commit()
-    except IntegrityError:
-        await session.rollback()
-        return _redirect_to_next(next_url, err="保存失败：用户名或 Token 冲突")
-    return _redirect_to_next(next_url, msg="已保存 Token（为空则清空）")
+        credential = await validate_memos_token_for_user(
+            session=session,
+            user=user,
+            token=token,
+            memos_user_id=memos_id,
+            allow_username_mismatch=True,
+        )
+        await save_memos_credential(session=session, user_id=user_id, credential=credential)
+    except HTTPException as e:
+        return _redirect_to_next(next_url, err=str(e.detail))
+
+    if credential.memos_username != user.username:
+        return _redirect_to_next(
+            next_url,
+            msg=f"已保存 Token（警告：Memos 用户名 {credential.memos_username} 与当前用户 {user.username} 不一致）",
+        )
+    return _redirect_to_next(next_url, msg="已更新 Token")
 
 
 @router.get("/admin/users/{user_id}", response_class=HTMLResponse)

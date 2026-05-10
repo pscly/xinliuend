@@ -1,13 +1,13 @@
 # 心流云服务后端（Flow Backend）
 
-> 当前版本：以 `pyproject.toml` 为准（示例：`0.6.0`）
+> 当前版本：以 `pyproject.toml` 为准（当前：`0.8.0`）
 
 Flow Backend 是「心流」客户端的云端后端服务，提供：
 
 1. 用户体系与鉴权：Bearer Token（移动端/脚本）+ Cookie Session（Web SPA）。
 2. 云端数据能力：笔记 / 待办 / 设置 / 附件 / 分享 / 通知 / 修订（冲突保留）等。
 3. 多端离线同步：`/api/v1/sync/*`（统一协议与冲突处理约定）。
-4. 可选对接 Memos：注册时创建 Memos 用户并签发 Token；并提供“本地 Notes ↔ Memos”双向同步能力。
+4. 可选对接 Memos：注册时创建 Memos 用户并签发 Token；用户也可在 Web 设置页自助绑定/更新 Memos Token 或自动签发 PAT；并提供“本地 Notes ↔ Memos”双向同步能力。
 5. 管理后台（Admin）：用户管理、设备活跃度追踪等运维能力。
 
 仓库结构：
@@ -47,6 +47,7 @@ Flow Backend 是「心流」客户端的云端后端服务，提供：
 - Auth：注册/登录/登出
 - Me：当前用户信息 + CSRF token 重取
 - Settings：用户键值配置
+- Me / Memos Credential：当前用户信息、改密、Memos 凭据绑定状态与自助更新
 - TODO：清单/任务/复发（RRULE + Occurrence overrides）
 - Notes：笔记、标签、搜索、软删除/恢复
 - Revisions：笔记修订与冲突快照
@@ -61,8 +62,13 @@ Flow Backend 是「心流」客户端的云端后端服务，提供：
 - Notes 与 Memos 双向同步：
   - Memos 作为权威源：当远端与本地同时修改，远端胜出，本地保留 `CONFLICT` 修订用于找回
   - 通过远端内容 hash 与映射表识别对应关系（减少“依赖时钟一致”的问题）
+- 用户自助凭据绑定：
+  - Web `/settings` 可粘贴已有 Memos Token / PAT，或输入当前 App 密码自动登录 Memos 并创建 PAT
+  - 保存前会调用 Memos 当前用户接口校验 Token，普通用户必须与 Flow 用户名一致
+  - 更新成功会返回新的 Flow Bearer Token；旧 Bearer Token 会立即失效，请移动端/脚本及时替换
 - Memos API 兼容性：
   - 支持用环境变量覆写 endpoint 列表，适配不同 Memos 版本
+  - 自动签发优先使用新版 `personalAccessTokens`，并保留旧版 `accessTokens` 兜底
 
 ---
 
@@ -314,7 +320,7 @@ npm run build
   - `LOG_LEVEL=INFO`
 - Memos：
   - `MEMOS_BASE_URL`
-  - `MEMOS_ADMIN_TOKEN`（注册自动创建用户时必需）
+  - `MEMOS_ADMIN_TOKEN`（注册自动创建用户、管理员重置 Memos 密码等运维路径必需；用户粘贴 Token 校验主要使用用户自己的 Token）
   - `MEMOS_CREATE_USER_ENDPOINTS`、`MEMOS_CREATE_TOKEN_ENDPOINTS`（不同 Memos 版本适配）
   - `MEMOS_ALLOW_RESET_PASSWORD_FOR_EXISTING_USER`（修复半成品用户用，默认 false）
   - `DEV_BYPASS_MEMOS=true|false`（本地开发兜底，生产必须 false）
@@ -369,7 +375,7 @@ Playwright 会：
 - Web UI 404（同源静态托管）：确认存在 `web/out/index.html`（运行 `cd web && npm run build`）。
 - 429 / 登录注册被限流：本地并发注册/登录可能触发；可在 `.env` 临时调低/关闭 `AUTH_*_RATE_LIMIT_*`（E2E 会自动覆写为 0）。
 - SQLite `database is locked`：避免多个进程同时写同一个 sqlite 文件；停掉占用 DB 的进程后重试。
-- 502（注册对接 Memos 失败）：优先用 Postman 在当前 Memos 实例上调通创建用户/签发 token 流程，并把正确 endpoint 写入：
+- 502（注册或自助凭据对接 Memos 失败）：优先用 Postman 在当前 Memos 实例上调通创建用户/签发 token 或 `auth/signin` + `personalAccessTokens` 流程，并把正确 endpoint 写入：
   - `MEMOS_CREATE_USER_ENDPOINTS`
   - `MEMOS_CREATE_TOKEN_ENDPOINTS`
 - Cookie Session 跨域不生效：检查 `CORS_ALLOW_ORIGINS` 是否为明确 allowlist（不能 `*`），以及浏览器请求是否 `credentials: "include"`。

@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import BigInteger, Column, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Column, Index, Text, UniqueConstraint
 from sqlalchemy.types import JSON as SAJSON
 from sqlmodel import Field, SQLModel
 
@@ -18,6 +18,15 @@ def utc_now() -> datetime:
 
 class User(SQLModel, table=True):
     __tablename__ = "users"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
+    __table_args__ = (
+        Index(
+            "uq_users_memos_token_not_null",
+            "memos_token",
+            unique=True,
+            sqlite_where=Column("memos_token", Text).is_not(None),
+            postgresql_where=Column("memos_token", Text).is_not(None),
+        ),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True, min_length=1, max_length=64)

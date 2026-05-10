@@ -57,3 +57,6 @@ test
 # Local scratch files that should not be tracked
 plan.md
 web/src/features/shell/shellActions.ts
+
+# oh-my-codex local runtime state
+.omx/

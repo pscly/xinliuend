@@ -1,6 +1,6 @@
 # Flow Backend API 文档（/api/v1）
 
-最后更新：2026-02-06
+最后更新：2026-05-10
 
 本文件面向 APK / Web 客户端开发团队，覆盖：鉴权、请求头约定、错误格式、同步协议、以及所有已实现的接口（对外仅保留 `/api/v1`）。
 
@@ -53,6 +53,9 @@ Token 来自：
 
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
+- `PUT /api/v1/me/memos-credential/token` 或 `POST /api/v1/me/memos-credential/issue-token` 成功后返回的新 `token`
+
+注意：当前兼容实现中，Flow Bearer Token 仍等于 `users.memos_token`。用户自助更新 Memos 凭据会使旧 Flow Bearer Token 立即失效；写接口成功响应会一次性返回新的完整 Token，请客户端及时保存。
 
 ### 2.2 Cookie Session + CSRF（Web SPA）
 
@@ -530,6 +533,109 @@ X-Request-Id: 55555555-6666-7777-8888-999999999999
 ```json
 {"username":"alice","is_admin":false,"csrf_token":"..."}
 ```
+
+### 5.1.1 Me：Memos 凭据自助绑定
+
+该组接口用于普通用户在 Web 设置页自助维护 Memos 凭据。状态接口不会返回完整 Token；两个写接口仅在更新成功响应中一次性返回新的完整 Flow Bearer Token。
+
+安全约束：
+
+- 保存已有 Token 前，后端会用该 Token 调用 Memos `GET /api/v1/auth/me` 校验当前 Memos 用户。Memos 官方说明该接口会校验 access token 并返回认证用户信息。
+- 普通用户自助绑定要求 Memos `username` 与 Flow `username` 一致；不一致返回 403。
+- `memos_user_id` 可选；未提供时从 Memos 返回的 `user.name = "users/{id}"` 自动解析。若手填 ID 与解析结果不一致，返回 400。
+- 当前 App 密码自动生成模式会先校验 Flow 密码，再按既有规则用 `App 密码 + "x"` 登录 Memos，并优先调用官方 `POST /api/v1/users/{user}/personalAccessTokens` 创建 PAT；Memos 官方说明 PAT 适用于脚本/集成，且明文 token 仅在创建时返回一次。
+- Web Cookie Session 调用写接口需要 CSRF；成功后会轮换 Cookie Session CSRF 并在响应 `csrf_token` 返回。Bearer 调用时 `csrf_token` 为 `null`。
+
+参考 Memos 官方接口：
+
+- `GET /api/v1/auth/me`：<https://usememos.com/docs/api/latest/authservice/GetCurrentUser>
+- `POST /api/v1/auth/signin`：<https://usememos.com/docs/api/latest/authservice/SignIn>
+- `POST /api/v1/users/{user}/personalAccessTokens`：<https://usememos.com/docs/api/latest/userservice/CreatePersonalAccessToken>
+- PAT 用途与一次性显示说明：<https://usememos.com/docs/configuration/authentication>
+
+#### GET /api/v1/me/memos-credential
+
+鉴权：Bearer 或 Cookie Session。
+
+成功响应：
+
+```json
+{
+  "memos_base_url": "https://memos.example.com",
+  "has_token": true,
+  "token_preview": "memos_pa…abc123",
+  "memos_user_id": 42,
+  "can_auto_issue_token": true
+}
+```
+
+字段说明：
+
+- `memos_base_url`：当前后端配置的 Memos 地址。
+- `has_token`：是否已绑定非空 Token。
+- `token_preview`：截断预览；未绑定为 `null`。
+- `memos_user_id`：当前绑定的 Memos 用户 ID；未知为 `null`。
+- `can_auto_issue_token`：后端是否具备尝试自动登录/签发 Token 的基础配置。
+
+#### PUT /api/v1/me/memos-credential/token
+
+用途：用户粘贴已有 Memos Token / PAT，后端校验属于当前同名 Memos 用户后保存。
+
+请求体：
+
+```json
+{
+  "memos_token": "memos_pat_xxx",
+  "memos_user_id": 42
+}
+```
+
+- `memos_token`：必填，后端会 `strip` 后保存。
+- `memos_user_id`：可选；不传或 `null` 时自动探测。
+
+成功响应：
+
+```json
+{
+  "ok": true,
+  "token": "memos_pat_xxx",
+  "server_url": "https://memos.example.com",
+  "memos_user_id": 42,
+  "memos_username": "alice",
+  "token_preview": "memos_pa…abc123",
+  "csrf_token": null
+}
+```
+
+常见错误：
+
+- 400：Token 无效、无法解析 Memos 用户、手填 `memos_user_id` 不匹配。
+- 403：Memos 用户名与当前 Flow 用户名不一致。
+- 409：Token 已被其它用户占用。
+- 500：`MEMOS_BASE_URL` 未配置。
+- 502：Memos 服务不可用，无法校验 Token。
+
+#### POST /api/v1/me/memos-credential/issue-token
+
+用途：用户输入当前 App 密码，后端自动登录 Memos 并创建新的 PAT。
+
+请求体：
+
+```json
+{
+  "current_password": "secret123"
+}
+```
+
+成功响应同 `PUT /api/v1/me/memos-credential/token`。
+
+常见错误：
+
+- 401：当前 App 密码错误。
+- 403：Memos 登录返回的用户名与 Flow 用户名不一致。
+- 409：新 Token 与其它用户冲突（极少见，但由数据库唯一索引兜底）。
+- 500：`MEMOS_BASE_URL` 未配置。
+- 502：Memos 登录或签发 PAT 失败；数据库不会写入半成品凭据。
 
 #### POST /api/v1/me/password
 

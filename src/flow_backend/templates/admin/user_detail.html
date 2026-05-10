@@ -162,15 +162,7 @@
             <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-3">
               <div class="text-xs text-zinc-400">Memos Token</div>
               <div class="mt-2 flex items-center gap-2 flex-wrap">
-                <code id="memosToken" class="text-xs text-zinc-200 font-mono break-all">{{ user.memos_token or '未设置' }}</code>
-                <button
-                  type="button"
-                  class="rounded-lg bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-1.5 text-xs font-semibold ring-1 ring-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onclick="copyById('memosToken', '已复制 Token')"
-                  {% if not user.memos_token %}disabled{% endif %}
-                >
-                  复制
-                </button>
+                <code id="memosToken" class="text-xs text-zinc-200 font-mono break-all">{{ token_preview(user.memos_token) or '未设置' }}</code>
               </div>
             </div>
 
@@ -268,25 +260,41 @@
 
           <div class="px-5 py-4 grid gap-4">
             <div class="rounded-xl bg-zinc-950/40 ring-1 ring-zinc-800 px-4 py-4">
-              <div class="text-sm font-semibold text-zinc-200">设置/清空 Token</div>
+              <div class="text-sm font-semibold text-zinc-200">更新 Token</div>
+              <div class="mt-1 text-xs text-zinc-400">Token 不会默认回填；更新时请重新粘贴。清空 Token 需要点击下方独立按钮，避免误清空。</div>
               <form method="post" action="/admin/users/{{ user.id }}/set-token" class="mt-3 grid grid-cols-1 md:grid-cols-6 gap-3">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
                 <input type="hidden" name="next" value="/admin/users/{{ user.id }}" />
+                <input type="hidden" name="action" value="update" />
                 <input
                   name="memos_id"
                   type="number"
                   inputmode="numeric"
                   min="0"
-                  placeholder="Memos ID（留空=清空）"
+                  value="{{ user.memos_id or '' }}"
+                  placeholder="Memos ID（留空=自动探测）"
                   class="md:col-span-2 rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-sm"
                 />
                 <input
                   name="memos_token"
-                  placeholder="粘贴 Token（留空=清空）"
+                  placeholder="粘贴新的 Memos Token / PAT"
                   class="md:col-span-3 rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-sm font-mono"
                 />
                 <button class="md:col-span-1 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 active:bg-indigo-600 px-3 py-2 text-sm font-semibold text-white ring-1 ring-indigo-400/25" type="submit">
-                  保存
+                  更新 Token
+                </button>
+              </form>
+              <form method="post" action="/admin/users/{{ user.id }}/set-token" class="mt-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <input type="hidden" name="next" value="/admin/users/{{ user.id }}" />
+                <input type="hidden" name="action" value="clear" />
+                <button
+                  class="rounded-xl bg-red-600/90 hover:bg-red-500 active:bg-red-600 px-3 py-2 text-sm font-semibold text-white ring-1 ring-red-400/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="submit"
+                  onclick="return confirm('确认清空该用户 Token？清空后 Bearer Token 登录会失效。');"
+                  {% if not user.memos_token and not user.memos_id %}disabled{% endif %}
+                >
+                  清空 Token
                 </button>
               </form>
             </div>

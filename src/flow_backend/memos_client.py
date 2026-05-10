@@ -22,6 +22,45 @@ class MemosUserAndToken:
     memos_token: str
 
 
+@dataclass(frozen=True)
+class MemosCurrentUser:
+    username: str
+    user_id: int
+
+    def __getitem__(self, key: str) -> str | int:
+        if key == "username":
+            return self.username
+        if key == "user_id":
+            return self.user_id
+        raise KeyError(key)
+
+    def as_dict(self) -> dict[str, str | int]:
+        return {"username": self.username, "user_id": self.user_id}
+
+
+@dataclass(frozen=True)
+class MemosSignInResult:
+    access_token: str
+    username: str
+    user_id: int
+
+    def __getitem__(self, key: str) -> str | int:
+        if key == "access_token":
+            return self.access_token
+        if key == "username":
+            return self.username
+        if key == "user_id":
+            return self.user_id
+        raise KeyError(key)
+
+    def as_dict(self) -> dict[str, str | int]:
+        return {
+            "access_token": self.access_token,
+            "username": self.username,
+            "user_id": self.user_id,
+        }
+
+
 class MemosClientError(RuntimeError):
     pass
 
@@ -36,6 +75,61 @@ class MemosUserAlreadyExistsError(MemosClientError):
 
 _MEMOS_PASSWORD_SUFFIX = "x"
 _MAX_APP_PASSWORD_BYTES_FOR_MEMOS = 71
+
+
+def _parse_user_id_from_name(name: object) -> int | None:
+    if isinstance(name, str) and name.startswith("users/"):
+        raw = name.split("/", 1)[1]
+        if raw.isdigit():
+            return int(raw)
+    return None
+
+
+def _parse_user_identity(data: object) -> MemosCurrentUser:
+    candidates: list[dict[str, Any]] = []
+    if isinstance(data, dict):
+        candidates.append(data)
+        user_obj = data.get("user")
+        if isinstance(user_obj, dict):
+            candidates.insert(0, user_obj)
+
+    for obj in candidates:
+        username = obj.get("username")
+        if not isinstance(username, str) or not username.strip():
+            continue
+        user_id: int | None = None
+        if isinstance(obj.get("id"), int):
+            user_id = int(obj["id"])
+        elif isinstance(obj.get("id"), str) and str(obj.get("id")).isdigit():
+            user_id = int(str(obj.get("id")))
+        if user_id is None:
+            user_id = _parse_user_id_from_name(obj.get("name"))
+        if user_id is not None:
+            return MemosCurrentUser(username=username.strip(), user_id=user_id)
+
+    raise MemosClientError(f"Cannot parse Memos user identity from response: {data}")
+
+
+def _extract_token(data: object) -> str | None:
+    if not isinstance(data, dict):
+        return None
+    for key in ("accessToken", "access_token", "token"):
+        value = data.get(key)
+        if isinstance(value, str) and value:
+            return value
+    access_token_obj = data.get("accessToken")
+    if isinstance(access_token_obj, dict):
+        for key in ("token", "accessToken", "access_token"):
+            value = access_token_obj.get(key)
+            if isinstance(value, str) and value:
+                return value
+    pat_obj = data.get("personalAccessToken")
+    if isinstance(pat_obj, dict):
+        for key in ("token", "accessToken", "access_token"):
+            value = pat_obj.get(key)
+            if isinstance(value, str) and value:
+                return value
+    return None
 
 
 def memos_password_from_app_password(password: str) -> str:
@@ -285,6 +379,81 @@ class MemosClient:
                     return token
             raise MemosClientError(f"Create token succeeded but cannot parse response: {data}")
         raise MemosClientError(f"Create token (bearer) failed. {resp.status_code} {resp.text}")
+
+    async def get_current_user_with_bearer(self, token: str) -> dict[str, str | int]:
+        bearer = token.strip()
+        if not bearer:
+            raise MemosClientError("Memos bearer token is empty")
+        url = f"{self._base_url}/api/v1/auth/me"
+        headers = {"Authorization": f"Bearer {bearer}"}
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(url, headers=headers)
+        if 200 <= resp.status_code < 300:
+            try:
+                return _parse_user_identity(resp.json()).as_dict()
+            except Exception as e:
+                if isinstance(e, MemosClientError):
+                    raise
+                raise MemosClientError(
+                    f"Get current user succeeded but cannot parse response: {e}"
+                ) from e
+        raise MemosClientError(f"Get current user failed. {resp.status_code} {resp.text}")
+
+    async def sign_in_with_password(self, username: str, app_password: str) -> dict[str, str | int]:
+        url = f"{self._base_url}/api/v1/auth/signin"
+        payload = {
+            "passwordCredentials": {
+                "username": username,
+                "password": memos_password_from_app_password(app_password),
+            }
+        }
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.post(url, json=payload)
+        if 200 <= resp.status_code < 300:
+            data = resp.json()
+            token = _extract_token(data)
+            if not token:
+                raise MemosClientError(f"Sign in succeeded but cannot parse access token: {data}")
+            identity = _parse_user_identity(data)
+            return MemosSignInResult(
+                access_token=token, username=identity.username, user_id=identity.user_id
+            ).as_dict()
+        raise MemosClientError(f"Sign in failed. {resp.status_code} {resp.text}")
+
+    async def create_personal_access_token_with_bearer(
+        self,
+        user_id: int,
+        bearer_token: str,
+        description: str,
+        expires_in_days: int = 0,
+    ) -> str:
+        bearer = bearer_token.strip()
+        if not bearer:
+            raise MemosClientError("Memos bearer token is empty")
+        headers = {"Authorization": f"Bearer {bearer}"}
+        candidates: list[tuple[str, dict[str, Any]]] = [
+            (
+                f"/api/v1/users/{user_id}/personalAccessTokens",
+                {
+                    "parent": f"users/{user_id}",
+                    "description": description,
+                    "expiresInDays": expires_in_days,
+                },
+            ),
+            (f"/api/v1/users/{user_id}/accessTokens", {"description": description}),
+        ]
+        last_error = ""
+        for ep, payload in candidates:
+            url = f"{self._base_url}{ep}"
+            resp = await self._post_json_with_headers(url, payload=payload, headers=headers)
+            if 200 <= resp.status_code < 300:
+                data = resp.json()
+                token = _extract_token(data)
+                if token:
+                    return token
+                raise MemosClientError(f"Create token succeeded but cannot parse response: {data}")
+            last_error = f"{resp.status_code} {resp.text}"
+        raise MemosClientError(f"Create personal access token failed. last_error={last_error}")
 
     async def create_user_and_token(
         self,

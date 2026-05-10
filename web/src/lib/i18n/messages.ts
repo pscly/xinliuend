@@ -40,6 +40,39 @@ export type MessageKey =
   | "settings.account.role.admin"
   | "settings.account.role.user"
   | "settings.account.changePassword"
+  | "settings.memosCredential.title"
+  | "settings.memosCredential.cardTitle"
+  | "settings.memosCredential.subtitle"
+  | "settings.memosCredential.baseUrl"
+  | "settings.memosCredential.bound"
+  | "settings.memosCredential.bound.yes"
+  | "settings.memosCredential.bound.no"
+  | "settings.memosCredential.tokenPreview"
+  | "settings.memosCredential.userId"
+  | "settings.memosCredential.warning"
+  | "settings.memosCredential.errorPrefix"
+  | "settings.memosCredential.errorGeneric"
+  | "settings.memosCredential.success"
+  | "settings.memosCredential.confirmTitle"
+  | "settings.memosCredential.confirmMessage"
+  | "settings.memosCredential.confirmText"
+  | "settings.memosCredential.paste.title"
+  | "settings.memosCredential.paste.subtitle"
+  | "settings.memosCredential.paste.token"
+  | "settings.memosCredential.paste.tokenPlaceholder"
+  | "settings.memosCredential.paste.userId"
+  | "settings.memosCredential.paste.userIdPlaceholder"
+  | "settings.memosCredential.paste.submit"
+  | "settings.memosCredential.issue.title"
+  | "settings.memosCredential.issue.subtitle"
+  | "settings.memosCredential.issue.password"
+  | "settings.memosCredential.issue.passwordPlaceholder"
+  | "settings.memosCredential.issue.submit"
+  | "settings.memosCredential.issue.unavailable"
+  | "settings.memosCredential.newToken.title"
+  | "settings.memosCredential.newToken.hint"
+  | "settings.memosCredential.newToken.copied"
+  | "settings.memosCredential.newToken.copyFailed"
   | "settings.memosMigration.title"
   | "settings.memosMigration.cardTitle"
   | "settings.memosMigration.subtitle"
@@ -320,6 +353,39 @@ const zhCN: Messages = {
   "settings.account.role.admin": "管理员",
   "settings.account.role.user": "普通用户",
   "settings.account.changePassword": "修改密码",
+  "settings.memosCredential.title": "Memos 凭据",
+  "settings.memosCredential.cardTitle": "Memos 凭据绑定",
+  "settings.memosCredential.subtitle": "普通用户可自助更新 Memos Token，或用当前 App 密码自动生成新的 Personal Access Token。",
+  "settings.memosCredential.baseUrl": "Memos 服务地址",
+  "settings.memosCredential.bound": "绑定状态",
+  "settings.memosCredential.bound.yes": "已绑定",
+  "settings.memosCredential.bound.no": "未绑定",
+  "settings.memosCredential.tokenPreview": "Token 预览",
+  "settings.memosCredential.userId": "Memos 用户 ID",
+  "settings.memosCredential.warning": "更新成功后，移动端/脚本使用的旧 Flow Bearer Token 会失效；请复制下方一次性显示的新 Token。",
+  "settings.memosCredential.errorPrefix": "凭据更新失败：",
+  "settings.memosCredential.errorGeneric": "请求失败，请稍后重试。",
+  "settings.memosCredential.success": "Memos 凭据已更新。",
+  "settings.memosCredential.confirmTitle": "确认更新 Memos 凭据",
+  "settings.memosCredential.confirmMessage": "更新后旧 Flow Bearer Token 会失效。请确认你能复制并保存成功响应中的新 Token。",
+  "settings.memosCredential.confirmText": "确认更新",
+  "settings.memosCredential.paste.title": "粘贴已有 Token",
+  "settings.memosCredential.paste.subtitle": "保存前会校验 Token 属于当前同名 Memos 用户。",
+  "settings.memosCredential.paste.token": "Memos Token / PAT",
+  "settings.memosCredential.paste.tokenPlaceholder": "粘贴 Memos Token",
+  "settings.memosCredential.paste.userId": "Memos 用户 ID（可选）",
+  "settings.memosCredential.paste.userIdPlaceholder": "留空则自动探测",
+  "settings.memosCredential.paste.submit": "校验并保存",
+  "settings.memosCredential.issue.title": "用当前 App 密码自动生成",
+  "settings.memosCredential.issue.subtitle": "后端会按现有规则使用 App 密码 + x 登录 Memos 并创建 PAT。",
+  "settings.memosCredential.issue.password": "当前 App 密码",
+  "settings.memosCredential.issue.passwordPlaceholder": "输入当前登录密码",
+  "settings.memosCredential.issue.submit": "自动生成并保存",
+  "settings.memosCredential.issue.unavailable": "当前服务未配置可用的 Memos 地址，暂不能自动生成 Token。",
+  "settings.memosCredential.newToken.title": "新的 Flow Token（仅显示一次）",
+  "settings.memosCredential.newToken.hint": "请立即复制并保存；离开页面后不会再次显示完整 Token。",
+  "settings.memosCredential.newToken.copied": "新 Token 已复制。",
+  "settings.memosCredential.newToken.copyFailed": "复制失败，请手动选中复制。",
   "settings.memosMigration.title": "数据迁移",
   "settings.memosMigration.cardTitle": "从 Memos 迁移笔记",
   "settings.memosMigration.subtitle": "将 Memos 中的笔记拉取到当前后端（仅拉取，不会写回 Memos）。",
@@ -599,6 +665,39 @@ const en: Messages = {
   "settings.account.role.admin": "Admin",
   "settings.account.role.user": "User",
   "settings.account.changePassword": "Change password",
+  "settings.memosCredential.title": "Memos credential",
+  "settings.memosCredential.cardTitle": "Memos credential binding",
+  "settings.memosCredential.subtitle": "Users can update their Memos token, or issue a new Personal Access Token with the current app password.",
+  "settings.memosCredential.baseUrl": "Memos service URL",
+  "settings.memosCredential.bound": "Binding status",
+  "settings.memosCredential.bound.yes": "Bound",
+  "settings.memosCredential.bound.no": "Not bound",
+  "settings.memosCredential.tokenPreview": "Token preview",
+  "settings.memosCredential.userId": "Memos user ID",
+  "settings.memosCredential.warning": "After a successful update, old Flow Bearer Tokens used by mobile clients or scripts will stop working. Copy the one-time new token below.",
+  "settings.memosCredential.errorPrefix": "Credential update failed: ",
+  "settings.memosCredential.errorGeneric": "Request failed. Please try again.",
+  "settings.memosCredential.success": "Memos credential updated.",
+  "settings.memosCredential.confirmTitle": "Update Memos credential",
+  "settings.memosCredential.confirmMessage": "Old Flow Bearer Tokens will stop working after this update. Make sure you can copy and save the new token from the success response.",
+  "settings.memosCredential.confirmText": "Update",
+  "settings.memosCredential.paste.title": "Paste existing token",
+  "settings.memosCredential.paste.subtitle": "The backend validates that the token belongs to the current same-name Memos user before saving.",
+  "settings.memosCredential.paste.token": "Memos Token / PAT",
+  "settings.memosCredential.paste.tokenPlaceholder": "Paste Memos token",
+  "settings.memosCredential.paste.userId": "Memos user ID (optional)",
+  "settings.memosCredential.paste.userIdPlaceholder": "Leave blank to auto-detect",
+  "settings.memosCredential.paste.submit": "Validate and save",
+  "settings.memosCredential.issue.title": "Auto-issue with app password",
+  "settings.memosCredential.issue.subtitle": "The backend signs in to Memos with app password + x and creates a PAT.",
+  "settings.memosCredential.issue.password": "Current app password",
+  "settings.memosCredential.issue.passwordPlaceholder": "Enter current password",
+  "settings.memosCredential.issue.submit": "Issue and save",
+  "settings.memosCredential.issue.unavailable": "The service has no usable Memos URL configured, so auto-issue is unavailable.",
+  "settings.memosCredential.newToken.title": "New Flow Token (shown once)",
+  "settings.memosCredential.newToken.hint": "Copy and store it now; the full token is not shown again after you leave this page.",
+  "settings.memosCredential.newToken.copied": "New token copied.",
+  "settings.memosCredential.newToken.copyFailed": "Copy failed. Select and copy it manually.",
   "settings.memosMigration.title": "Data migration",
   "settings.memosMigration.cardTitle": "Migrate notes from Memos",
   "settings.memosMigration.subtitle": "Pull memos into this backend (pull-only; never writes back to Memos).",

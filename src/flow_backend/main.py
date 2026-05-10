@@ -26,6 +26,7 @@ from flow_backend.device_tracking import extract_device_id_name, record_device_a
 from flow_backend.routers import (  # pyright: ignore[reportMissingTypeStubs]
     admin,
     auth,
+    memos_credentials,
     memos_migration,
     me,
     settings as settings_router,
@@ -209,6 +210,7 @@ def health() -> HealthResponse:
 
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(me.router, prefix=settings.api_prefix)
+app.include_router(memos_credentials.router, prefix=settings.api_prefix)
 app.include_router(settings_router.router, prefix=settings.api_prefix)
 app.include_router(memos_migration.router, prefix=settings.api_prefix)
 app.include_router(todo.router, prefix=settings.api_prefix)

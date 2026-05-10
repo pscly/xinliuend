@@ -268,25 +268,10 @@
                       </button>
                     </div>
 
-                    <form method="post" action="/admin/users/{{ u.id }}/set-token" class="flex items-center gap-2">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-                      <input
-                        name="memos_id"
-                        type="number"
-                        inputmode="numeric"
-                        min="0"
-                        placeholder="Memos ID（留空=清空）"
-                        class="w-40 rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-xs"
-                      />
-                      <input
-                        name="memos_token"
-                        placeholder="粘贴 Token（留空=清空）"
-                        class="w-full min-w-[280px] rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-indigo-500/45 px-3 py-2 text-xs font-mono"
-                      />
-                      <button class="rounded-xl bg-indigo-600/90 hover:bg-indigo-500 active:bg-indigo-600 px-3 py-2 text-xs font-semibold text-white ring-1 ring-indigo-400/25" type="submit">
-                        保存
-                      </button>
-                    </form>
+                    <div class="flex items-center gap-2 text-xs text-zinc-500">
+                      <a href="/admin/users/{{ u.id }}" class="rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 active:bg-indigo-600/20 px-3 py-2 font-semibold text-indigo-200 ring-1 ring-indigo-400/25">进入详情页更新 Token</a>
+                      <span>为避免误清空，列表页不再提供行内 Token 写入。</span>
+                    </div>
                   </div>
                 </td>
                 <td class="px-5 py-4 text-zinc-400">{{ u.created_at.strftime('%Y-%m-%d %H:%M') if u.created_at else '' }}</td>

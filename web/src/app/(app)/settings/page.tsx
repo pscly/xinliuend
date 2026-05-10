@@ -2,10 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import type { MemosCredentialStatus, MemosCredentialUpdateResponse } from "@/features/memos/memosCredentialApi";
+import { getMemosCredentialStatus, issueMemosCredentialToken, updateMemosCredentialToken } from "@/features/memos/memosCredentialApi";
 import type { MemosMigrationResponse, MemosMigrationSummary } from "@/features/memos/memosMigrationApi";
 import { applyMemosMigration, previewMemosMigration } from "@/features/memos/memosMigrationApi";
 import { InkButton, InkLink } from "@/features/ui/InkButton";
 import { InkCard, InkCardBody, InkCardFooter, InkCardHeader } from "@/features/ui/InkCard";
+import { InkTextField } from "@/features/ui/InkField";
 import { useInkDialog } from "@/features/ui/dialogs/useInkDialog";
 import { Page } from "@/features/ui/Page";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -30,6 +33,16 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState<"preview" | "apply" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [credentialStatus, setCredentialStatus] = useState<MemosCredentialStatus | null>(null);
+  const [credentialLoading, setCredentialLoading] = useState(true);
+  const [credentialBusy, setCredentialBusy] = useState<"paste" | "issue" | "copy" | null>(null);
+  const [credentialError, setCredentialError] = useState<string | null>(null);
+  const [credentialSuccess, setCredentialSuccess] = useState<string | null>(null);
+  const [memosTokenInput, setMemosTokenInput] = useState("");
+  const [memosUserIdInput, setMemosUserIdInput] = useState("");
+  const [appPasswordInput, setAppPasswordInput] = useState("");
+  const [newFlowToken, setNewFlowToken] = useState<MemosCredentialUpdateResponse | null>(null);
+
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => getSyncStatus());
   const [clearingOffline, setClearingOffline] = useState(false);
   const [manualSyncing, setManualSyncing] = useState(false);
@@ -39,6 +52,32 @@ export default function SettingsPage() {
       setSyncStatus(next);
     });
   }, []);
+
+  async function refreshCredentialStatus() {
+    setCredentialLoading(true);
+    try {
+      const status = await getMemosCredentialStatus();
+      setCredentialStatus(status);
+    } catch (e) {
+      setCredentialError(e instanceof Error ? e.message : t("settings.memosCredential.errorGeneric"));
+    } finally {
+      setCredentialLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void refreshCredentialStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleCredentialResult(data: MemosCredentialUpdateResponse) {
+    setNewFlowToken(data);
+    setMemosTokenInput("");
+    setMemosUserIdInput("");
+    setAppPasswordInput("");
+    setCredentialSuccess(t("settings.memosCredential.success"));
+    await refreshCredentialStatus();
+  }
 
   const lastSyncText = useMemo(() => {
     if (!syncStatus.last_sync_at_ms) return t("settings.offline.status.never");
@@ -95,6 +134,184 @@ export default function SettingsPage() {
                 {t("settings.account.changePassword")}
               </InkLink>
             </InkCardFooter>
+          </InkCard>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>{t("settings.memosCredential.title")}</div>
+
+          <InkCard>
+            <InkCardHeader title={t("settings.memosCredential.cardTitle")} subtitle={t("settings.memosCredential.subtitle")} />
+            <InkCardBody className={styles.cardBody}>
+              {credentialLoading ? <div className={styles.hint}>{t("common.loading")}</div> : null}
+
+              <div className={styles.summaryGrid}>
+                <InkCard variant="surface2">
+                  <InkCardBody className={styles.summaryCard}>
+                    <div className={styles.summaryLabel}>{t("settings.memosCredential.baseUrl")}</div>
+                    <div className={styles.summaryValueSmall}>{credentialStatus?.memos_base_url ?? "-"}</div>
+                  </InkCardBody>
+                </InkCard>
+                <InkCard variant="surface2">
+                  <InkCardBody className={styles.summaryCard}>
+                    <div className={styles.summaryLabel}>{t("settings.memosCredential.bound")}</div>
+                    <div className={styles.summaryValueSmall}>
+                      {credentialStatus?.has_token ? t("settings.memosCredential.bound.yes") : t("settings.memosCredential.bound.no")}
+                    </div>
+                  </InkCardBody>
+                </InkCard>
+                <InkCard variant="surface2">
+                  <InkCardBody className={styles.summaryCard}>
+                    <div className={styles.summaryLabel}>{t("settings.memosCredential.tokenPreview")}</div>
+                    <div className={styles.summaryValueSmall}>{credentialStatus?.token_preview ?? "-"}</div>
+                  </InkCardBody>
+                </InkCard>
+                <InkCard variant="surface2">
+                  <InkCardBody className={styles.summaryCard}>
+                    <div className={styles.summaryLabel}>{t("settings.memosCredential.userId")}</div>
+                    <div className={styles.summaryValueSmall}>{credentialStatus?.memos_user_id ?? "-"}</div>
+                  </InkCardBody>
+                </InkCard>
+              </div>
+
+              <div className={styles.hint}>{t("settings.memosCredential.warning")}</div>
+
+              {credentialError ? (
+                <div className={styles.error}>
+                  {t("settings.memosCredential.errorPrefix")}
+                  {credentialError}
+                </div>
+              ) : null}
+              {credentialSuccess ? <div className={styles.success}>{credentialSuccess}</div> : null}
+
+              <div className={styles.credentialGrid}>
+                <InkCard variant="surface2">
+                  <InkCardHeader title={t("settings.memosCredential.paste.title")} subtitle={t("settings.memosCredential.paste.subtitle")} />
+                  <InkCardBody className={styles.cardBody}>
+                    <InkTextField
+                      label={t("settings.memosCredential.paste.token")}
+                      value={memosTokenInput}
+                      onChange={(e) => setMemosTokenInput(e.currentTarget.value)}
+                      placeholder={t("settings.memosCredential.paste.tokenPlaceholder")}
+                      mono
+                      autoComplete="off"
+                    />
+                    <InkTextField
+                      label={t("settings.memosCredential.paste.userId")}
+                      value={memosUserIdInput}
+                      onChange={(e) => setMemosUserIdInput(e.currentTarget.value)}
+                      placeholder={t("settings.memosCredential.paste.userIdPlaceholder")}
+                      inputMode="numeric"
+                    />
+                    <InkButton
+                      type="button"
+                      variant="primary"
+                      disabled={credentialBusy !== null || !memosTokenInput.trim()}
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: t("settings.memosCredential.confirmTitle"),
+                          message: t("settings.memosCredential.confirmMessage"),
+                          confirmText: t("settings.memosCredential.confirmText"),
+                        });
+                        if (!ok) return;
+                        setCredentialBusy("paste");
+                        setCredentialError(null);
+                        setCredentialSuccess(null);
+                        setNewFlowToken(null);
+                        try {
+                          const parsedId = memosUserIdInput.trim() ? Number(memosUserIdInput.trim()) : null;
+                          const res = await updateMemosCredentialToken({
+                            memos_token: memosTokenInput,
+                            memos_user_id: Number.isFinite(parsedId) ? parsedId : null,
+                          });
+                          await handleCredentialResult(res);
+                        } catch (e) {
+                          setCredentialError(e instanceof Error ? e.message : t("settings.memosCredential.errorGeneric"));
+                        } finally {
+                          setCredentialBusy(null);
+                        }
+                      }}
+                    >
+                      {credentialBusy === "paste" ? t("common.saving") : t("settings.memosCredential.paste.submit")}
+                    </InkButton>
+                  </InkCardBody>
+                </InkCard>
+
+                <InkCard variant="surface2">
+                  <InkCardHeader title={t("settings.memosCredential.issue.title")} subtitle={t("settings.memosCredential.issue.subtitle")} />
+                  <InkCardBody className={styles.cardBody}>
+                    <InkTextField
+                      label={t("settings.memosCredential.issue.password")}
+                      value={appPasswordInput}
+                      onChange={(e) => setAppPasswordInput(e.currentTarget.value)}
+                      type="password"
+                      autoComplete="current-password"
+                      placeholder={t("settings.memosCredential.issue.passwordPlaceholder")}
+                      disabled={!credentialStatus?.can_auto_issue_token}
+                    />
+                    <InkButton
+                      type="button"
+                      variant="primary"
+                      disabled={credentialBusy !== null || !appPasswordInput || !credentialStatus?.can_auto_issue_token}
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: t("settings.memosCredential.confirmTitle"),
+                          message: t("settings.memosCredential.confirmMessage"),
+                          confirmText: t("settings.memosCredential.confirmText"),
+                        });
+                        if (!ok) return;
+                        setCredentialBusy("issue");
+                        setCredentialError(null);
+                        setCredentialSuccess(null);
+                        setNewFlowToken(null);
+                        try {
+                          const res = await issueMemosCredentialToken({ current_password: appPasswordInput });
+                          await handleCredentialResult(res);
+                        } catch (e) {
+                          setCredentialError(e instanceof Error ? e.message : t("settings.memosCredential.errorGeneric"));
+                        } finally {
+                          setCredentialBusy(null);
+                        }
+                      }}
+                    >
+                      {credentialBusy === "issue" ? t("common.saving") : t("settings.memosCredential.issue.submit")}
+                    </InkButton>
+                    {!credentialStatus?.can_auto_issue_token ? (
+                      <div className={styles.hint}>{t("settings.memosCredential.issue.unavailable")}</div>
+                    ) : null}
+                  </InkCardBody>
+                </InkCard>
+              </div>
+
+              {newFlowToken ? (
+                <div className={styles.resultBlock}>
+                  <div className={styles.resultTitle}>{t("settings.memosCredential.newToken.title")}</div>
+                  <div className={styles.hint}>{t("settings.memosCredential.newToken.hint")}</div>
+                  <code className={styles.secretBox}>{newFlowToken.token}</code>
+                  <div className={styles.actions}>
+                    <InkButton
+                      type="button"
+                      size="sm"
+                      variant="surface"
+                      disabled={credentialBusy === "copy"}
+                      onClick={async () => {
+                        setCredentialBusy("copy");
+                        try {
+                          await navigator.clipboard.writeText(newFlowToken.token);
+                          setCredentialSuccess(t("settings.memosCredential.newToken.copied"));
+                        } catch {
+                          setCredentialError(t("settings.memosCredential.newToken.copyFailed"));
+                        } finally {
+                          setCredentialBusy(null);
+                        }
+                      }}
+                    >
+                      {t("common.copy")}
+                    </InkButton>
+                  </div>
+                </div>
+              ) : null}
+            </InkCardBody>
           </InkCard>
         </section>
 
