@@ -35,7 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await apiFetchJson<MeResponse>("/api/v1/me", { method: "GET" });
       setSession({
-        user: { username: data.username, isAdmin: data.is_admin },
+        user: {
+          username: data.username,
+          isAdmin: data.is_admin,
+          email: data.email ?? null,
+          emailVerified: Boolean(data.email_verified),
+        },
         csrfToken: data.csrf_token,
         status: "authenticated",
       });

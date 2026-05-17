@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useI18n } from "@/lib/i18n/useI18n";
@@ -149,6 +150,12 @@ export default function LoginPage() {
               >
                 {t("auth.login")}
               </button>
+
+              <div className={styles.helperRow}>
+                <Link href="/forgot-password" className={styles.helperLink}>
+                  {t("auth.forgotPasswordLink")}
+                </Link>
+              </div>
             </form>
           </section>
         </main>

@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.9.0 - 2026-05-17
+
+### Added
+
+- **邮箱找回密码端到端流程**：
+  - 新增 `POST /api/v1/auth/forgot-password` 与 `POST /api/v1/auth/reset-password`，输入邮箱即可通过邮件链接重置密码；
+  - 新增 `POST /api/v1/me/email/request` 与 `POST /api/v1/me/email/confirm`，用户在 `/settings/email` 自助绑定邮箱（6 位数字验证码）；
+  - 新表 `email_verification_tokens`、`password_reset_tokens`，token 仅以 SHA-256 哈希形式落库；
+  - 重置/绑定邮件使用同款 HTML + 纯文本模板，模板位于 `src/flow_backend/templates/emails/`；
+  - 默认限流：`auth_forgot_password=5/IP/5min`、`auth_reset_password=20/IP/5min`、`email_bind_request=5/IP/5min`、`email_bind_confirm=10/IP/5min`，均可在 `.env` 覆写。
+- **管理员后台 SMTP 设置（运行时可编辑，无需重启）**：
+  - 新增 `GET /admin/smtp`、`POST /admin/smtp`、`POST /admin/smtp/test`；
+  - SMTP 密码使用现有 `USER_PASSWORD_ENCRYPTION_KEY`（Fernet）加密存储；
+  - 同时支持 SSL（端口 465）与 STARTTLS（端口 587）；
+  - 配置缺失时回退 `.env` 字段（`EMAIL_HOST/PORT/USERNAME/PASSWORD/FROM_ADDRESS/FROM_NAME/USE_SSL/USE_STARTTLS`）。
+- **`site_settings` 通用键值表 + service**，带 30 秒进程内缓存，写入即失效。
+- **前端**：
+  - 新增公开页面 `/forgot-password` 与 `/reset-password`；
+  - 新增鉴权页面 `/settings/email`；
+  - 登录页加「忘记密码？」入口；
+  - `MeResponse` 与 `useAuth().user` 新增 `email` / `emailVerified` 字段。
+- **管理员强制写入 Memos Token 备用入口**：在 `/admin/users/{id}` 的「更新 Token」表单加「强制写入（不校验）」复选框（`force=1`），便于 Memos 升级后救急。
+
+### Fixed
+
+- **修复升级版 Memos 校验导致 502** —— 新版 Memos 把 user resource name 从 `users/<id>` 改为 `users/<username>`，导致 `_parse_user_identity` 抛错、上游 502。现在 `MemosCurrentUser` 接受 `user_id=0` 作为「无数字 id」哨兵值，`MemosClient.update_user_password` 优先使用 `users/<username>` URL、回退 `users/<numeric_id>`，`change_password` / admin reset 调用都会带上 username。
+- 兼容旧版 Memos 数字 id 的所有现有路径保留。
+
+### Schema migrations
+
+- `20260517_0015_user_email_and_password_reset.py`：`users` 表新增 `email`、`email_verified_at`、`password_changed_at`；创建 `email_verification_tokens`、`password_reset_tokens`、`site_settings` 三张新表。
+
+### Documentation
+
+- README 与 CHANGELOG 同步更新；版本号 `pyproject.toml` 与 `__init__.py` 升至 `0.9.0`。
+
+### Tests
+
+- 新增 38 个测试：
+  - `test_memos_client_new_resource_name.py`、`test_admin_force_bind_memos_token.py`（Memos 兼容性 + force 写入）
+  - `test_site_settings_and_smtp.py`、`test_email_service.py`、`test_admin_smtp_page.py`（SMTP 配置 + 发邮件）
+  - `test_email_binding.py`、`test_forgot_and_reset_password.py`（用户流程 + 反枚举）
+
 ## 0.8.0 - 2026-05-10
 
 ### Added

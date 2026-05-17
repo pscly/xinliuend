@@ -7,13 +7,28 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import BigInteger, Column, Index, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Column, DateTime, Index, String, Text, UniqueConstraint
 from sqlalchemy.types import JSON as SAJSON
 from sqlmodel import Field, SQLModel
 
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def as_utc(value: datetime | None) -> datetime | None:
+    """Coerce a possibly-naive datetime returned from the DB to a UTC-aware one.
+
+    SQLite via SQLAlchemy strips tzinfo on `DateTime(timezone=True)` columns
+    (Postgres preserves it). When code needs to compare a stored value with
+    `utc_now()` it must first re-attach UTC to avoid a `TypeError`.
+    """
+
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
 
 
 class User(SQLModel, table=True):
@@ -25,6 +40,13 @@ class User(SQLModel, table=True):
             unique=True,
             sqlite_where=Column("memos_token", Text).is_not(None),
             postgresql_where=Column("memos_token", Text).is_not(None),
+        ),
+        Index(
+            "uq_users_email_not_null",
+            "email",
+            unique=True,
+            sqlite_where=Column("email", String(320)).is_not(None),
+            postgresql_where=Column("email", String(320)).is_not(None),
         ),
     )
 
@@ -39,9 +61,64 @@ class User(SQLModel, table=True):
     # 允许先创建账号、后续再由管理员在后台手动补齐 memos_token
     memos_token: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
 
+    # 邮箱（小写存储）。仅在用户成功完成邮箱验证后才写入；用于“忘记密码 → 邮件找回”。
+    email: Optional[str] = Field(
+        default=None, sa_column=Column(String(320), nullable=True)
+    )
+    email_verified_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    # 密码最近一次修改时间。session cookie 中的 issued_at 早于该字段则视为失效。
+    password_changed_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+
     is_active: bool = Field(default=True, index=True)
     is_admin: bool = Field(default=False, index=True)
     created_at: datetime = Field(default_factory=utc_now, index=True)
+
+
+class EmailVerificationToken(SQLModel, table=True):
+    __tablename__ = "email_verification_tokens"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True, foreign_key="users.id")
+    email: str = Field(index=True, max_length=320)
+    code_hash: str = Field(index=True, max_length=128)
+    purpose: str = Field(max_length=32)
+    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    consumed_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    created_at: datetime = Field(default_factory=utc_now)
+    ip: Optional[str] = Field(default=None, max_length=64)
+
+
+class PasswordResetToken(SQLModel, table=True):
+    __tablename__ = "password_reset_tokens"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
+    __table_args__ = (
+        Index("uq_password_reset_tokens_token_hash", "token_hash", unique=True),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True, foreign_key="users.id")
+    token_hash: str = Field(max_length=128)
+    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    consumed_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    created_at: datetime = Field(default_factory=utc_now)
+    requester_ip: Optional[str] = Field(default=None, max_length=64)
+    requester_ua: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+
+
+class SiteSetting(SQLModel, table=True):
+    __tablename__ = "site_settings"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
+
+    key: str = Field(primary_key=True, max_length=128)
+    value_json: str = Field(sa_column=Column(Text, nullable=False))
+    updated_at: datetime = Field(default_factory=utc_now)
+    updated_by: Optional[str] = Field(default=None, max_length=64)
 
 
 class UserDevice(SQLModel, table=True):

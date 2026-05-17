@@ -10,7 +10,7 @@ from flow_backend.config import settings
 from flow_backend.db import get_session
 from flow_backend.deps import get_current_user
 from flow_backend.memos_client import MemosClient, MemosClientError
-from flow_backend.models import User
+from flow_backend.models import User, utc_now
 from flow_backend.password_crypto import encrypt_password
 from flow_backend.schemas import ChangePasswordRequest, ChangePasswordResponse, MeResponse
 from flow_backend.security import hash_password, verify_password
@@ -23,7 +23,13 @@ router = APIRouter(prefix="/me", tags=["me"])
 async def get_me(request: Request, user: User = Depends(get_current_user)):
     # SPA can call /me after refresh to obtain a new CSRF token without reading httpOnly cookies.
     csrf_token = getattr(request.state, "user_csrf_token", None)
-    return MeResponse(username=user.username, is_admin=bool(user.is_admin), csrf_token=csrf_token)
+    return MeResponse(
+        username=user.username,
+        is_admin=bool(user.is_admin),
+        csrf_token=csrf_token,
+        email=user.email,
+        email_verified=user.email_verified_at is not None,
+    )
 
 
 @router.post("/password", response_model=ChangePasswordResponse)
@@ -51,10 +57,6 @@ async def change_password(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail="memos token not set; contact admin"
             )
-        if not user.memos_id or int(user.memos_id) <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="memos user id not set; contact admin"
-            )
         if not settings.memos_admin_token.strip():
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -67,8 +69,13 @@ async def change_password(
             timeout_seconds=settings.memos_request_timeout_seconds,
         )
         try:
+            # Pass both numeric id (if known) and username. Newer Memos releases
+            # only accept `users/<username>` PATCH URLs; older releases accept
+            # `users/<numeric_id>`. update_user_password tries each in turn.
             await client.update_user_password(
-                user_id=int(user.memos_id), new_password=payload.new_password
+                user_id=int(user.memos_id or 0),
+                new_password=payload.new_password,
+                username=user.username,
             )
         except MemosClientError as e:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
@@ -87,6 +94,7 @@ async def change_password(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+    user_row.password_changed_at = utc_now()
     session.add(user_row)
     await session.commit()
 

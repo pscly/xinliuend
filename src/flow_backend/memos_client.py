@@ -26,16 +26,22 @@ class MemosUserAndToken:
 class MemosCurrentUser:
     username: str
     user_id: int
+    # New Memos versions use `users/<username>` as the resource name (no numeric id).
+    # Keep the raw resource name so callers that need to address the user via REST
+    # can prefer username over numeric id when the latter is unavailable.
+    name: str = ""
 
     def __getitem__(self, key: str) -> str | int:
         if key == "username":
             return self.username
         if key == "user_id":
             return self.user_id
+        if key == "name":
+            return self.name
         raise KeyError(key)
 
     def as_dict(self) -> dict[str, str | int]:
-        return {"username": self.username, "user_id": self.user_id}
+        return {"username": self.username, "user_id": self.user_id, "name": self.name}
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,7 @@ class MemosSignInResult:
     access_token: str
     username: str
     user_id: int
+    name: str = ""
 
     def __getitem__(self, key: str) -> str | int:
         if key == "access_token":
@@ -51,6 +58,8 @@ class MemosSignInResult:
             return self.username
         if key == "user_id":
             return self.user_id
+        if key == "name":
+            return self.name
         raise KeyError(key)
 
     def as_dict(self) -> dict[str, str | int]:
@@ -58,6 +67,7 @@ class MemosSignInResult:
             "access_token": self.access_token,
             "username": self.username,
             "user_id": self.user_id,
+            "name": self.name,
         }
 
 
@@ -104,8 +114,15 @@ def _parse_user_identity(data: object) -> MemosCurrentUser:
             user_id = int(str(obj.get("id")))
         if user_id is None:
             user_id = _parse_user_id_from_name(obj.get("name"))
-        if user_id is not None:
-            return MemosCurrentUser(username=username.strip(), user_id=user_id)
+        raw_name = obj.get("name") if isinstance(obj.get("name"), str) else ""
+        # New Memos (>= mid-2025) drops numeric user ids and addresses users by
+        # `users/<username>` resource names. Fall back to user_id=0 in that case;
+        # callers that need an addressable identifier should prefer `.name` / `.username`.
+        return MemosCurrentUser(
+            username=username.strip(),
+            user_id=int(user_id) if user_id is not None else 0,
+            name=str(raw_name or "").strip(),
+        )
 
     raise MemosClientError(f"Cannot parse Memos user identity from response: {data}")
 
@@ -195,17 +212,60 @@ class MemosClient:
                     return None
         return None
 
-    async def update_user_password(self, user_id: int, new_password: str) -> None:
-        url = f"{self._base_url}/api/v1/users/{user_id}"
-        params = {"update_mask": "password"}
-        payload = {
-            "name": f"users/{user_id}",
-            "password": memos_password_from_app_password(new_password),
-        }
-        resp = await self._patch_json(url, payload=payload, params=params)
-        if 200 <= resp.status_code < 300:
-            return
-        raise MemosClientError(f"Update user password failed. {resp.status_code} {resp.text}")
+    async def update_user_password(
+        self,
+        user_id: int,
+        new_password: str,
+        *,
+        username: str | None = None,
+    ) -> None:
+        """Patch a Memos user's password.
+
+        New Memos releases address users by `users/<username>` and reject numeric ids,
+        while older releases use `users/<numeric_id>`. We try the username form first
+        when known, then the numeric form, and aggregate the per-attempt errors when
+        neither succeeds.
+        """
+
+        memos_password = memos_password_from_app_password(new_password)
+        attempts: list[tuple[str, dict[str, object]]] = []
+
+        clean_username = (username or "").strip()
+        if clean_username:
+            attempts.append(
+                (
+                    f"{self._base_url}/api/v1/users/{clean_username}",
+                    {
+                        "name": f"users/{clean_username}",
+                        "username": clean_username,
+                        "password": memos_password,
+                    },
+                )
+            )
+
+        if isinstance(user_id, int) and user_id > 0:
+            attempts.append(
+                (
+                    f"{self._base_url}/api/v1/users/{user_id}",
+                    {
+                        "name": f"users/{user_id}",
+                        "password": memos_password,
+                    },
+                )
+            )
+
+        if not attempts:
+            raise MemosClientError(
+                "Update user password failed: neither memos user id nor username is set"
+            )
+
+        last_error = ""
+        for url, payload in attempts:
+            resp = await self._patch_json(url, payload=payload, params={"update_mask": "password"})
+            if 200 <= resp.status_code < 300:
+                return
+            last_error = f"{url} -> {resp.status_code} {resp.text}"
+        raise MemosClientError(f"Update user password failed. last_error={last_error}")
 
     async def create_user(self, endpoints: list[str], username: str, password: str) -> int:
         memos_password = memos_password_from_app_password(password)
@@ -416,7 +476,10 @@ class MemosClient:
                 raise MemosClientError(f"Sign in succeeded but cannot parse access token: {data}")
             identity = _parse_user_identity(data)
             return MemosSignInResult(
-                access_token=token, username=identity.username, user_id=identity.user_id
+                access_token=token,
+                username=identity.username,
+                user_id=identity.user_id,
+                name=identity.name,
             ).as_dict()
         raise MemosClientError(f"Sign in failed. {resp.status_code} {resp.text}")
 

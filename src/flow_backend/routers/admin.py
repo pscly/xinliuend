@@ -27,11 +27,18 @@ from flow_backend.models import User, UserDevice, UserDeviceIP
 from flow_backend.password_crypto import decrypt_password, encrypt_password
 from flow_backend.rate_limiting import build_ip_key, enforce_rate_limit
 from flow_backend.security import hash_password
+from flow_backend.services.email_service import EmailSendError, render_email, send_email
 from flow_backend.services.memos_credentials import (
     clear_memos_credential,
+    force_save_memos_credential_unchecked,
     save_memos_credential,
     token_preview,
     validate_memos_token_for_user,
+)
+from flow_backend.services.smtp_config import (
+    has_stored_password,
+    load_smtp_config,
+    save_smtp_config,
 )
 
 router = APIRouter(tags=["admin"])
@@ -459,6 +466,26 @@ async def set_token(
             return _redirect_to_next(next_url, err="Memos 用户 ID 必须是数字（或留空）")
         memos_id = int(memos_id_s)
 
+    force_raw = str(form.get("force") or "").strip().lower()
+    force = force_raw in {"1", "true", "on", "yes"}
+
+    if force:
+        try:
+            credential = await force_save_memos_credential_unchecked(
+                session=session,
+                user=user,
+                token=token,
+                memos_user_id=memos_id,
+            )
+        except HTTPException as e:
+            return _redirect_to_next(next_url, err=str(e.detail))
+        return _redirect_to_next(
+            next_url,
+            msg=(
+                "已强制写入 Token（未经 Memos 校验）：请尽快确认 Token 归属与权限正确"
+            ),
+        )
+
     try:
         credential = await validate_memos_token_for_user(
             session=session,
@@ -592,7 +619,12 @@ async def admin_reset_user_password(
         return _redirect_to_next(next_url, err="用户不存在")
 
     # Best-effort keep Memos password consistent with app password (password + 'x').
-    if (not settings.dev_bypass_memos) and user.memos_id and int(user.memos_id) > 0:
+    # New-style Memos identifies users by username (no numeric id), so we trigger
+    # the sync whenever the app has a token bound — not only when memos_id > 0.
+    has_memos_link = bool(user.memos_token) or (
+        bool(user.memos_id) and int(user.memos_id or 0) > 0
+    )
+    if (not settings.dev_bypass_memos) and has_memos_link:
         if not settings.memos_admin_token.strip():
             return _redirect_to_next(next_url, err="MEMOS_ADMIN_TOKEN 未配置，无法重置 Memos 密码")
         client = MemosClient(
@@ -601,7 +633,11 @@ async def admin_reset_user_password(
             timeout_seconds=settings.memos_request_timeout_seconds,
         )
         try:
-            await client.update_user_password(user_id=int(user.memos_id), new_password=password)
+            await client.update_user_password(
+                user_id=int(user.memos_id or 0),
+                new_password=password,
+                username=user.username,
+            )
         except MemosClientError as e:
             return _redirect_to_next(next_url, err=str(e))
 
@@ -617,6 +653,164 @@ async def admin_reset_user_password(
     session.add(user)
     await session.commit()
     return _redirect_to_next(next_url, msg="密码已更新")
+
+
+def _smtp_redirect(msg: str | None = None, err: str | None = None) -> RedirectResponse:
+    url = "/admin/smtp"
+    if msg:
+        url += f"?msg={quote(msg)}"
+    if err:
+        sep = "&" if "?" in url else "?"
+        url += f"{sep}err={quote(err)}"
+    return RedirectResponse(url=url, status_code=303)
+
+
+@router.get("/admin/smtp", response_class=HTMLResponse)
+async def admin_smtp_page(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = _get_admin_session(request)
+    if not sess:
+        return _redirect_to_login(next_url="/admin/smtp")
+
+    cfg = await load_smtp_config(session)
+    stored_password = await has_stored_password(session)
+    msg = request.query_params.get("msg")
+    err = request.query_params.get("err")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/smtp_settings.html",
+        context={
+            "csrf_token": sess["csrf_token"],
+            "cfg": cfg,
+            "has_stored_password": stored_password,
+            "msg": msg,
+            "err": err,
+        },
+    )
+
+
+@router.post("/admin/smtp")
+async def admin_smtp_save(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = _get_admin_session(request)
+    if not sess:
+        return _redirect_to_login(next_url="/admin/smtp")
+
+    form = await request.form()
+    if not _csrf_ok(str(form.get("csrf_token") or ""), sess["csrf_token"]):
+        resp = _redirect_to_login(next_url="/admin/smtp", err="CSRF 校验失败，请重新登录")
+        _clear_admin_session_cookie(resp)
+        return resp
+
+    host = str(form.get("host") or "").strip()
+    port_s = str(form.get("port") or "").strip()
+    username = str(form.get("username") or "").strip()
+    password = str(form.get("password") or "")  # do not strip — admins may include trailing spaces? probably not, but be conservative
+    from_address = str(form.get("from_address") or "").strip()
+    from_name = str(form.get("from_name") or "").strip()
+    reply_to = str(form.get("reply_to") or "").strip()
+    use_ssl = str(form.get("use_ssl") or "").strip().lower() in {"1", "true", "on", "yes"}
+    use_starttls = str(form.get("use_starttls") or "").strip().lower() in {
+        "1",
+        "true",
+        "on",
+        "yes",
+    }
+
+    if not host:
+        return _smtp_redirect(err="SMTP 主机不能为空")
+    if not port_s.isdigit() or not (1 <= int(port_s) <= 65535):
+        return _smtp_redirect(err="SMTP 端口必须是 1-65535 的整数")
+    if not username:
+        return _smtp_redirect(err="SMTP 用户名不能为空")
+    if not from_address or "@" not in from_address:
+        return _smtp_redirect(err="发件地址必须是合法的邮箱")
+
+    # password=None => keep existing; empty submitted string treated as "don't overwrite"
+    password_to_store: str | None
+    if password.strip() == "":
+        password_to_store = None
+    else:
+        password_to_store = password
+
+    try:
+        await save_smtp_config(
+            session,
+            host=host,
+            port=int(port_s),
+            username=username,
+            password=password_to_store,
+            from_address=from_address,
+            from_name=from_name,
+            use_ssl=use_ssl,
+            use_starttls=use_starttls,
+            reply_to=reply_to,
+            updated_by=settings.admin_basic_user or "admin",
+        )
+    except Exception as exc:
+        return _smtp_redirect(err=f"保存失败：{exc}")
+
+    return _smtp_redirect(msg="已保存 SMTP 配置")
+
+
+@router.post("/admin/smtp/test")
+async def admin_smtp_test(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    sess = _get_admin_session(request)
+    if not sess:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"ok": False, "error": "unauthorized"},
+        )
+
+    form = await request.form()
+    if not _csrf_ok(str(form.get("csrf_token") or ""), sess["csrf_token"]):
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"ok": False, "error": "CSRF 校验失败，请重新登录"},
+        )
+
+    to_address = str(form.get("to_address") or "").strip()
+    if not to_address or "@" not in to_address:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"ok": False, "error": "请填写合法的收件邮箱"},
+        )
+
+    cfg = await load_smtp_config(session)
+    try:
+        from datetime import datetime as _dt
+
+        html, text = render_email(
+            "test",
+            {
+                "brand_name": "心流（Flow）",
+                "smtp_host": cfg.host,
+                "smtp_port": cfg.port,
+                "trigger_time": _dt.now().isoformat(timespec="seconds"),
+                "trigger_admin": settings.admin_basic_user or "admin",
+            },
+        )
+        await send_email(
+            session=session,
+            to_address=to_address,
+            subject="【心流 Flow】SMTP 测试邮件",
+            html=html,
+            text=text,
+        )
+    except EmailSendError as exc:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"ok": False, "error": str(exc)},
+        )
+
+    return {"ok": True}
 
 
 @router.get("/admin/users/{user_id}/devices", response_class=HTMLResponse)

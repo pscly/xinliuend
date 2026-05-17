@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Flow 管理后台 - SMTP 配置</title>
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/_assets/icon-192.png" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica", "Arial", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "sans-serif"],
+              mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "monospace"],
+            },
+            boxShadow: {
+              soft: "0 10px 30px rgba(0,0,0,.35)",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+    <div class="pointer-events-none fixed inset-0 -z-10">
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(99,102,241,0.18),transparent_55%)]"></div>
+      <div class="absolute inset-0 opacity-20 [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <div class="mb-6 sm:mb-8 flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl ring-1 ring-emerald-400/25 shadow-soft overflow-hidden">
+            <img src="/_assets/icon-192.png" class="h-full w-full object-cover" alt="" aria-hidden="true" />
+          </div>
+          <div>
+            <h1 class="text-xl sm:text-2xl font-semibold tracking-tight">SMTP 邮件配置</h1>
+            <div class="mt-1 text-sm text-zinc-400">配置后即生效（无需重启）；用于「忘记密码」与邮箱绑定验证码邮件</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap justify-end">
+          <a href="/admin" class="rounded-xl bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-2 text-xs font-semibold ring-1 ring-zinc-700">返回用户列表</a>
+          <form method="post" action="/admin/logout">
+            <button class="rounded-xl bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-800 px-3 py-2 text-xs font-semibold ring-1 ring-zinc-700" type="submit">退出登录</button>
+          </form>
+        </div>
+      </div>
+
+      {% if err %}
+      <div class="mb-4 rounded-xl border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm text-red-200 ring-1 ring-red-900/30">
+        <div class="font-medium">操作失败</div>
+        <div class="mt-1 text-red-200/90 break-all">{{ err }}</div>
+      </div>
+      {% endif %}
+      {% if msg %}
+      <div class="mb-4 rounded-xl border border-emerald-900/60 bg-emerald-950/25 px-4 py-3 text-sm text-emerald-200 ring-1 ring-emerald-900/25">
+        <div class="font-medium">已完成</div>
+        <div class="mt-1 text-emerald-200/90 break-all">{{ msg }}</div>
+      </div>
+      {% endif %}
+
+      <div class="rounded-2xl bg-zinc-900/50 ring-1 ring-zinc-800 shadow-soft overflow-hidden">
+        <div class="px-5 py-4 border-b border-zinc-800">
+          <div class="text-base font-semibold">SMTP 服务器参数</div>
+          <div class="mt-1 text-sm text-zinc-400">支持 SSL（465）与 STARTTLS（587）。163 邮箱建议：smtp.163.com / 465 / SSL，发件地址必须等于用户名。</div>
+        </div>
+
+        <form method="post" action="/admin/smtp" class="px-5 py-5 grid gap-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <label class="md:col-span-2 block">
+              <span class="block text-xs text-zinc-400 mb-1">SMTP 主机</span>
+              <input name="host" value="{{ cfg.host or '' }}" placeholder="例如：smtp.163.com" class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm" />
+            </label>
+            <label class="block">
+              <span class="block text-xs text-zinc-400 mb-1">端口</span>
+              <input name="port" type="number" min="1" max="65535" value="{{ cfg.port or 465 }}" placeholder="465 / 587" class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm" />
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label class="block">
+              <span class="block text-xs text-zinc-400 mb-1">用户名（登录账号）</span>
+              <input name="username" value="{{ cfg.username or '' }}" placeholder="例如：pscly1@163.com" class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm" />
+            </label>
+            <label class="block">
+              <span class="block text-xs text-zinc-400 mb-1">
+                密码 / 授权码
+                {% if has_stored_password %}
+                <span class="ml-1 text-emerald-300/80">（已保存，留空即保留）</span>
+                {% else %}
+                <span class="ml-1 text-amber-300/80">（尚未配置）</span>
+                {% endif %}
+              </span>
+              <input name="password" type="password" placeholder="{{ '保持不变请留空' if has_stored_password else '163 邮箱请填授权码' }}" class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm font-mono" autocomplete="new-password" />
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label class="block">
+              <span class="block text-xs text-zinc-400 mb-1">发件地址（From）</span>
+              <input name="from_address" value="{{ cfg.from_address or '' }}" placeholder="例如：pscly1@163.com（163 要求与用户名相同）" class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm" />
+            </label>
+            <label class="block">
+              <span class="block text-xs text-zinc-400 mb-1">发件人名称（可选）</span>
+              <input name="from_name" value="{{ cfg.from_name or '心流' }}" placeholder="例如：心流" class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm" />
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label class="block">
+              <span class="block text-xs text-zinc-400 mb-1">回信地址（Reply-To，可选）</span>
+              <input name="reply_to" value="{{ cfg.reply_to or '' }}" placeholder="例如：noreply@example.com" class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm" />
+            </label>
+            <div class="flex items-center gap-6 mt-1">
+              <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="use_ssl" value="1" {% if cfg.use_ssl %}checked{% endif %} class="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500/50" />
+                <span class="text-sm">使用 SSL（端口 465）</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="use_starttls" value="1" {% if cfg.use_starttls %}checked{% endif %} class="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500/50" />
+                <span class="text-sm">使用 STARTTLS（端口 587）</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+            <button class="rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-600 px-4 py-2 text-sm font-semibold text-zinc-950" type="submit">保存配置</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="mt-6 rounded-2xl bg-zinc-900/50 ring-1 ring-zinc-800 shadow-soft overflow-hidden">
+        <div class="px-5 py-4 border-b border-zinc-800">
+          <div class="text-base font-semibold">发送测试邮件</div>
+          <div class="mt-1 text-sm text-zinc-400">用上方已保存的配置立即发送一封测试邮件，确认 SMTP 链路是否通畅。</div>
+        </div>
+        <div class="px-5 py-5 grid gap-3">
+          <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+            <label class="flex-1">
+              <span class="block text-xs text-zinc-400 mb-1">收件地址</span>
+              <input id="testTo" placeholder="例如：pscly1@163.com" class="w-full rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800 focus:ring-emerald-500/50 px-3 py-2 text-sm" />
+            </label>
+            <button id="sendTestBtn" type="button" class="rounded-xl bg-indigo-600/90 hover:bg-indigo-500 active:bg-indigo-600 px-4 py-2 text-sm font-semibold text-white ring-1 ring-indigo-400/25">
+              发送测试邮件
+            </button>
+          </div>
+          <div id="testResult" class="hidden rounded-xl px-4 py-3 text-sm"></div>
+        </div>
+      </div>
+
+      <div id="toastHost" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+    </div>
+
+    <script>
+      function showToast(message, type) {
+        const host = document.getElementById("toastHost");
+        if (!host) return;
+        const el = document.createElement("div");
+        const ok = type === "ok";
+        el.className =
+          "max-w-sm rounded-xl px-4 py-3 text-sm ring-1 shadow-soft " +
+          (ok ? "bg-emerald-950/60 text-emerald-200 ring-emerald-900/40" : "bg-red-950/60 text-red-200 ring-red-900/40");
+        el.textContent = message;
+        host.appendChild(el);
+        setTimeout(() => el.classList.add("opacity-0"), 2500);
+        setTimeout(() => el.remove(), 2900);
+      }
+
+      function showResult(message, ok) {
+        const box = document.getElementById("testResult");
+        if (!box) return;
+        box.className =
+          "rounded-xl px-4 py-3 text-sm ring-1 " +
+          (ok ? "bg-emerald-950/40 text-emerald-200 ring-emerald-900/40" : "bg-red-950/40 text-red-200 ring-red-900/40");
+        box.textContent = message;
+      }
+
+      document.getElementById("sendTestBtn").addEventListener("click", async () => {
+        const to = (document.getElementById("testTo").value || "").trim();
+        if (!to || to.indexOf("@") < 0) {
+          showToast("请填写合法的收件邮箱", "err");
+          return;
+        }
+        const csrfToken = "{{ csrf_token }}";
+        const btn = document.getElementById("sendTestBtn");
+        const oldText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "发送中…";
+        try {
+          const res = await fetch("/admin/smtp/test", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ csrf_token: csrfToken, to_address: to }).toString(),
+          });
+          const data = await res.json().catch(() => ({ ok: false, error: "无法解析响应" }));
+          if (res.ok && data.ok === true) {
+            showResult(`已发送到 ${to}，请到收件箱查看（注意 163 可能放进垃圾邮件）。`, true);
+            showToast("测试邮件已发送", "ok");
+          } else {
+            showResult(`发送失败：${(data && data.error) || res.status}`, false);
+            showToast("发送失败", "err");
+          }
+        } catch (e) {
+          showResult(`请求错误：${e}`, false);
+          showToast("请求错误", "err");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = oldText;
+        }
+      });
+    </script>
+  </body>
+</html>

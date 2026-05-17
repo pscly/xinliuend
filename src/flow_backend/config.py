@@ -135,6 +135,26 @@ class Settings(BaseSettings):
     auth_login_rate_limit_per_ip_user: int = 10
     auth_register_rate_limit_per_ip: int = 10
     admin_login_rate_limit_per_ip: int = 20
+    auth_forgot_password_rate_limit_per_ip: int = 5
+    auth_reset_password_rate_limit_per_ip: int = 20
+    email_bind_request_rate_limit_per_ip: int = 5
+    email_bind_confirm_rate_limit_per_ip: int = 10
+
+    # SMTP fallback (used only when site_settings.smtp.* is empty).
+    # Admins should prefer the /admin/smtp UI (DB-backed runtime config).
+    email_host: str = ""
+    email_port: int = 465
+    email_username: str = ""
+    email_password: str = ""
+    email_from_address: str = ""
+    email_from_name: str = ""
+    email_use_ssl: bool = True
+    email_use_starttls: bool = False
+
+    # Password reset tokens
+    password_reset_token_ttl_seconds: int = 60 * 30  # 30 minutes
+    # Email verification codes (binding)
+    email_verification_code_ttl_seconds: int = 60 * 10  # 10 minutes
 
     # Validate production settings early to fail fast on unsafe defaults.
     if model_validator is not None:

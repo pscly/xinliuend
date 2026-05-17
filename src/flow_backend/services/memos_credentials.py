@@ -77,12 +77,10 @@ def _extract_validated_info(info: dict[str, Any]) -> tuple[str, int]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Memos Token 校验成功，但无法解析 Memos 用户名",
         )
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Memos Token 校验成功，但无法解析 Memos 用户 ID",
-        )
-    return username, int(user_id)
+    # Newer Memos versions identify users by `users/<username>` resource names and
+    # no longer expose numeric ids. user_id == 0 is treated as "unknown numeric id"
+    # and is acceptable; downstream code keys off the username instead.
+    return username, int(user_id) if user_id is not None else 0
 
 
 def _build_memos_client() -> MemosClient:
@@ -142,7 +140,15 @@ async def validate_memos_token_for_user(
             detail=f"Memos username mismatch: expected {user.username}, got {memos_username}",
         )
 
-    if memos_user_id is not None and int(memos_user_id) != resolved_memos_user_id:
+    if (
+        memos_user_id is not None
+        and resolved_memos_user_id > 0
+        and int(memos_user_id) != resolved_memos_user_id
+    ):
+        # When the resolved id is 0 the upstream Memos didn't expose a numeric id
+        # for this user (new resource-name scheme). Comparing 0 against the caller's
+        # value would always fail, so we only enforce equality when we actually got
+        # a real id back from Memos.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="memos_user_id does not match Memos Token owner",
@@ -153,6 +159,51 @@ async def validate_memos_token_for_user(
         memos_user_id=resolved_memos_user_id,
         memos_username=memos_username,
     )
+
+
+async def force_save_memos_credential_unchecked(
+    *,
+    session: AsyncSession,
+    user: User,
+    token: str,
+    memos_user_id: int | None,
+) -> ValidatedMemosCredential:
+    """Admin escape hatch: write a memos token to the user WITHOUT calling Memos.
+
+    This is needed when the upstream Memos cannot validate the token (e.g. just
+    after an upstream upgrade changed its identity API and the validation call
+    fails before the parser can decode the response). The caller is responsible
+    for surfacing a clear "未校验" warning to the operator.
+    """
+
+    clean_token = normalize_memos_token(token)
+    if clean_token is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="memos_token is required",
+        )
+    user_id = user.id
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="user id missing"
+        )
+
+    existing = (
+        await session.exec(
+            select(User).where((User.memos_token == clean_token) & (User.id != int(user_id)))
+        )
+    ).first()
+    if existing is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Token 已被其它用户占用")
+
+    resolved_id = int(memos_user_id) if memos_user_id is not None and int(memos_user_id) >= 0 else 0
+    credential = ValidatedMemosCredential(
+        token=clean_token,
+        memos_user_id=resolved_id,
+        memos_username=user.username,
+    )
+    await save_memos_credential(session=session, user_id=int(user_id), credential=credential)
+    return credential
 
 
 async def save_memos_credential(

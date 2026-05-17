@@ -93,7 +93,13 @@ async def test_memos_client_sign_in_and_create_pat_prefer_latest_endpoints(
         description="flow token",
     )
 
-    assert signin == {"access_token": "signin-access-token", "username": "alice", "user_id": 42}
+    # `name` was added so callers can address users by `users/<username>` on new Memos.
+    assert signin == {
+        "access_token": "signin-access-token",
+        "username": "alice",
+        "user_id": 42,
+        "name": "users/42",
+    }
     assert token == "pat-token"
     assert [c[1] for c in calls] == [
         "/api/v1/auth/signin",

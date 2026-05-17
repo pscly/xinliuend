@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -12,13 +13,30 @@ from flow_backend.config import settings
 from flow_backend.db import get_session, session_scope
 from flow_backend.device_tracking import extract_client_ip, record_device_activity
 from flow_backend.memos_client import MemosClient, MemosClientError
-from flow_backend.models import User
+from flow_backend.models import User, utc_now
 from flow_backend.password_crypto import encrypt_password
-from flow_backend.schemas import AuthTokenResponse, LoginRequest, RegisterRequest
+from flow_backend.schemas import (
+    AuthTokenResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    LoginRequest,
+    RegisterRequest,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
+)
 from flow_backend.schemas_common import OkResponse
 from flow_backend.security import hash_password, verify_password
 from flow_backend.rate_limiting import build_ip_key, build_ip_username_key, enforce_rate_limit
+from flow_backend.services.email_service import EmailSendError, render_email, send_email
+from flow_backend.services.email_verification_service import normalize_email
+from flow_backend.services.password_reset_service import (
+    consume_reset_token,
+    create_reset_token,
+)
 import flow_backend.user_session
+
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -171,6 +189,167 @@ async def login(
         server_url=settings.memos_base_url,
         csrf_token=csrf_token,
     )
+
+
+async def _send_reset_email_in_session(
+    *,
+    to_address: str,
+    username: str,
+    reset_url: str,
+    ttl_minutes: int,
+) -> None:
+    """Background task wrapper that opens its own DB session."""
+
+    html, text = render_email(
+        "password_reset",
+        {
+            "brand_name": "心流（Flow）",
+            "username": username,
+            "reset_url": reset_url,
+            "ttl_minutes": ttl_minutes,
+        },
+    )
+    try:
+        async with session_scope() as bg_session:
+            await send_email(
+                session=bg_session,
+                to_address=to_address,
+                subject="【心流 Flow】重置账号密码",
+                html=html,
+                text=text,
+            )
+    except EmailSendError as exc:
+        logger.warning("forgot-password email send failed to=%s: %s", to_address, exc)
+    except Exception:
+        logger.exception("forgot-password email task crashed")
+
+
+@router.post(
+    "/forgot-password",
+    response_model=ForgotPasswordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    background: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
+) -> ForgotPasswordResponse:
+    """Issue a password-reset token and email it.
+
+    Always returns 200 with the same body regardless of whether the email
+    matches a registered+verified user. This blocks user enumeration via the
+    public endpoint.
+    """
+
+    ip = extract_client_ip(request)
+    await enforce_rate_limit(
+        scope="auth_forgot_password",
+        key=build_ip_key(ip),
+        limit=settings.auth_forgot_password_rate_limit_per_ip,
+        window_seconds=settings.rate_limit_window_seconds,
+    )
+
+    normalized = normalize_email(payload.email)
+    if "@" in normalized and len(normalized) <= 320:
+        user = (
+            await session.exec(
+                select(User)
+                .where(User.email == normalized)
+                .where(User.is_active.is_(True))  # type: ignore[union-attr]
+                .where(User.email_verified_at.is_not(None))  # type: ignore[union-attr]
+            )
+        ).first()
+        if user is not None:
+            ua = request.headers.get("user-agent")
+            raw_token = await create_reset_token(
+                session=session,
+                user=user,
+                requester_ip=ip,
+                requester_ua=ua,
+            )
+            base = settings.public_base_url.rstrip("/") or "http://localhost:31031"
+            reset_url = f"{base}/reset-password?token={raw_token}"
+            ttl_minutes = max(1, int(settings.password_reset_token_ttl_seconds) // 60)
+            background.add_task(
+                _send_reset_email_in_session,
+                to_address=normalized,
+                username=user.username,
+                reset_url=reset_url,
+                ttl_minutes=ttl_minutes,
+            )
+
+    # Always the same response — do not leak whether the email exists.
+    return ForgotPasswordResponse(ok=True)
+
+
+@router.post(
+    "/reset-password",
+    response_model=ResetPasswordResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def reset_password(
+    payload: ResetPasswordRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> ResetPasswordResponse:
+    ip = extract_client_ip(request)
+    await enforce_rate_limit(
+        scope="auth_reset_password",
+        key=build_ip_key(ip),
+        limit=settings.auth_reset_password_rate_limit_per_ip,
+        window_seconds=settings.rate_limit_window_seconds,
+    )
+
+    if payload.new_password != payload.new_password2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="两次输入的新密码不一致"
+        )
+
+    user = await consume_reset_token(session=session, raw_token=payload.token)
+    if user is None or user.id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="重置链接已失效或已被使用，请重新申请",
+        )
+
+    memos_sync_warning: str | None = None
+    if (not settings.dev_bypass_memos) and user.memos_token:
+        if not settings.memos_admin_token.strip():
+            memos_sync_warning = "MEMOS_ADMIN_TOKEN 未配置，Memos 端密码未同步"
+            logger.warning("MEMOS_ADMIN_TOKEN missing during reset-password for user=%s", user.username)
+        else:
+            client = MemosClient(
+                base_url=settings.memos_base_url,
+                admin_token=settings.memos_admin_token,
+                timeout_seconds=settings.memos_request_timeout_seconds,
+            )
+            try:
+                await client.update_user_password(
+                    user_id=int(user.memos_id or 0),
+                    new_password=payload.new_password,
+                    username=user.username,
+                )
+            except MemosClientError as e:
+                memos_sync_warning = f"Memos 端密码同步失败：{e}"
+                logger.warning("Memos sync failed during reset for user=%s: %s", user.username, e)
+
+    user_row = await session.get(User, int(user.id))
+    if user_row is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+    try:
+        user_row.password_hash = hash_password(payload.new_password)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    try:
+        user_row.password_enc = encrypt_password(payload.new_password)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    user_row.password_changed_at = utc_now()
+    session.add(user_row)
+    await session.commit()
+
+    return ResetPasswordResponse(ok=True, memos_sync_warning=memos_sync_warning)
 
 
 @router.post("/logout", response_model=OkResponse)

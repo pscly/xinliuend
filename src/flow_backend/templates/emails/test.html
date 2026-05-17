@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>SMTP 测试邮件</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f2329;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:24px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(15,23,42,0.06);">
+            <tr>
+              <td style="padding:28px 32px;">
+                <div style="font-size:18px;font-weight:600;color:#0f172a;">{{ brand_name or "心流（Flow）" }}</div>
+                <div style="margin-top:4px;font-size:13px;color:#64748b;">SMTP 配置测试邮件</div>
+                <p style="margin:18px 0 6px;font-size:15px;line-height:1.7;color:#1f2937;">
+                  这是一封来自 <strong>Flow Backend / Admin</strong> 的测试邮件。
+                </p>
+                <p style="margin:0 0 12px;font-size:13px;color:#475569;line-height:1.7;">
+                  如果你收到了它，说明站点的 SMTP 配置（{{ smtp_host }}:{{ smtp_port }}）工作正常。
+                </p>
+                <pre style="margin:12px 0 0;padding:12px 14px;background:#0f172a;color:#bef264;border-radius:8px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.6;white-space:pre-wrap;">
+触发时间：{{ trigger_time }}
+触发管理员：{{ trigger_admin }}
+                </pre>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

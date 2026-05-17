@@ -1,0 +1,6 @@
+{{ brand_name or "心流（Flow）" }} — SMTP 测试邮件
+
+如果你收到了这封邮件，说明 SMTP 配置（{{ smtp_host }}:{{ smtp_port }}）工作正常。
+
+触发时间：{{ trigger_time }}
+触发管理员：{{ trigger_admin }}

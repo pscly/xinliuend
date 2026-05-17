@@ -131,6 +131,55 @@ export type MessageKey =
   | "settings.password.errorMismatch"
   | "settings.password.errorGeneric"
   | "settings.password.errorNetwork"
+  | "settings.email.entry"
+  | "settings.email.entry.subtitle"
+  | "page.settings.email.title"
+  | "page.settings.email.subtitle"
+  | "settings.email.currentLabel"
+  | "settings.email.notBound"
+  | "settings.email.boundPrefix"
+  | "settings.email.verifiedBadge"
+  | "settings.email.unverifiedBadge"
+  | "settings.email.requestCard.title"
+  | "settings.email.requestCard.subtitle"
+  | "settings.email.input.label"
+  | "settings.email.input.placeholder"
+  | "settings.email.requestSubmit"
+  | "settings.email.requestSubmitting"
+  | "settings.email.codeSent"
+  | "settings.email.confirmCard.title"
+  | "settings.email.confirmCard.subtitle"
+  | "settings.email.codeLabel"
+  | "settings.email.codePlaceholder"
+  | "settings.email.confirmSubmit"
+  | "settings.email.confirmSubmitting"
+  | "settings.email.success"
+  | "settings.email.errorPrefix"
+  | "settings.email.invalidEmail"
+  | "settings.email.back"
+  | "auth.forgotPasswordLink"
+  | "page.forgot.title"
+  | "page.forgot.subtitle"
+  | "page.forgot.emailLabel"
+  | "page.forgot.emailPlaceholder"
+  | "page.forgot.submit"
+  | "page.forgot.submitting"
+  | "page.forgot.successHint"
+  | "page.forgot.backToLogin"
+  | "page.forgot.invalidEmail"
+  | "page.reset.title"
+  | "page.reset.subtitle"
+  | "page.reset.missingToken"
+  | "page.reset.newPasswordLabel"
+  | "page.reset.confirmPasswordLabel"
+  | "page.reset.submit"
+  | "page.reset.submitting"
+  | "page.reset.successHint"
+  | "page.reset.memosSyncWarningPrefix"
+  | "page.reset.errorInvalidLink"
+  | "page.reset.errorMismatch"
+  | "page.reset.errorGeneric"
+  | "page.reset.goLogin"
   | "auth.username"
   | "auth.password"
   | "auth.login"
@@ -444,6 +493,55 @@ const zhCN: Messages = {
   "settings.password.errorMismatch": "两次输入的新密码不一致。",
   "settings.password.errorGeneric": "修改失败，请稍后重试。",
   "settings.password.errorNetwork": "网络错误或服务不可用，请稍后重试。",
+  "settings.email.entry": "邮箱绑定",
+  "settings.email.entry.subtitle": "用于密码找回与重要通知",
+  "page.settings.email.title": "邮箱绑定",
+  "page.settings.email.subtitle": "绑定邮箱后即可在「忘记密码」时通过邮件重置。",
+  "settings.email.currentLabel": "当前邮箱",
+  "settings.email.notBound": "未绑定",
+  "settings.email.boundPrefix": "已绑定：",
+  "settings.email.verifiedBadge": "已验证",
+  "settings.email.unverifiedBadge": "未验证",
+  "settings.email.requestCard.title": "1. 发送验证码",
+  "settings.email.requestCard.subtitle": "将向该邮箱发送 6 位数字验证码（10 分钟内有效）。",
+  "settings.email.input.label": "邮箱地址",
+  "settings.email.input.placeholder": "例如：you@example.com",
+  "settings.email.requestSubmit": "发送验证码",
+  "settings.email.requestSubmitting": "发送中…",
+  "settings.email.codeSent": "验证码已发送，请到邮箱查收（注意垃圾邮件）。",
+  "settings.email.confirmCard.title": "2. 输入验证码",
+  "settings.email.confirmCard.subtitle": "请使用刚才邮件中收到的 6 位验证码完成绑定。",
+  "settings.email.codeLabel": "验证码",
+  "settings.email.codePlaceholder": "6 位数字",
+  "settings.email.confirmSubmit": "确认绑定",
+  "settings.email.confirmSubmitting": "提交中…",
+  "settings.email.success": "邮箱绑定成功！",
+  "settings.email.errorPrefix": "操作失败：",
+  "settings.email.invalidEmail": "请输入合法的邮箱地址。",
+  "settings.email.back": "返回设置",
+  "auth.forgotPasswordLink": "忘记密码？",
+  "page.forgot.title": "忘记密码",
+  "page.forgot.subtitle": "输入已绑定并验证的邮箱，我们会发送一封重置链接到你的邮箱。",
+  "page.forgot.emailLabel": "已绑定的邮箱",
+  "page.forgot.emailPlaceholder": "例如：you@example.com",
+  "page.forgot.submit": "发送重置邮件",
+  "page.forgot.submitting": "发送中…",
+  "page.forgot.successHint": "如果该邮箱已注册并验证，重置链接已发送，请查收（含垃圾邮件文件夹）。",
+  "page.forgot.backToLogin": "返回登录",
+  "page.forgot.invalidEmail": "请输入合法的邮箱地址。",
+  "page.reset.title": "重置密码",
+  "page.reset.subtitle": "请输入新的密码，至少 6 位。",
+  "page.reset.missingToken": "无效的链接：缺少 token 参数。请回到「忘记密码」页面重新发起。",
+  "page.reset.newPasswordLabel": "新密码",
+  "page.reset.confirmPasswordLabel": "确认新密码",
+  "page.reset.submit": "提交并重置",
+  "page.reset.submitting": "提交中…",
+  "page.reset.successHint": "密码已重置，请用新密码登录。",
+  "page.reset.memosSyncWarningPrefix": "提醒：",
+  "page.reset.errorInvalidLink": "重置链接已失效或已使用，请重新发起申请。",
+  "page.reset.errorMismatch": "两次输入的密码不一致。",
+  "page.reset.errorGeneric": "重置失败，请稍后重试。",
+  "page.reset.goLogin": "去登录",
   "auth.username": "用户名",
   "auth.password": "密码",
   "auth.login": "登录",
@@ -756,6 +854,55 @@ const en: Messages = {
   "settings.password.errorMismatch": "Passwords do not match.",
   "settings.password.errorGeneric": "Update failed. Please try again.",
   "settings.password.errorNetwork": "Network error or service unavailable. Please try again.",
+  "settings.email.entry": "Email binding",
+  "settings.email.entry.subtitle": "Used for password recovery & important notices",
+  "page.settings.email.title": "Email binding",
+  "page.settings.email.subtitle": "After binding an email you can reset your password via email.",
+  "settings.email.currentLabel": "Current email",
+  "settings.email.notBound": "Not bound",
+  "settings.email.boundPrefix": "Bound: ",
+  "settings.email.verifiedBadge": "Verified",
+  "settings.email.unverifiedBadge": "Unverified",
+  "settings.email.requestCard.title": "1. Send verification code",
+  "settings.email.requestCard.subtitle": "We will send a 6-digit code to this email (valid for 10 minutes).",
+  "settings.email.input.label": "Email address",
+  "settings.email.input.placeholder": "e.g. you@example.com",
+  "settings.email.requestSubmit": "Send code",
+  "settings.email.requestSubmitting": "Sending…",
+  "settings.email.codeSent": "Code sent. Please check your inbox (and the spam folder).",
+  "settings.email.confirmCard.title": "2. Enter the code",
+  "settings.email.confirmCard.subtitle": "Enter the 6-digit code from the email to complete binding.",
+  "settings.email.codeLabel": "Verification code",
+  "settings.email.codePlaceholder": "6-digit number",
+  "settings.email.confirmSubmit": "Confirm binding",
+  "settings.email.confirmSubmitting": "Submitting…",
+  "settings.email.success": "Email bound successfully!",
+  "settings.email.errorPrefix": "Operation failed: ",
+  "settings.email.invalidEmail": "Please enter a valid email address.",
+  "settings.email.back": "Back to Settings",
+  "auth.forgotPasswordLink": "Forgot password?",
+  "page.forgot.title": "Forgot password",
+  "page.forgot.subtitle": "Enter the email you bound and verified; we will send a reset link.",
+  "page.forgot.emailLabel": "Bound email",
+  "page.forgot.emailPlaceholder": "e.g. you@example.com",
+  "page.forgot.submit": "Send reset email",
+  "page.forgot.submitting": "Sending…",
+  "page.forgot.successHint": "If the email is registered and verified, a reset link has been sent. Please check your inbox (including spam).",
+  "page.forgot.backToLogin": "Back to sign in",
+  "page.forgot.invalidEmail": "Please enter a valid email address.",
+  "page.reset.title": "Reset password",
+  "page.reset.subtitle": "Enter your new password (at least 6 characters).",
+  "page.reset.missingToken": "Invalid link: missing token parameter. Please request a new one from the Forgot Password page.",
+  "page.reset.newPasswordLabel": "New password",
+  "page.reset.confirmPasswordLabel": "Confirm new password",
+  "page.reset.submit": "Submit",
+  "page.reset.submitting": "Submitting…",
+  "page.reset.successHint": "Password has been reset. Please sign in with the new password.",
+  "page.reset.memosSyncWarningPrefix": "Notice: ",
+  "page.reset.errorInvalidLink": "Reset link is invalid or already used. Please request a new one.",
+  "page.reset.errorMismatch": "Passwords do not match.",
+  "page.reset.errorGeneric": "Reset failed. Please try again.",
+  "page.reset.goLogin": "Go to sign in",
   "auth.username": "Username",
   "auth.password": "Password",
   "auth.login": "Sign in",

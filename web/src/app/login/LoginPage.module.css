@@ -190,6 +190,26 @@
   transform: none;
 }
 
+.helperRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.helperLink {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: 4px 6px;
+  border-radius: var(--radius-1);
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.helperLink:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+
 @media (max-width: 560px) {
   .title {
     font-size: 26px;

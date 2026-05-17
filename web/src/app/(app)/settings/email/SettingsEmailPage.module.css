@@ -1,0 +1,80 @@
+.content {
+  display: grid;
+  gap: 14px;
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+}
+
+.cardBody {
+  display: grid;
+  gap: 12px;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.kvRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kvLabel {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.kvValue {
+  font-size: 13px;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.codeText {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.badgeOk {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 38%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badgeWarn {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-accent-gold) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent-gold) 14%, transparent);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.error {
+  font-size: 13px;
+  color: var(--color-danger);
+  line-height: 1.5;
+}
+
+.success {
+  font-size: 13px;
+  color: var(--color-success);
+  line-height: 1.5;
+}

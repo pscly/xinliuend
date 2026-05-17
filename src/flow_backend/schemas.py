@@ -50,6 +50,44 @@ class MeResponse(BaseModel):
     username: str
     is_admin: bool
     csrf_token: str | None = None
+    email: str | None = None
+    email_verified: bool = False
+
+
+class EmailBindRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+
+
+class EmailBindConfirmRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    code: str = Field(min_length=4, max_length=12)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+
+
+class ForgotPasswordResponse(BaseModel):
+    ok: bool = True
+    message: str = "如果该邮箱已注册并验证，重置链接已发送，请查收（含垃圾邮件）。"
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=8, max_length=512)
+    new_password: str = Field(min_length=6, max_length=72)
+    new_password2: str = Field(min_length=6, max_length=72)
+
+    @field_validator("new_password", "new_password2")
+    @classmethod
+    def validate_password_bytes_for_memos(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > _MAX_APP_PASSWORD_BYTES_FOR_MEMOS:
+            raise ValueError("密码过长（为了给 Memos 追加 x，最多 71 字节）")
+        return v
+
+
+class ResetPasswordResponse(BaseModel):
+    ok: bool = True
+    memos_sync_warning: str | None = None
 
 
 class ChangePasswordResponse(BaseModel):

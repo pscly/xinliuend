@@ -130,6 +130,9 @@ export default function SettingsPage() {
             </InkCardBody>
 
             <InkCardFooter className={styles.cardFooter}>
+              <InkLink href="/settings/email" variant="surface" size="sm">
+                {t("settings.email.entry")}
+              </InkLink>
               <InkLink href="/settings/password" variant="surface" size="sm">
                 {t("settings.account.changePassword")}
               </InkLink>

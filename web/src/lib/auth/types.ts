@@ -2,6 +2,8 @@ export type MeData = {
   username: string;
   is_admin: boolean;
   csrf_token: string | null;
+  email?: string | null;
+  email_verified?: boolean;
 };
 
 export type MeResponse = MeData;
@@ -18,6 +20,8 @@ export type LogoutResponse = { ok: boolean };
 export type AuthUser = {
   username: string;
   isAdmin: boolean;
+  email: string | null;
+  emailVerified: boolean;
 };
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
