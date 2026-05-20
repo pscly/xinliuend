@@ -58,6 +58,7 @@ class User(SQLModel, table=True):
     password_enc: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
 
     memos_id: Optional[int] = Field(default=None, index=True)
+    memos_user_name: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     # 允许先创建账号、后续再由管理员在后台手动补齐 memos_token
     memos_token: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
 

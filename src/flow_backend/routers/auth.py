@@ -72,6 +72,7 @@ async def register(
 
     if settings.dev_bypass_memos:
         memos_user_id = 0
+        memos_user_name = f"users/{payload.username}"
         memos_token = f"dev-{secrets.token_urlsafe(24)}"
     else:
         if not settings.memos_admin_token.strip():
@@ -83,6 +84,7 @@ async def register(
             base_url=settings.memos_base_url,
             admin_token=settings.memos_admin_token,
             timeout_seconds=settings.memos_request_timeout_seconds,
+            trust_env=settings.memos_http_trust_env,
         )
         try:
             result = await client.create_user_and_token(
@@ -93,6 +95,7 @@ async def register(
                 allow_reset_existing_user_password=settings.memos_allow_reset_password_for_existing_user,
             )
             memos_user_id = result.memos_user_id
+            memos_user_name = result.memos_user_name
             memos_token = result.memos_token
         except MemosClientError as e:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
@@ -101,6 +104,7 @@ async def register(
         username=payload.username,
         password_hash="",
         memos_id=memos_user_id,
+        memos_user_name=memos_user_name,
         memos_token=memos_token,
         is_active=True,
     )
@@ -314,7 +318,10 @@ async def reset_password(
         )
 
     memos_sync_warning: str | None = None
-    if (not settings.dev_bypass_memos) and user.memos_token:
+    memos_user_name = user.memos_user_name
+    if not memos_user_name and user.memos_id and int(user.memos_id) > 0:
+        memos_user_name = f"users/{int(user.memos_id)}"
+    if (not settings.dev_bypass_memos) and memos_user_name:
         if not settings.memos_admin_token.strip():
             memos_sync_warning = "MEMOS_ADMIN_TOKEN 未配置，Memos 端密码未同步"
             logger.warning("MEMOS_ADMIN_TOKEN missing during reset-password for user=%s", user.username)
@@ -323,12 +330,13 @@ async def reset_password(
                 base_url=settings.memos_base_url,
                 admin_token=settings.memos_admin_token,
                 timeout_seconds=settings.memos_request_timeout_seconds,
+                trust_env=settings.memos_http_trust_env,
             )
             try:
                 await client.update_user_password(
-                    user_id=int(user.memos_id or 0),
+                    user_name=memos_user_name,
+                    user_id=int(user.memos_id) if user.memos_id else None,
                     new_password=payload.new_password,
-                    username=user.username,
                 )
             except MemosClientError as e:
                 memos_sync_warning = f"Memos 端密码同步失败：{e}"

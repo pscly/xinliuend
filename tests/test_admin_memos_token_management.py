@@ -26,6 +26,7 @@ class _SettingsSnapshot:
     admin_session_secret: str
     memos_base_url: str
     memos_admin_token: str
+    memos_http_trust_env: bool
 
 
 async def _prepare_admin_db(tmp_path: Path, db_name: str = "admin-token.db") -> _SettingsSnapshot:
@@ -36,6 +37,7 @@ async def _prepare_admin_db(tmp_path: Path, db_name: str = "admin-token.db") -> 
         admin_session_secret=settings.admin_session_secret,
         memos_base_url=settings.memos_base_url,
         memos_admin_token=settings.memos_admin_token,
+        memos_http_trust_env=settings.memos_http_trust_env,
     )
     settings.database_url = f"sqlite:///{tmp_path / db_name}"
     settings.admin_basic_user = "admin"
@@ -43,6 +45,7 @@ async def _prepare_admin_db(tmp_path: Path, db_name: str = "admin-token.db") -> 
     settings.admin_session_secret = "admin-secret"
     settings.memos_base_url = "https://memos.test"
     settings.memos_admin_token = "admin-token"
+    settings.memos_http_trust_env = False
     reset_engine_cache()
     await init_db()
     return snapshot
@@ -55,10 +58,14 @@ def _restore_settings(snapshot: _SettingsSnapshot) -> None:
     settings.admin_session_secret = snapshot.admin_session_secret
     settings.memos_base_url = snapshot.memos_base_url
     settings.memos_admin_token = snapshot.memos_admin_token
+    settings.memos_http_trust_env = snapshot.memos_http_trust_env
 
 
 async def _create_user(
-    username: str = "alice", token: str | None = "old-token", memos_id: int | None = 1
+    username: str = "alice",
+    token: str | None = "old-token",
+    memos_id: int | None = 1,
+    memos_user_name: str | None = None,
 ) -> User:
     async with session_scope() as session:
         user = User(
@@ -66,6 +73,7 @@ async def _create_user(
             password_hash=hash_password("pass1234"),
             memos_token=token,
             memos_id=memos_id,
+            memos_user_name=memos_user_name,
             is_active=True,
         )
         session.add(user)
@@ -96,7 +104,7 @@ async def test_admin_set_token_empty_input_does_not_clear_without_explicit_actio
 ) -> None:
     snapshot = await _prepare_admin_db(tmp_path)
     try:
-        user = await _create_user(token="old-token", memos_id=5)
+        user = await _create_user(token="old-token", memos_id=5, memos_user_name="users/5")
         assert user.id is not None
 
         async with _make_async_client() as client:
@@ -149,7 +157,8 @@ async def test_admin_clear_token_requires_explicit_clear_action(tmp_path: Path) 
             row = await session.get(User, int(user.id))
             assert row is not None
             assert row.memos_token is None
-            assert row.memos_id is None
+            assert row.memos_id == 5
+            assert row.memos_user_name == "users/5"
     finally:
         _restore_settings(snapshot)
 
@@ -171,7 +180,7 @@ async def test_admin_set_token_redirects_errors_to_next_and_keeps_existing_value
 
             async def get_current_user_with_bearer(self, token: str) -> dict[str, Any]:
                 assert token == "bad-token"
-                return {"username": "alice", "user_id": 9}
+                return {"username": "alice", "user_id": 9, "name": "users/9"}
 
         monkeypatch.setattr("flow_backend.services.memos_credentials.MemosClient", FakeMemosClient)
 
@@ -234,7 +243,7 @@ async def test_admin_set_token_validates_and_saves_auto_detected_id(
 
             async def get_current_user_with_bearer(self, token: str) -> dict[str, Any]:
                 assert token == "new-token"
-                return {"username": "alice", "user_id": 11}
+                return {"username": "alice", "user_id": 11, "name": "users/11"}
 
         monkeypatch.setattr("flow_backend.services.memos_credentials.MemosClient", FakeMemosClient)
 
@@ -258,5 +267,6 @@ async def test_admin_set_token_validates_and_saves_auto_detected_id(
             assert row is not None
             assert row.memos_token == "new-token"
             assert row.memos_id == 11
+            assert row.memos_user_name == "users/11"
     finally:
         _restore_settings(snapshot)

@@ -619,24 +619,23 @@ async def admin_reset_user_password(
         return _redirect_to_next(next_url, err="用户不存在")
 
     # Best-effort keep Memos password consistent with app password (password + 'x').
-    # New-style Memos identifies users by username (no numeric id), so we trigger
-    # the sync whenever the app has a token bound — not only when memos_id > 0.
-    has_memos_link = bool(user.memos_token) or (
-        bool(user.memos_id) and int(user.memos_id or 0) > 0
-    )
-    if (not settings.dev_bypass_memos) and has_memos_link:
+    memos_user_name = user.memos_user_name
+    if not memos_user_name and user.memos_id and int(user.memos_id) > 0:
+        memos_user_name = f"users/{int(user.memos_id)}"
+    if (not settings.dev_bypass_memos) and memos_user_name:
         if not settings.memos_admin_token.strip():
             return _redirect_to_next(next_url, err="MEMOS_ADMIN_TOKEN 未配置，无法重置 Memos 密码")
         client = MemosClient(
             base_url=settings.memos_base_url,
             admin_token=settings.memos_admin_token,
             timeout_seconds=settings.memos_request_timeout_seconds,
+            trust_env=settings.memos_http_trust_env,
         )
         try:
             await client.update_user_password(
-                user_id=int(user.memos_id or 0),
+                user_name=memos_user_name,
+                user_id=int(user.memos_id) if user.memos_id else None,
                 new_password=password,
-                username=user.username,
             )
         except MemosClientError as e:
             return _redirect_to_next(next_url, err=str(e))

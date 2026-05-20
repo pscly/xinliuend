@@ -63,19 +63,26 @@ async def change_password(
                 detail="MEMOS_ADMIN_TOKEN is not set (or set DEV_BYPASS_MEMOS=true for local dev)",
             )
 
+        memos_user_name = user.memos_user_name
+        if not memos_user_name and user.memos_id and int(user.memos_id) > 0:
+            memos_user_name = f"users/{int(user.memos_id)}"
+        if not memos_user_name:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="memos user identity not set; contact admin",
+            )
+
         client = MemosClient(
             base_url=settings.memos_base_url,
             admin_token=settings.memos_admin_token,
             timeout_seconds=settings.memos_request_timeout_seconds,
+            trust_env=settings.memos_http_trust_env,
         )
         try:
-            # Pass both numeric id (if known) and username. Newer Memos releases
-            # only accept `users/<username>` PATCH URLs; older releases accept
-            # `users/<numeric_id>`. update_user_password tries each in turn.
             await client.update_user_password(
-                user_id=int(user.memos_id or 0),
+                user_name=memos_user_name,
+                user_id=int(user.memos_id) if user.memos_id else None,
                 new_password=payload.new_password,
-                username=user.username,
             )
         except MemosClientError as e:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))

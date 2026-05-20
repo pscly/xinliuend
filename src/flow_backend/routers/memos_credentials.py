@@ -43,7 +43,8 @@ def _maybe_rotate_cookie_session_csrf(
 def _credential_update_response(
     *,
     token: str,
-    memos_user_id: int,
+    memos_user_id: int | None,
+    memos_user_name: str,
     memos_username: str,
     csrf_token: str | None,
 ) -> MemosCredentialUpdateResponse:
@@ -57,6 +58,7 @@ def _credential_update_response(
         token=token,
         server_url=settings.memos_base_url,
         memos_user_id=memos_user_id,
+        memos_user_name=memos_user_name,
         memos_username=memos_username,
         token_preview=preview,
         csrf_token=csrf_token,
@@ -72,6 +74,7 @@ async def get_memos_credential_status(
         has_token=bool(user.memos_token and user.memos_token.strip()),
         token_preview=token_preview(user.memos_token),
         memos_user_id=user.memos_id,
+        memos_user_name=user.memos_user_name,
         can_auto_issue_token=can_auto_issue_memos_token(),
     )
 
@@ -102,6 +105,7 @@ async def update_memos_credential_token(
     return _credential_update_response(
         token=credential.token,
         memos_user_id=credential.memos_user_id,
+        memos_user_name=credential.memos_user_name,
         memos_username=credential.memos_username,
         csrf_token=csrf_token,
     )
@@ -132,6 +136,7 @@ async def issue_memos_credential_token(
     return _credential_update_response(
         token=credential.token,
         memos_user_id=credential.memos_user_id,
+        memos_user_name=credential.memos_user_name,
         memos_username=credential.memos_username,
         csrf_token=csrf_token,
     )

@@ -29,6 +29,7 @@ class _SettingsSnapshot:
     dev_bypass_memos: bool
     memos_base_url: str
     memos_admin_token: str
+    memos_http_trust_env: bool
 
 
 async def _prepare_db(tmp_path: Path, db_name: str = "memos-credential.db") -> _SettingsSnapshot:
@@ -38,12 +39,14 @@ async def _prepare_db(tmp_path: Path, db_name: str = "memos-credential.db") -> _
         dev_bypass_memos=settings.dev_bypass_memos,
         memos_base_url=settings.memos_base_url,
         memos_admin_token=settings.memos_admin_token,
+        memos_http_trust_env=settings.memos_http_trust_env,
     )
     settings.database_url = f"sqlite:///{tmp_path / db_name}"
     settings.user_session_secret = "test-user-session-secret"
     settings.dev_bypass_memos = False
     settings.memos_base_url = "https://memos.test"
     settings.memos_admin_token = "admin-token"
+    settings.memos_http_trust_env = False
     reset_engine_cache()
     await init_db()
     return snapshot
@@ -55,6 +58,7 @@ def _restore_settings(snapshot: _SettingsSnapshot) -> None:
     settings.dev_bypass_memos = snapshot.dev_bypass_memos
     settings.memos_base_url = snapshot.memos_base_url
     settings.memos_admin_token = snapshot.memos_admin_token
+    settings.memos_http_trust_env = snapshot.memos_http_trust_env
 
 
 async def _create_user(
@@ -63,6 +67,7 @@ async def _create_user(
     password: str = "pass1234",
     token: str | None = "old-token",
     memos_id: int | None = 1,
+    memos_user_name: str | None = None,
     is_admin: bool = False,
 ) -> User:
     async with session_scope() as session:
@@ -70,6 +75,7 @@ async def _create_user(
             username=username,
             password_hash=hash_password(password),
             memos_id=memos_id,
+            memos_user_name=memos_user_name,
             memos_token=token,
             is_active=True,
             is_admin=is_admin,
@@ -85,7 +91,7 @@ async def test_get_memos_credential_returns_safe_status(tmp_path: Path) -> None:
     snapshot = await _prepare_db(tmp_path)
     try:
         await _create_user(
-            username="alice", token="memos_pat_abcdefghijklmnopqrstuvwxyz", memos_id=7
+            username="alice", token="memos_pat_abcdefghijklmnopqrstuvwxyz", memos_id=7, memos_user_name="users/7"
         )
 
         async with _make_async_client() as client:
@@ -100,6 +106,7 @@ async def test_get_memos_credential_returns_safe_status(tmp_path: Path) -> None:
             assert data["token_preview"].startswith("memos_pa")
             assert "abcdefghijklmnopqrstuvwxyz" not in data["token_preview"]
             assert data["memos_user_id"] == 7
+            assert data["memos_user_name"] == "users/7"
             assert data["can_auto_issue_token"] is True
             assert "token" not in data
     finally:
@@ -121,7 +128,7 @@ async def test_put_memos_credential_token_validates_owner_and_rotates_bearer_tok
 
             async def get_current_user_with_bearer(self, token: str) -> dict[str, Any]:
                 assert token == "new-token"
-                return {"username": "alice", "user_id": 42}
+                return {"username": "alice", "user_id": 42, "name": "users/42"}
 
         monkeypatch.setattr("flow_backend.services.memos_credentials.MemosClient", FakeMemosClient)
 
@@ -137,6 +144,7 @@ async def test_put_memos_credential_token_validates_owner_and_rotates_bearer_tok
             assert data["token"] == "new-token"
             assert data["server_url"] == "https://memos.test"
             assert data["memos_user_id"] == 42
+            assert data["memos_user_name"] == "users/42"
             assert data["memos_username"] == "alice"
             assert data["csrf_token"] is None
             assert data["token_preview"] != "new-token"
@@ -177,7 +185,7 @@ async def test_put_memos_credential_token_rejects_empty_username_mismatch_and_id
                 self.kwargs = kwargs
 
             async def get_current_user_with_bearer(self, token: str) -> dict[str, Any]:  # noqa: ARG002
-                return {"username": "bob", "user_id": 2}
+                return {"username": "bob", "user_id": 2, "name": "users/2"}
 
         monkeypatch.setattr(
             "flow_backend.services.memos_credentials.MemosClient", FakeMismatchClient
@@ -196,7 +204,7 @@ async def test_put_memos_credential_token_rejects_empty_username_mismatch_and_id
                 self.kwargs = kwargs
 
             async def get_current_user_with_bearer(self, token: str) -> dict[str, Any]:  # noqa: ARG002
-                return {"username": "alice", "user_id": 3}
+                return {"username": "alice", "user_id": 3, "name": "users/3"}
 
         monkeypatch.setattr("flow_backend.services.memos_credentials.MemosClient", FakeIdClient)
         async with _make_async_client() as client:
@@ -235,16 +243,16 @@ async def test_issue_memos_credential_token_verifies_current_password_and_saves_
                 self, username: str, app_password: str
             ) -> dict[str, Any]:
                 calls.append(("signin", username, app_password))
-                return {"access_token": "signin-token", "username": "alice", "user_id": 42}
+                return {"access_token": "signin-token", "username": "alice", "user_id": 42, "name": "users/42"}
 
             async def create_personal_access_token_with_bearer(
                 self,
-                user_id: int,
+                user_name: str,
                 bearer_token: str,
                 description: str,
                 expires_in_days: int = 0,
             ) -> str:
-                calls.append(("pat", user_id, bearer_token, description, expires_in_days))
+                calls.append(("pat", user_name, bearer_token, description, expires_in_days))
                 return "new-pat-token"
 
         monkeypatch.setattr("flow_backend.services.memos_credentials.MemosClient", FakeMemosClient)
@@ -266,6 +274,7 @@ async def test_issue_memos_credential_token_verifies_current_password_and_saves_
             data = r.json()
             assert data["token"] == "new-pat-token"
             assert data["memos_user_id"] == 42
+            assert data["memos_user_name"] == "users/42"
             assert data["memos_username"] == "alice"
 
         assert calls[0] == ("signin", "alice", "pass1234")
@@ -362,7 +371,7 @@ async def test_cookie_session_credential_update_returns_rotated_csrf(
 
             async def get_current_user_with_bearer(self, token: str) -> dict[str, Any]:
                 assert token == "new-token"
-                return {"username": "alice", "user_id": 2}
+                return {"username": "alice", "user_id": 2, "name": "users/2"}
 
         monkeypatch.setattr("flow_backend.services.memos_credentials.MemosClient", FakeMemosClient)
 

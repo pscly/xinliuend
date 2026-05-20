@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     memos_base_url: str = "https://memos.example.com"
     memos_admin_token: str = ""
     memos_request_timeout_seconds: float = 15.0
+    # 是否让对 Memos 的出站 HTTP 请求继承宿主机代理环境变量（HTTP_PROXY/HTTPS_PROXY/ALL_PROXY/NO_PROXY）。
+    # 默认关闭，避免宿主机存在 socks 代理变量但未安装 httpx[socks] 时直接在客户端初始化阶段崩溃。
+    memos_http_trust_env: bool = False
 
     # Primary env: CORS_ALLOW_ORIGINS; also accept CORS_ORIGINS as alias.
     cors_allow_origins: str = Field(
@@ -97,7 +100,11 @@ class Settings(BaseSettings):
 
     # Comma-separated endpoint list, tried in order.
     memos_create_user_endpoints: str = "/api/v1/users"
-    memos_create_token_endpoints: str = "/api/v1/users/{user_id}/accessTokens"
+    memos_create_token_endpoints: str = (
+        "/api/v1/{user_name}/personalAccessTokens,"
+        "/api/v1/users/{user_id}/accessTokens,"
+        "/api/v1/users/{user_id}/personalAccessTokens"
+    )
 
     # Notes connector endpoint overrides (comma-separated)
     memos_note_list_endpoints: str = "/api/v1/memos"
@@ -268,9 +275,17 @@ class Settings(BaseSettings):
 
     def create_token_endpoints_list(self) -> list[str]:
         eps = _split_csv(self.memos_create_token_endpoints)
-        preferred = "/api/v1/users/{user_id}/accessTokens"
-        if preferred in eps:
-            eps = [preferred] + [e for e in eps if e != preferred]
+        preferreds = [
+            "/api/v1/{user_name}/personalAccessTokens",
+            "/api/v1/users/{user_id}/accessTokens",
+            "/api/v1/users/{user_id}/personalAccessTokens",
+        ]
+        ordered: list[str] = []
+        for preferred in preferreds:
+            if preferred in eps:
+                ordered.append(preferred)
+        if ordered:
+            eps = ordered + [e for e in eps if e not in set(ordered)]
         return eps
 
     def note_list_endpoints_list(self) -> list[str]:

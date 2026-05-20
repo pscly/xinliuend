@@ -16,7 +16,8 @@ from flow_backend.models import User
 @dataclass(frozen=True)
 class ValidatedMemosCredential:
     token: str
-    memos_user_id: int
+    memos_user_id: int | None
+    memos_user_name: str
     memos_username: str
 
 
@@ -69,18 +70,21 @@ def _get_int(data: dict[str, Any], key: str) -> int | None:
     return None
 
 
-def _extract_validated_info(info: dict[str, Any]) -> tuple[str, int]:
+def _extract_validated_info(info: dict[str, Any]) -> tuple[str, int | None, str]:
     username = _get_str(info, "username")
     user_id = _get_int(info, "user_id")
+    user_name = _get_str(info, "user_name") or _get_str(info, "name")
     if not username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Memos Token 校验成功，但无法解析 Memos 用户名",
         )
-    # Newer Memos versions identify users by `users/<username>` resource names and
-    # no longer expose numeric ids. user_id == 0 is treated as "unknown numeric id"
-    # and is acceptable; downstream code keys off the username instead.
-    return username, int(user_id) if user_id is not None else 0
+    if not user_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Memos Token 校验成功，但无法解析 Memos 用户资源名",
+        )
+    return username, user_id, user_name
 
 
 def _build_memos_client() -> MemosClient:
@@ -89,6 +93,7 @@ def _build_memos_client() -> MemosClient:
         base_url=settings.memos_base_url,
         admin_token=settings.memos_admin_token,
         timeout_seconds=settings.memos_request_timeout_seconds,
+        trust_env=settings.memos_http_trust_env,
     )
 
 
@@ -133,22 +138,18 @@ async def validate_memos_token_for_user(
             detail = "Memos 服务不可用，暂时无法校验 Token"
         raise HTTPException(status_code=status_code, detail=detail) from exc
 
-    memos_username, resolved_memos_user_id = _extract_validated_info(info)
-    if (not allow_username_mismatch) and memos_username != user.username:
+    resolved_username, resolved_memos_user_id, resolved_memos_user_name = _extract_validated_info(info)
+    if (not allow_username_mismatch) and resolved_username != user.username:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Memos username mismatch: expected {user.username}, got {memos_username}",
+            detail=f"Memos username mismatch: expected {user.username}, got {resolved_username}",
         )
 
     if (
         memos_user_id is not None
-        and resolved_memos_user_id > 0
+        and resolved_memos_user_id is not None
         and int(memos_user_id) != resolved_memos_user_id
     ):
-        # When the resolved id is 0 the upstream Memos didn't expose a numeric id
-        # for this user (new resource-name scheme). Comparing 0 against the caller's
-        # value would always fail, so we only enforce equality when we actually got
-        # a real id back from Memos.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="memos_user_id does not match Memos Token owner",
@@ -157,7 +158,8 @@ async def validate_memos_token_for_user(
     return ValidatedMemosCredential(
         token=clean_token,
         memos_user_id=resolved_memos_user_id,
-        memos_username=memos_username,
+        memos_user_name=resolved_memos_user_name,
+        memos_username=resolved_username,
     )
 
 
@@ -168,13 +170,7 @@ async def force_save_memos_credential_unchecked(
     token: str,
     memos_user_id: int | None,
 ) -> ValidatedMemosCredential:
-    """Admin escape hatch: write a memos token to the user WITHOUT calling Memos.
-
-    This is needed when the upstream Memos cannot validate the token (e.g. just
-    after an upstream upgrade changed its identity API and the validation call
-    fails before the parser can decode the response). The caller is responsible
-    for surfacing a clear "未校验" warning to the operator.
-    """
+    """Admin escape hatch: write a memos token to the user WITHOUT calling Memos."""
 
     clean_token = normalize_memos_token(token)
     if clean_token is None:
@@ -196,10 +192,14 @@ async def force_save_memos_credential_unchecked(
     if existing is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Token 已被其它用户占用")
 
-    resolved_id = int(memos_user_id) if memos_user_id is not None and int(memos_user_id) >= 0 else 0
+    resolved_id = int(memos_user_id) if memos_user_id is not None and int(memos_user_id) >= 0 else None
+    resource_name = user.memos_user_name or (
+        f"users/{resolved_id}" if resolved_id is not None else f"users/{user.username}"
+    )
     credential = ValidatedMemosCredential(
         token=clean_token,
         memos_user_id=resolved_id,
+        memos_user_name=resource_name,
         memos_username=user.username,
     )
     await save_memos_credential(session=session, user_id=int(user_id), credential=credential)
@@ -217,6 +217,7 @@ async def save_memos_credential(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
     user_row.memos_token = credential.token
     user_row.memos_id = credential.memos_user_id
+    user_row.memos_user_name = credential.memos_user_name
     session.add(user_row)
     try:
         await session.commit()
@@ -233,8 +234,11 @@ async def clear_memos_credential(*, session: AsyncSession, user_id: int) -> User
     user_row = await session.get(User, int(user_id))
     if user_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+    # 只清 token，保留 memos_id / memos_user_name 作为身份锚点，避免后续改密/修复链路失去目标用户。
+    # 对历史只有 memos_id 的老数据，顺手回填资源名，后续新版 Memos 路径可直接复用。
+    if not user_row.memos_user_name and user_row.memos_id and int(user_row.memos_id) > 0:
+        user_row.memos_user_name = f"users/{int(user_row.memos_id)}"
     user_row.memos_token = None
-    user_row.memos_id = None
     session.add(user_row)
     await session.commit()
     await session.refresh(user_row)
@@ -253,7 +257,7 @@ async def issue_memos_personal_access_token(
         sign_in = await client.sign_in_with_password(
             username=user.username, app_password=app_password
         )
-        memos_username, memos_user_id = _extract_validated_info(sign_in)
+        memos_username, memos_user_id, memos_user_name = _extract_validated_info(sign_in)
         access_token = _get_str(sign_in, "access_token")
         if not access_token:
             raise HTTPException(
@@ -266,7 +270,7 @@ async def issue_memos_personal_access_token(
                 detail=f"Memos username mismatch: expected {user.username}, got {memos_username}",
             )
         pat = await client.create_personal_access_token_with_bearer(
-            user_id=memos_user_id,
+            user_name=memos_user_name,
             bearer_token=access_token,
             description=token_name,
             expires_in_days=0,
@@ -274,28 +278,31 @@ async def issue_memos_personal_access_token(
         return ValidatedMemosCredential(
             token=pat,
             memos_user_id=memos_user_id,
+            memos_user_name=memos_user_name,
             memos_username=memos_username,
         )
     except HTTPException:
         raise
     except MemosClientError as primary_exc:
-        # Compatibility fallback for older Memos deployments: if the old session/accessTokens
-        # flow is available and we already know a Memos user id, try it before surfacing 502.
         if (
-            user.memos_id
-            and int(user.memos_id) > 0
-            and hasattr(client, "create_access_token_as_user")
+            hasattr(client, "create_access_token_as_user")
+            and (
+                (user.memos_user_name and user.memos_user_name.startswith("users/"))
+                or (user.memos_id and int(user.memos_id) > 0)
+            )
         ):
             try:
+                legacy_user_name = user.memos_user_name or f"users/{int(user.memos_id)}"
                 legacy_pat = await client.create_access_token_as_user(
-                    user_id=int(user.memos_id),
+                    user_name=legacy_user_name,
                     username=user.username,
                     password=app_password,
                     token_name=token_name,
                 )
                 return ValidatedMemosCredential(
                     token=legacy_pat,
-                    memos_user_id=int(user.memos_id),
+                    memos_user_id=int(user.memos_id) if user.memos_id else None,
+                    memos_user_name=legacy_user_name,
                     memos_username=user.username,
                 )
             except MemosClientError:

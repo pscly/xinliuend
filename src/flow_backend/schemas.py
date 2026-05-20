@@ -105,6 +105,7 @@ class MemosCredentialStatusResponse(BaseModel):
     has_token: bool
     token_preview: str | None = None
     memos_user_id: int | None = None
+    memos_user_name: str | None = None
     can_auto_issue_token: bool
 
 
@@ -121,7 +122,8 @@ class MemosCredentialUpdateResponse(BaseModel):
     ok: bool = True
     token: str
     server_url: str
-    memos_user_id: int
+    memos_user_id: int | None
+    memos_user_name: str
     memos_username: str
     token_preview: str
     csrf_token: str | None = None
