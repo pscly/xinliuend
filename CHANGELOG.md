@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.10.0 - 2026-05-21
+
+### Added
+
+- 新增 `scripts/build_release_bundle.sh`：自动打包后端发布包，统一产出部署压缩包、SHA-256 校验文件、构建元数据 JSON 与快速启动说明。
+- 新增 `.github/workflows/release.yml`：
+  - `main` 分支每次通过 CI 后自动生成一条 **main snapshot 预发布**；
+  - 推送 `v*` 标签后自动生成一条 **正式 Release**；
+  - 手动触发时也可补发当前提交的发布包。
+
+### Changed
+
+- 版本号从 `0.9.0` 升级到 `0.10.0`，用于标记“自动发布与可下载交付”这一轮能力增强。
+- README 补充 GitHub Releases 下载说明，并把当前版本展示同步到 `0.10.0`。
+
+### Documentation
+
+- OpenAPI 快照会随本次版本提升同步导出，避免 `apidocs/openapi-v1*.json` 继续停留在旧版本号。
+
+### Delivery
+
+- 以后每次 `main` 成功通过 CI，都能在 `https://github.com/pscly/xinliuend/releases` 看到新的可下载结果；你无需再去 Actions 里翻产物。
+
 ## 0.9.0 - 2026-05-17
 
 ### Added

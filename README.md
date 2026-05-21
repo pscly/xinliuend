@@ -1,6 +1,6 @@
 # 心流云服务后端（Flow Backend）
 
-> 当前版本：以 `pyproject.toml` 为准（当前：`0.8.0`）
+> 当前版本：以 `pyproject.toml` 为准（当前：`0.10.0`）
 
 Flow Backend 是「心流」客户端的云端后端服务，提供：
 
@@ -14,6 +14,19 @@ Flow Backend 是「心流」客户端的云端后端服务，提供：
 
 - 后端（FastAPI）：`src/flow_backend/`
 - 用户前端（Next.js）：`web/`（可双端口开发，也可静态导出后由后端同源托管）
+
+---
+
+## 0. GitHub Releases 下载与更新
+
+- Releases 页面：`https://github.com/pscly/xinliuend/releases`
+- `main` 每次通过 CI 后，都会自动生成一条 **main snapshot 预发布**，方便你直接下载与观察最近一次可部署结果。
+- 推送 `v*` 标签（例如 `v0.10.0`）后，会自动生成一条 **正式 Release**。
+- 每个 Release 默认附带：
+  - `*.tar.gz`：可直接下载的部署包（含后端源码、Web 源码、Docker Compose、迁移与文档）
+  - `*.sha256`：校验文件
+  - `*.json`：版本 / 提交 / 工作流元数据
+  - `*.quickstart.md`：快速启动说明
 
 ---
 

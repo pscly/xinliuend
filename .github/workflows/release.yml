@@ -1,0 +1,183 @@
+name: Release Bundle
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: ["main"]
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.ref || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify_for_ref_release:
+    if: github.event_name != 'workflow_run'
+    uses: ./.github/workflows/verify.yml
+
+  release_from_ci:
+    name: Release (main snapshot)
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: 生成快照发布标签
+        shell: bash
+        run: |
+          set -euo pipefail
+          short_sha="$(git rev-parse --short=8 HEAD)"
+          timestamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          echo "RELEASE_TAG=main-build-${timestamp}-${short_sha}" >> "$GITHUB_ENV"
+          echo "RELEASE_CHANNEL=main-snapshot" >> "$GITHUB_ENV"
+          echo "RELEASE_NAME=xinliuend main snapshot ${timestamp} (${short_sha})" >> "$GITHUB_ENV"
+          echo "RELEASE_PRERELEASE=true" >> "$GITHUB_ENV"
+          echo "WORKFLOW_URL=${{ github.event.workflow_run.html_url }}" >> "$GITHUB_ENV"
+          echo "REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}" >> "$GITHUB_ENV"
+
+      - name: 打包发布产物
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/build_release_bundle.sh \
+            --release-tag "$RELEASE_TAG" \
+            --channel "$RELEASE_CHANNEL" \
+            --output-dir dist \
+            --workflow-url "$WORKFLOW_URL" \
+            --repository-url "$REPOSITORY_URL"
+          cat dist/release-manifest.env >> "$GITHUB_ENV"
+
+      - name: 上传工作流 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle-${{ env.ASSET_BASE }}
+          path: |
+            ${{ env.BUNDLE_PATH }}
+            ${{ env.CHECKSUM_PATH }}
+            ${{ env.METADATA_PATH }}
+            ${{ env.QUICKSTART_PATH }}
+            ${{ env.RELEASE_NOTES_PATH }}
+          if-no-files-found: error
+
+      - name: 创建 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            "$BUNDLE_PATH" \
+            "$CHECKSUM_PATH" \
+            "$METADATA_PATH" \
+            "$QUICKSTART_PATH" \
+            --target "${{ github.event.workflow_run.head_sha }}" \
+            --title "$RELEASE_NAME" \
+            --notes-file "$RELEASE_NOTES_PATH" \
+            --prerelease
+
+  release_from_ref:
+    name: Release (tag / manual)
+    if: github.event_name != 'workflow_run' && needs.verify_for_ref_release.result == 'success'
+    needs: verify_for_ref_release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@v4
+
+      - name: 生成发布标签
+        shell: bash
+        run: |
+          set -euo pipefail
+          short_sha="$(git rev-parse --short=8 HEAD)"
+          timestamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          version="$(python - <<'PY'
+from pathlib import Path
+import tomllib
+print(tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])
+PY
+          )"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+            echo "RELEASE_CHANNEL=stable" >> "$GITHUB_ENV"
+            echo "RELEASE_NAME=xinliuend ${version} (${GITHUB_REF_NAME})" >> "$GITHUB_ENV"
+            echo "RELEASE_PRERELEASE=false" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_TAG=manual-build-${timestamp}-${short_sha}" >> "$GITHUB_ENV"
+            echo "RELEASE_CHANNEL=manual-snapshot" >> "$GITHUB_ENV"
+            echo "RELEASE_NAME=xinliuend manual snapshot ${timestamp} (${short_sha})" >> "$GITHUB_ENV"
+            echo "RELEASE_PRERELEASE=true" >> "$GITHUB_ENV"
+          fi
+          echo "WORKFLOW_URL=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}" >> "$GITHUB_ENV"
+
+      - name: 打包发布产物
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/build_release_bundle.sh \
+            --release-tag "$RELEASE_TAG" \
+            --channel "$RELEASE_CHANNEL" \
+            --output-dir dist \
+            --workflow-url "$WORKFLOW_URL" \
+            --repository-url "$REPOSITORY_URL"
+          cat dist/release-manifest.env >> "$GITHUB_ENV"
+
+      - name: 上传工作流 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle-${{ env.ASSET_BASE }}
+          path: |
+            ${{ env.BUNDLE_PATH }}
+            ${{ env.CHECKSUM_PATH }}
+            ${{ env.METADATA_PATH }}
+            ${{ env.QUICKSTART_PATH }}
+            ${{ env.RELEASE_NOTES_PATH }}
+          if-no-files-found: error
+
+      - name: 创建或更新 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" \
+              "$BUNDLE_PATH" \
+              "$CHECKSUM_PATH" \
+              "$METADATA_PATH" \
+              "$QUICKSTART_PATH" \
+              --clobber
+            gh release edit "$RELEASE_TAG" \
+              --title "$RELEASE_NAME" \
+              --notes-file "$RELEASE_NOTES_PATH"
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              gh release edit "$RELEASE_TAG" --prerelease
+            else
+              gh release edit "$RELEASE_TAG" --latest
+            fi
+          else
+            create_args=(
+              "$RELEASE_TAG"
+              "$BUNDLE_PATH"
+              "$CHECKSUM_PATH"
+              "$METADATA_PATH"
+              "$QUICKSTART_PATH"
+              --target "${GITHUB_SHA}"
+              --title "$RELEASE_NAME"
+              --notes-file "$RELEASE_NOTES_PATH"
+            )
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              create_args+=(--prerelease)
+            fi
+            gh release create "${create_args[@]}"
+          fi
