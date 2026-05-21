@@ -40,7 +40,9 @@ async def test_site_settings_crud_and_cache(tmp_path: Path) -> None:
             await site_settings_service.set_setting(
                 session, "smtp.host", "smtp.example.com", updated_by="admin"
             )
-            assert await site_settings_service.get_setting(session, "smtp.host") == "smtp.example.com"
+            assert (
+                await site_settings_service.get_setting(session, "smtp.host") == "smtp.example.com"
+            )
 
             # Prefix queries return only matching keys.
             await site_settings_service.set_setting(session, "smtp.port", 465)
@@ -50,7 +52,9 @@ async def test_site_settings_crud_and_cache(tmp_path: Path) -> None:
 
             # Update + cache invalidation.
             await site_settings_service.set_setting(session, "smtp.host", "smtp.changed.com")
-            assert await site_settings_service.get_setting(session, "smtp.host") == "smtp.changed.com"
+            assert (
+                await site_settings_service.get_setting(session, "smtp.host") == "smtp.changed.com"
+            )
     finally:
         _restore(old_db)
 

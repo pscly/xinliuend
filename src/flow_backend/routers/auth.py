@@ -324,7 +324,9 @@ async def reset_password(
     if (not settings.dev_bypass_memos) and memos_user_name:
         if not settings.memos_admin_token.strip():
             memos_sync_warning = "MEMOS_ADMIN_TOKEN 未配置，Memos 端密码未同步"
-            logger.warning("MEMOS_ADMIN_TOKEN missing during reset-password for user=%s", user.username)
+            logger.warning(
+                "MEMOS_ADMIN_TOKEN missing during reset-password for user=%s", user.username
+            )
         else:
             client = MemosClient(
                 base_url=settings.memos_base_url,

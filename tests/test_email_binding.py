@@ -90,17 +90,13 @@ async def test_request_and_confirm_email_binding_full_flow(
         async with _make_async_client() as client:
             client.headers["Authorization"] = "Bearer bearer-1"
 
-            r = await client.post(
-                "/api/v1/me/email/request", json={"email": "PSCLY1@163.com"}
-            )
+            r = await client.post("/api/v1/me/email/request", json={"email": "PSCLY1@163.com"})
             assert r.status_code == 200, r.text
             assert captured_codes, "send_email must have been called"
 
             # Database stored the email in lowercase form.
             async with session_scope() as session:
-                rows = list(
-                    await session.exec(select(EmailVerificationToken))
-                )
+                rows = list(await session.exec(select(EmailVerificationToken)))
                 assert len(rows) == 1
                 assert rows[0].email == "pscly1@163.com"
 
@@ -182,9 +178,7 @@ async def test_email_already_used_by_other_returns_409(
 
         async with _make_async_client() as client:
             client.headers["Authorization"] = "Bearer alice-tok"
-            r = await client.post(
-                "/api/v1/me/email/request", json={"email": "shared@example.com"}
-            )
+            r = await client.post("/api/v1/me/email/request", json={"email": "shared@example.com"})
             assert r.status_code == 409
     finally:
         _restore(snap)

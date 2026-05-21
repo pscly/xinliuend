@@ -50,11 +50,7 @@ class SmtpConfig:
 
     def is_complete(self) -> bool:
         return bool(
-            self.host
-            and self.port
-            and self.username
-            and self.password
-            and self.from_address
+            self.host and self.port and self.username and self.password and self.from_address
         )
 
 

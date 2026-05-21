@@ -116,9 +116,7 @@ async def test_forgot_password_with_verified_email_creates_token_and_emails(
         )
 
         async with _make_async_client() as client:
-            r = await client.post(
-                "/api/v1/auth/forgot-password", json={"email": "PSCLY1@163.com"}
-            )
+            r = await client.post("/api/v1/auth/forgot-password", json={"email": "PSCLY1@163.com"})
             assert r.status_code == 200
 
         # Token persisted.
@@ -165,9 +163,7 @@ async def test_forgot_password_unverified_email_does_not_send(
         )
 
         async with _make_async_client() as client:
-            r = await client.post(
-                "/api/v1/auth/forgot-password", json={"email": "pscly1@163.com"}
-            )
+            r = await client.post("/api/v1/auth/forgot-password", json={"email": "pscly1@163.com"})
             assert r.status_code == 200  # Same anti-enum response
 
         # No email sent.
@@ -188,9 +184,7 @@ async def test_reset_password_full_flow_updates_password_and_invalidates_token(
         async with session_scope() as session:
             user = await session.get(User, user_id)
             assert user is not None
-            raw = await password_reset_service.create_reset_token(
-                session=session, user=user
-            )
+            raw = await password_reset_service.create_reset_token(session=session, user=user)
 
         async with _make_async_client() as client:
             r = await client.post(
@@ -270,9 +264,7 @@ async def test_reset_password_rejects_mismatched_confirmation(tmp_path: Path) ->
         async with session_scope() as session:
             user = await session.get(User, user_id)
             assert user is not None
-            raw = await password_reset_service.create_reset_token(
-                session=session, user=user
-            )
+            raw = await password_reset_service.create_reset_token(session=session, user=user)
 
         async with _make_async_client() as client:
             r = await client.post(
@@ -298,12 +290,8 @@ async def test_creating_new_token_invalidates_prior_unconsumed_tokens(
         async with session_scope() as session:
             user = await session.get(User, user_id)
             assert user is not None
-            raw1 = await password_reset_service.create_reset_token(
-                session=session, user=user
-            )
-            raw2 = await password_reset_service.create_reset_token(
-                session=session, user=user
-            )
+            raw1 = await password_reset_service.create_reset_token(session=session, user=user)
+            raw2 = await password_reset_service.create_reset_token(session=session, user=user)
             assert raw1 != raw2
 
         # raw1 should now be invalid; raw2 still valid.
@@ -342,9 +330,7 @@ async def test_reset_password_continues_when_memos_sync_fails(
         async with session_scope() as session:
             user = await session.get(User, user_id)
             assert user is not None
-            raw = await password_reset_service.create_reset_token(
-                session=session, user=user
-            )
+            raw = await password_reset_service.create_reset_token(session=session, user=user)
 
         class FailingMemos:
             def __init__(self, **kwargs: Any) -> None:

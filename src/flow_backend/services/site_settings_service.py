@@ -73,9 +73,7 @@ async def get_setting(session: AsyncSession, key: str) -> Any | None:
     return value
 
 
-async def get_settings_by_prefix(
-    session: AsyncSession, prefix: str
-) -> dict[str, Any]:
+async def get_settings_by_prefix(session: AsyncSession, prefix: str) -> dict[str, Any]:
     """Return all settings whose key starts with the given prefix (e.g. 'smtp.')."""
 
     rows = list(

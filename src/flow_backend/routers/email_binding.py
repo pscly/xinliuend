@@ -46,9 +46,7 @@ async def request_email_code(
         window_seconds=settings.rate_limit_window_seconds,
     )
 
-    await request_email_verification(
-        session=session, user=user, email=payload.email, ip=ip
-    )
+    await request_email_verification(session=session, user=user, email=payload.email, ip=ip)
     return OkResponse(ok=True)
 
 

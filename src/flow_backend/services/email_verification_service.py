@@ -43,9 +43,7 @@ async def _ensure_email_not_used_by_other(
     session: AsyncSession, *, email: str, user_id: int
 ) -> None:
     row = (
-        await session.exec(
-            select(User).where((User.email == email) & (User.id != int(user_id)))
-        )
+        await session.exec(select(User).where((User.email == email) & (User.id != int(user_id))))
     ).first()
     if row is not None:
         raise HTTPException(
@@ -172,9 +170,7 @@ async def confirm_email_verification(
 
     user_row = await session.get(User, int(user_id))
     if user_row is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
 
     user_row.email = normalized
     user_row.email_verified_at = now

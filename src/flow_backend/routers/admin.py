@@ -481,9 +481,7 @@ async def set_token(
             return _redirect_to_next(next_url, err=str(e.detail))
         return _redirect_to_next(
             next_url,
-            msg=(
-                "已强制写入 Token（未经 Memos 校验）：请尽快确认 Token 归属与权限正确"
-            ),
+            msg=("已强制写入 Token（未经 Memos 校验）：请尽快确认 Token 归属与权限正确"),
         )
 
     try:
@@ -708,7 +706,9 @@ async def admin_smtp_save(
     host = str(form.get("host") or "").strip()
     port_s = str(form.get("port") or "").strip()
     username = str(form.get("username") or "").strip()
-    password = str(form.get("password") or "")  # do not strip — admins may include trailing spaces? probably not, but be conservative
+    password = str(
+        form.get("password") or ""
+    )  # do not strip — admins may include trailing spaces? probably not, but be conservative
     from_address = str(form.get("from_address") or "").strip()
     from_name = str(form.get("from_name") or "").strip()
     reply_to = str(form.get("reply_to") or "").strip()

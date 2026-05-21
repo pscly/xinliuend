@@ -63,9 +63,7 @@ class User(SQLModel, table=True):
     memos_token: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
 
     # 邮箱（小写存储）。仅在用户成功完成邮箱验证后才写入；用于“忘记密码 → 邮件找回”。
-    email: Optional[str] = Field(
-        default=None, sa_column=Column(String(320), nullable=True)
-    )
+    email: Optional[str] = Field(default=None, sa_column=Column(String(320), nullable=True))
     email_verified_at: Optional[datetime] = Field(
         default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
     )
@@ -97,9 +95,7 @@ class EmailVerificationToken(SQLModel, table=True):
 
 class PasswordResetToken(SQLModel, table=True):
     __tablename__ = "password_reset_tokens"  # pyright: ignore[reportAssignmentType,reportIncompatibleVariableOverride]
-    __table_args__ = (
-        Index("uq_password_reset_tokens_token_hash", "token_hash", unique=True),
-    )
+    __table_args__ = (Index("uq_password_reset_tokens_token_hash", "token_hash", unique=True),)
 
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(index=True, foreign_key="users.id")

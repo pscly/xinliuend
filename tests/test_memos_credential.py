@@ -91,7 +91,10 @@ async def test_get_memos_credential_returns_safe_status(tmp_path: Path) -> None:
     snapshot = await _prepare_db(tmp_path)
     try:
         await _create_user(
-            username="alice", token="memos_pat_abcdefghijklmnopqrstuvwxyz", memos_id=7, memos_user_name="users/7"
+            username="alice",
+            token="memos_pat_abcdefghijklmnopqrstuvwxyz",
+            memos_id=7,
+            memos_user_name="users/7",
         )
 
         async with _make_async_client() as client:
@@ -243,7 +246,12 @@ async def test_issue_memos_credential_token_verifies_current_password_and_saves_
                 self, username: str, app_password: str
             ) -> dict[str, Any]:
                 calls.append(("signin", username, app_password))
-                return {"access_token": "signin-token", "username": "alice", "user_id": 42, "name": "users/42"}
+                return {
+                    "access_token": "signin-token",
+                    "username": "alice",
+                    "user_id": 42,
+                    "name": "users/42",
+                }
 
             async def create_personal_access_token_with_bearer(
                 self,

@@ -138,7 +138,9 @@ async def validate_memos_token_for_user(
             detail = "Memos 服务不可用，暂时无法校验 Token"
         raise HTTPException(status_code=status_code, detail=detail) from exc
 
-    resolved_username, resolved_memos_user_id, resolved_memos_user_name = _extract_validated_info(info)
+    resolved_username, resolved_memos_user_id, resolved_memos_user_name = _extract_validated_info(
+        info
+    )
     if (not allow_username_mismatch) and resolved_username != user.username:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -192,7 +194,9 @@ async def force_save_memos_credential_unchecked(
     if existing is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Token 已被其它用户占用")
 
-    resolved_id = int(memos_user_id) if memos_user_id is not None and int(memos_user_id) >= 0 else None
+    resolved_id = (
+        int(memos_user_id) if memos_user_id is not None and int(memos_user_id) >= 0 else None
+    )
     resource_name = user.memos_user_name or (
         f"users/{resolved_id}" if resolved_id is not None else f"users/{user.username}"
     )
@@ -284,12 +288,9 @@ async def issue_memos_personal_access_token(
     except HTTPException:
         raise
     except MemosClientError as primary_exc:
-        if (
-            hasattr(client, "create_access_token_as_user")
-            and (
-                (user.memos_user_name and user.memos_user_name.startswith("users/"))
-                or (user.memos_id and int(user.memos_id) > 0)
-            )
+        if hasattr(client, "create_access_token_as_user") and (
+            (user.memos_user_name and user.memos_user_name.startswith("users/"))
+            or (user.memos_id and int(user.memos_id) > 0)
         ):
             try:
                 legacy_user_name = user.memos_user_name or f"users/{int(user.memos_id)}"

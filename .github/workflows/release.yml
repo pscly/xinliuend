@@ -100,12 +100,7 @@ jobs:
           set -euo pipefail
           short_sha="$(git rev-parse --short=8 HEAD)"
           timestamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-          version="$(python - <<'PY'
-from pathlib import Path
-import tomllib
-print(tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])
-PY
-          )"
+          version="$(python -c "from pathlib import Path; import tomllib; print(tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")"
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
             echo "RELEASE_CHANNEL=stable" >> "$GITHUB_ENV"
